@@ -1,0 +1,71 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Brand colors — overridden at runtime from tenant config */
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+  --color-primary-fg: #ffffff;
+  --color-secondary: #7c3aed;
+  --color-secondary-hover: #6d28d9;
+  --color-secondary-fg: #ffffff;
+
+  /* Surfaces */
+  --color-surface: #ffffff;
+  --color-surface-raised: #f8fafc;
+  --color-surface-overlay: #f1f5f9;
+
+  /* Borders */
+  --color-border: #e2e8f0;
+  --color-border-strong: #cbd5e1;
+
+  /* Muted */
+  --color-muted: #f1f5f9;
+  --color-muted-fg: #64748b;
+
+  /* Text */
+  --color-foreground: #0f172a;
+  --color-foreground-subtle: #475569;
+
+  /* Semantic */
+  --color-success: #dcfce7;
+  --color-success-fg: #15803d;
+  --color-warning: #fef9c3;
+  --color-warning-fg: #a16207;
+  --color-danger: #fee2e2;
+  --color-danger-fg: #dc2626;
+  --color-info: #dbeafe;
+  --color-info-fg: #1d4ed8;
+
+  /* Shape */
+  --radius: 0.5rem;
+  --radius-sm: 0.25rem;
+  --radius-lg: 0.75rem;
+
+  /* Typography */
+  --font-sans: 'Inter', system-ui, sans-serif;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+    box-sizing: border-box;
+  }
+
+  body {
+    @apply bg-surface text-foreground font-sans;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight;
+  }
+}
+
+@layer utilities {
+  .focus-ring {
+    @apply outline-none ring-2 ring-primary ring-offset-2;
+  }
+}
