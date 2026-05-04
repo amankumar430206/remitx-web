@@ -28,7 +28,7 @@ export function PaymentDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const qc = useQueryClient()
-  const { user } = useAuthStore()
+  const user = useAuthStore(s => s.user)
 
   const { data: payment, isLoading, isError, refetch } = usePayment(id ?? '')
 
@@ -164,7 +164,7 @@ export function PaymentDetail() {
 
       {/* Approve/reject errors */}
       {(approveMutation.isError || rejectMutation.isError) && (
-        <div className="rounded-md bg-error/10 border border-error/30 px-4 py-2 text-sm text-error">
+        <div className="rounded-md bg-danger/10 border border-danger/30 px-4 py-2 text-sm text-danger-fg">
           Action failed. Please try again.
         </div>
       )}

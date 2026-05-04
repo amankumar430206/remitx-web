@@ -3,15 +3,16 @@
 @tailwind utilities;
 
 :root {
-  /* Brand colors — overridden at runtime from tenant config */
-  --color-primary: #2563eb;
-  --color-primary-hover: #1d4ed8;
-  --color-primary-fg: #ffffff;
-  --color-secondary: #7c3aed;
-  --color-secondary-hover: #6d28d9;
-  --color-secondary-fg: #ffffff;
+  /* Brand colors — stored as RGB channels so Tailwind opacity modifiers work */
+  --color-primary: 37 99 235;        /* #2563eb */
+  --color-primary-hover: 29 78 216;  /* #1d4ed8 */
+  --color-primary-fg: 255 255 255;
 
-  /* Surfaces */
+  --color-secondary: 124 58 237;     /* #7c3aed */
+  --color-secondary-hover: 109 40 217; /* #6d28d9 */
+  --color-secondary-fg: 255 255 255;
+
+  /* Surfaces — not used with opacity modifiers, hex is fine */
   --color-surface: #ffffff;
   --color-surface-raised: #f8fafc;
   --color-surface-overlay: #f1f5f9;
@@ -22,7 +23,7 @@
 
   /* Muted */
   --color-muted: #f1f5f9;
-  --color-muted-fg: #64748b;
+  --color-muted-fg: 100 116 139;     /* #64748b — needs /40 opacity */
 
   /* Text */
   --color-foreground: #0f172a;
@@ -33,10 +34,10 @@
   --color-success-fg: #15803d;
   --color-warning: #fef9c3;
   --color-warning-fg: #a16207;
-  --color-danger: #fee2e2;
-  --color-danger-fg: #dc2626;
-  --color-info: #dbeafe;
-  --color-info-fg: #1d4ed8;
+  --color-danger: 220 38 38;         /* #dc2626 — needs /10, /30 opacity */
+  --color-danger-fg: 153 27 27;      /* #991b1b — dark red, readable on light red bg */
+  --color-info: 219 234 254;         /* #dbeafe — needs /30 opacity */
+  --color-info-fg: 29 78 216;        /* #1d4ed8 */
 
   /* Shape */
   --radius: 0.5rem;
@@ -49,12 +50,13 @@
 
 @layer base {
   * {
-    @apply border-border;
     box-sizing: border-box;
   }
 
   body {
-    @apply bg-surface text-foreground font-sans;
+    background-color: var(--color-surface);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }

@@ -83,21 +83,21 @@ function FxCountdown({ expiresAt, onExpire }: { expiresAt: string; onExpire: () 
     <div className="flex items-center gap-2">
       <div className="relative h-7 w-7">
         <svg className="h-7 w-7 -rotate-90" viewBox="0 0 28 28">
-          <circle cx="14" cy="14" r="11" fill="none" stroke="var(--color-border)" strokeWidth="2.5" />
+          <circle cx="14" cy="14" r="11" fill="none" stroke="var(--color-border)" strokeWidth="2.5" className="text-border" />
           <circle
             cx="14" cy="14" r="11" fill="none"
-            stroke={urgent ? 'var(--color-error)' : 'var(--color-primary)'}
+            stroke={urgent ? 'rgb(var(--color-danger))' : 'rgb(var(--color-primary))'}
             strokeWidth="2.5"
             strokeDasharray={`${2 * Math.PI * 11}`}
             strokeDashoffset={`${2 * Math.PI * 11 * (1 - pct / 100)}`}
             className="transition-all duration-1000"
           />
         </svg>
-        <span className={cn('absolute inset-0 flex items-center justify-center text-[9px] font-bold', urgent ? 'text-error' : 'text-primary')}>
+        <span className={cn('absolute inset-0 flex items-center justify-center text-[9px] font-bold', urgent ? 'text-danger-fg' : 'text-primary')}>
           {secs}
         </span>
       </div>
-      <span className={cn('text-xs', urgent ? 'text-error' : 'text-muted-fg')}>
+      <span className={cn('text-xs', urgent ? 'text-danger-fg' : 'text-muted-fg')}>
         {urgent ? 'Refreshing soon…' : 'Rate locked'}
       </span>
     </div>
@@ -274,7 +274,7 @@ function Step2({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
             <Spinner size="sm" /> Fetching live rate…
           </div>
         )}
-        {quoteError && <p className="text-sm text-error">{quoteError}</p>}
+        {quoteError && <p className="text-sm text-danger-fg">{quoteError}</p>}
         {!quoteLoading && !quoteError && !quote && (
           <p className="text-sm text-muted-fg">Enter an amount to see the live rate.</p>
         )}
@@ -443,7 +443,7 @@ function Step4({ onBack }: { onBack: () => void }) {
       </p>
 
       {isError && (
-        <div className="rounded-md bg-error/10 border border-error/30 px-4 py-2 text-sm text-error">
+        <div className="rounded-md bg-danger/10 border border-danger/30 px-4 py-2 text-sm text-danger-fg">
           {(error as Error).message || 'Submission failed. Please try again.'}
         </div>
       )}
