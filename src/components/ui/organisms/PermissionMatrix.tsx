@@ -1,3 +1,4 @@
+import React from 'react'
 import { cn } from '@/lib/utils'
 import { Toggle } from '@/components/ui/atoms/Toggle'
 
@@ -28,8 +29,8 @@ export function PermissionMatrix({ roles, permissions, value, onChange, readOnly
         </thead>
         <tbody>
           {groups.map(group => (
-            <>
-              <tr key={`group-${group}`} className="bg-surface-overlay">
+            <React.Fragment key={group}>
+              <tr className="bg-surface-overlay">
                 <td colSpan={roles.length + 1} className="px-4 py-2 text-xs font-semibold text-muted-fg uppercase tracking-wider">
                   {group}
                 </td>
@@ -52,7 +53,7 @@ export function PermissionMatrix({ roles, permissions, value, onChange, readOnly
                   })}
                 </tr>
               ))}
-            </>
+            </React.Fragment>
           ))}
         </tbody>
       </table>
