@@ -29,7 +29,7 @@ export function ApprovalQueue() {
 
   const { data, isLoading, isError, refetch } = useApprovalQueue({ page })
   const payments = data?.data ?? []
-  const total = data?.meta.total ?? 0
+  const total = data?.meta?.total ?? 0
   const totalPages = Math.ceil(total / 20)
 
   const isChecker = user?.role === 'admin' || user?.role === 'checker'

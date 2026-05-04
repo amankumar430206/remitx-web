@@ -124,7 +124,7 @@ function Step1({ onNext }: { onNext: () => void }) {
 
       {isLoading && <div className="flex justify-center py-8"><Spinner size="md" /></div>}
 
-      {!isLoading && data?.data.length === 0 && (
+      {!isLoading && (data?.data?.length ?? 0) === 0 && (
         <div className="rounded-lg border border-dashed border-border py-10 text-center">
           <p className="text-sm text-muted-fg">No beneficiaries found.</p>
           <p className="mt-1 text-xs text-muted-fg">Try a different search or add a new beneficiary first.</p>
@@ -132,7 +132,7 @@ function Step1({ onNext }: { onNext: () => void }) {
       )}
 
       <div className="flex flex-col gap-2">
-        {data?.data.map(b => (
+        {(data?.data ?? []).map(b => (
           <button
             key={b.id}
             onClick={() => handleSelect(b.id, b.name, b.countryCode)}

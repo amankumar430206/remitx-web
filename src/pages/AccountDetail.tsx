@@ -53,7 +53,7 @@ export function AccountDetail() {
   if (loadingAccount) return <LoadingState />
   if (accountError || !account) return <ErrorState onRetry={() => navigate('/accounts')} />
 
-  const totalPages = ledgerData ? Math.ceil(ledgerData.meta.total / 20) : 1
+  const totalPages = ledgerData?.meta?.total ? Math.ceil(ledgerData.meta.total / 20) : 1
 
   return (
     <div className="flex flex-col gap-6">
@@ -80,9 +80,9 @@ export function AccountDetail() {
         </ContentCard>
         <ContentCard className="col-span-2">
           <p className="text-sm font-medium text-muted-fg mb-3">Recent activity</p>
-          {account.recentEntries?.length > 0 ? (
+          {(account.recentEntries?.length ?? 0) > 0 ? (
             <Timeline
-              events={account.recentEntries.slice(0, 5).map(e => ({
+              events={(account.recentEntries ?? []).slice(0, 5).map(e => ({
                 id: e.id,
                 status: e.entryType === 'credit' ? 'completed' : 'processing',
                 label: e.description,
@@ -137,7 +137,7 @@ export function AccountDetail() {
             {totalPages > 1 && (
               <div className="flex items-center justify-between px-5 py-3 border-t border-border">
                 <span className="text-xs text-muted-fg">
-                  Page {page} of {totalPages} · {ledgerData?.meta.total} entries
+                  Page {page} of {totalPages} · {ledgerData?.meta?.total} entries
                 </span>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>Previous</Button>

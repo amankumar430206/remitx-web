@@ -85,7 +85,7 @@ export function PaymentList() {
   const { data, isLoading, isError } = usePayments({ page, limit: 20, status: status || undefined })
 
   const payments = data?.data ?? []
-  const total = data?.meta.total ?? 0
+  const total = data?.meta?.total ?? 0
   const totalPages = Math.ceil(total / 20)
 
   const columns = [

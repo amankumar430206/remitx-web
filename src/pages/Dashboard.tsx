@@ -12,7 +12,7 @@ import { ContentCard } from '@/layouts/ContentCard'
 export function Dashboard() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const { accessToken } = useAuthStore()
+  const accessToken = useAuthStore(s => s.accessToken)
   const { data: accounts, isLoading: loadingAccounts } = useAccounts()
   const { data: paymentsData, isLoading: loadingPayments, isError: paymentsError } = usePayments({ limit: 10 })
 
@@ -30,8 +30,8 @@ export function Dashboard() {
     return () => { socket.disconnect() }
   }, [accessToken, queryClient])
 
-  const totalBalance = accounts?.reduce((sum, a) => sum + parseFloat(a.balance), 0) ?? 0
-  const pendingCount = paymentsData?.data.filter(p => p.status === 'pending_approval').length ?? 0
+  const totalBalance = (accounts ?? []).reduce((sum, a) => sum + parseFloat(a.balance), 0)
+  const pendingCount = (paymentsData?.data ?? []).filter(p => p.status === 'pending_approval').length
 
   return (
     <div className="flex flex-col gap-6">
