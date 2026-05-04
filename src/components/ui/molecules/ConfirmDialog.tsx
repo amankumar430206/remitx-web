@@ -10,13 +10,14 @@ export interface ConfirmDialogProps {
   cancelLabel?: string
   onConfirm: () => void
   loading?: boolean
+  disabled?: boolean
   variant?: 'danger' | 'primary'
   children?: React.ReactNode
 }
 
 export function ConfirmDialog({
   open, onOpenChange, title, description, confirmLabel = 'Confirm',
-  cancelLabel = 'Cancel', onConfirm, loading, variant = 'primary', children,
+  cancelLabel = 'Cancel', onConfirm, loading, disabled, variant = 'primary', children,
 }: ConfirmDialogProps) {
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -32,7 +33,7 @@ export function ConfirmDialog({
             <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
               {cancelLabel}
             </Button>
-            <Button variant={variant} onClick={onConfirm} loading={loading}>
+            <Button variant={variant} onClick={onConfirm} loading={loading} disabled={disabled || loading}>
               {confirmLabel}
             </Button>
           </div>

@@ -11,6 +11,10 @@ import { Dashboard } from '@/pages/Dashboard'
 import { AccountList } from '@/pages/AccountList'
 import { AccountDetail } from '@/pages/AccountDetail'
 import { DesignSystem } from '@/pages/DesignSystem'
+import { PaymentList } from '@/pages/payments/PaymentList'
+import { PaymentDetail } from '@/pages/payments/PaymentDetail'
+import { NewPayment } from '@/pages/payments/NewPayment'
+import { ApprovalQueue } from '@/pages/payments/ApprovalQueue'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -37,8 +41,12 @@ function App() {
               <Route path="/accounts" element={<AccountList />} />
               <Route path="/accounts/:id" element={<AccountDetail />} />
               <Route path="/settings/mfa" element={<MfaSetup />} />
-              {/* Placeholder routes — filled by later phases */}
-              <Route path="/payments/*" element={<ComingSoon title="Payments" />} />
+              {/* Payments */}
+              <Route path="/payments" element={<PaymentList />} />
+              <Route path="/payments/new" element={<NewPayment />} />
+              <Route path="/payments/approval-queue" element={<ApprovalQueue />} />
+              <Route path="/payments/:id" element={<PaymentDetail />} />
+              {/* Placeholder — filled by later phases */}
               <Route path="/beneficiaries/*" element={<ComingSoon title="Beneficiaries" />} />
             </Route>
           </Route>
