@@ -31,7 +31,8 @@ const NAV_ICONS = {
 }
 
 export function AppShell() {
-  const { user, logout, tenantSlug } = useAuthStore(s => ({ user: s.user, logout: s.clearAuth, tenantSlug: s.tenantSlug }))
+  const user = useAuthStore(s => s.user)
+  const tenantSlug = useAuthStore(s => s.tenantSlug)
   const navigate = useNavigate()
   const applyTheme = useThemeStore(s => s.applyTheme)
   const { data: approvalData } = useApprovalQueue()
@@ -51,7 +52,7 @@ export function AppShell() {
     navigate('/login')
   }
 
-  const pendingApprovals = approvalData?.meta.total ?? 0
+  const pendingApprovals = approvalData?.meta?.total ?? 0
 
   const navItems = [
     { label: 'Dashboard', href: '/dashboard', icon: NAV_ICONS.dashboard },
