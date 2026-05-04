@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { AppShell } from '@/components/AppShell'
+import { SettingsLayout } from '@/layouts/SettingsLayout'
 import { Login } from '@/pages/Login'
 import { MfaChallenge } from '@/pages/MfaChallenge'
 import { MfaSetup } from '@/pages/MfaSetup'
@@ -21,6 +22,21 @@ import { BeneficiaryDetail } from '@/pages/BeneficiaryDetail'
 import { FxRates } from '@/pages/FxRates'
 import { KycStatus } from '@/pages/KYC/KycStatus'
 import { KycVerify } from '@/pages/KYC/KycVerify'
+import { Statement } from '@/pages/reports/Statement'
+import { Transactions } from '@/pages/reports/Transactions'
+import { Reconciliation } from '@/pages/reports/Reconciliation'
+import { Profile } from '@/pages/settings/Profile'
+import { Mfa } from '@/pages/settings/Mfa'
+import { Notifications } from '@/pages/settings/Notifications'
+import { Users } from '@/pages/settings/Users'
+import { Permissions } from '@/pages/settings/Permissions'
+import { SubClients } from '@/pages/settings/SubClients'
+import { Theme } from '@/pages/settings/Theme'
+import { TenantList } from '@/pages/admin/TenantList'
+import { TenantDetail } from '@/pages/admin/TenantDetail'
+import { KycQueue } from '@/pages/admin/KycQueue'
+import { ManualPaymentQueue } from '@/pages/admin/ManualPaymentQueue'
+import { ProviderConfig } from '@/pages/admin/ProviderConfig'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -46,7 +62,6 @@ function App() {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/accounts" element={<AccountList />} />
               <Route path="/accounts/:id" element={<AccountDetail />} />
-              <Route path="/settings/mfa" element={<MfaSetup />} />
               {/* Payments */}
               <Route path="/payments" element={<PaymentList />} />
               <Route path="/payments/new" element={<NewPayment />} />
@@ -61,6 +76,27 @@ function App() {
               {/* KYC */}
               <Route path="/kyc" element={<KycStatus />} />
               <Route path="/kyc/verify" element={<KycVerify />} />
+              {/* Reports */}
+              <Route path="/reports/statement" element={<Statement />} />
+              <Route path="/reports/transactions" element={<Transactions />} />
+              <Route path="/reports/reconciliation" element={<Reconciliation />} />
+              {/* Settings */}
+              <Route path="/settings" element={<SettingsLayout />}>
+                <Route index element={<Navigate to="/settings/profile" replace />} />
+                <Route path="profile" element={<Profile />} />
+                <Route path="mfa" element={<Mfa />} />
+                <Route path="notifications" element={<Notifications />} />
+                <Route path="users" element={<Users />} />
+                <Route path="permissions" element={<Permissions />} />
+                <Route path="sub-clients" element={<SubClients />} />
+                <Route path="theme" element={<Theme />} />
+              </Route>
+              {/* Admin */}
+              <Route path="/admin/tenants" element={<TenantList />} />
+              <Route path="/admin/tenants/:id" element={<TenantDetail />} />
+              <Route path="/admin/kyc-queue" element={<KycQueue />} />
+              <Route path="/admin/manual-payments" element={<ManualPaymentQueue />} />
+              <Route path="/admin/providers" element={<ProviderConfig />} />
             </Route>
           </Route>
 
