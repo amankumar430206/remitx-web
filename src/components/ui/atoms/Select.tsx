@@ -17,9 +17,24 @@ export interface SelectProps {
   className?: string
 }
 
+// Radix Select.Item rejects empty string values, so we use a sentinel
+const EMPTY_SENTINEL = '__empty__'
+
+function toRadix(v: string | undefined) {
+  return v === '' ? EMPTY_SENTINEL : (v ?? '')
+}
+
+function fromRadix(v: string) {
+  return v === EMPTY_SENTINEL ? '' : v
+}
+
 export function Select({ value, onValueChange, options, placeholder = 'Select…', disabled, error, className }: SelectProps) {
   return (
-    <RadixSelect.Root value={value} onValueChange={onValueChange} disabled={disabled}>
+    <RadixSelect.Root
+      value={toRadix(value)}
+      onValueChange={v => onValueChange?.(fromRadix(v))}
+      disabled={disabled}
+    >
       <RadixSelect.Trigger
         className={cn(
           'flex h-9 w-full items-center justify-between rounded border bg-surface px-3 py-1 text-sm shadow-sm',
@@ -44,7 +59,7 @@ export function Select({ value, onValueChange, options, placeholder = 'Select…
             {options.map((opt) => (
               <RadixSelect.Item
                 key={opt.value}
-                value={opt.value}
+                value={toRadix(opt.value)}
                 disabled={opt.disabled}
                 className={cn(
                   'relative flex cursor-default select-none items-center rounded px-2 py-1.5 text-sm outline-none',
