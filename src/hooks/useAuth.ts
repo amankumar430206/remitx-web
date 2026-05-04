@@ -8,7 +8,7 @@ export function useAuth() {
   const navigate = useNavigate()
 
   const login = async (payload: LoginPayload, slug: string) => {
-    const { data } = await authApi.login(payload)
+    const { data } = await authApi.login(payload, slug)
     const res = data.data
     if (res.mfaRequired) {
       return { mfaRequired: true, mfaChallengeToken: res.mfaChallengeToken }

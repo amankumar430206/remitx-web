@@ -12,8 +12,10 @@ export interface LoginResponse {
 export interface MfaSetupResponse { secret: string; qrUri: string; backupCodes: string[] }
 
 const auth = {
-  login: (payload: LoginPayload) =>
-    apiClient.post<{ success: boolean; data: LoginResponse }>('/auth/login', payload),
+  login: (payload: LoginPayload, tenantSlug: string) =>
+    apiClient.post<{ success: boolean; data: LoginResponse }>('/auth/login', payload, {
+      headers: { 'X-Tenant-Slug': tenantSlug },
+    }),
 
   refresh: (refreshToken: string) =>
     apiClient.post<{ success: boolean; data: { accessToken: string; refreshToken: string } }>('/auth/refresh', { refreshToken }),
