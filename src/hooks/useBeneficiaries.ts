@@ -24,6 +24,18 @@ export function useCreateBeneficiary() {
   })
 }
 
+export function useUpdateBeneficiary() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<CreateBeneficiaryPayload> }) =>
+      beneficiariesApi.update(id, data).then(r => r.data.data),
+    onSuccess: (_, { id }) => {
+      qc.invalidateQueries({ queryKey: ['beneficiaries'] })
+      qc.invalidateQueries({ queryKey: ['beneficiaries', id] })
+    },
+  })
+}
+
 export function useDeleteBeneficiary() {
   const qc = useQueryClient()
   return useMutation({

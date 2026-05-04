@@ -26,16 +26,22 @@ export const useThemeStore = create<ThemeState>()((set) => ({
 
   applyTheme: (theme) => {
     const root = document.documentElement
-    // Store as "R G B" channels so Tailwind opacity modifiers work
-    const toChannels = (hex: string) => {
-      const { r, g, b } = hexToRgb(hex)
-      return `${r} ${g} ${b}`
+
+    if (theme.primaryColor) {
+      const { r, g, b } = hexToRgb(theme.primaryColor)
+      root.style.setProperty('--color-primary', theme.primaryColor)
+      root.style.setProperty('--color-primary-hover', darken(theme.primaryColor))
+      root.style.setProperty('--color-primary-subtle', `rgba(${r}, ${g}, ${b}, 0.08)`)
+      root.style.setProperty('--color-primary-subtle-border', `rgba(${r}, ${g}, ${b}, 0.3)`)
     }
-    root.style.setProperty('--color-primary', toChannels(theme.primaryColor))
-    root.style.setProperty('--color-primary-hover', toChannels(darken(theme.primaryColor)))
-    root.style.setProperty('--color-secondary', toChannels(theme.secondaryColor))
-    root.style.setProperty('--color-secondary-hover', toChannels(darken(theme.secondaryColor)))
+
+    if (theme.secondaryColor) {
+      root.style.setProperty('--color-secondary', theme.secondaryColor)
+      root.style.setProperty('--color-secondary-hover', darken(theme.secondaryColor))
+    }
+
     if (theme.fontFamily) root.style.setProperty('--font-sans', theme.fontFamily)
+
     set({ theme })
   },
 }))

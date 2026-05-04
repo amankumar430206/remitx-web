@@ -56,7 +56,7 @@ export function MobileNav({ logo, navItems, user, onLogout, tenantName }: Mobile
                   className={({ isActive }) => cn(
                     'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
                     isActive
-                      ? 'bg-primary/10 text-primary'
+                      ? 'bg-primary-subtle text-primary'
                       : 'text-foreground-subtle hover:text-foreground hover:bg-surface-overlay'
                   )}
                 >

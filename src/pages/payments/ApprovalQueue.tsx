@@ -123,7 +123,7 @@ export function ApprovalQueue() {
 
       {/* Bulk action bar */}
       {isChecker && selectedIds.length > 0 && (
-        <div className="flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3">
+        <div className="flex items-center gap-3 rounded-lg border border-primary-subtle-border bg-primary-subtle px-4 py-3">
           <span className="text-sm font-medium text-foreground">{selectedIds.length} selected</span>
           <div className="ml-auto flex gap-2">
             <Button
@@ -147,7 +147,7 @@ export function ApprovalQueue() {
       )}
 
       {(approveMutation.isError || rejectMutation.isError) && (
-        <div className="rounded-md bg-danger/10 border border-danger/30 px-4 py-2 text-sm text-danger-fg">
+        <div className="rounded-md bg-danger border border-danger-border px-4 py-2 text-sm text-danger-fg">
           Action failed. Please try again.
         </div>
       )}

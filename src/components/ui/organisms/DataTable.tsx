@@ -113,7 +113,7 @@ export function DataTable<T>({
                   className={cn(
                     'border-b border-border last:border-0 transition-colors',
                     onRowClick && 'cursor-pointer hover:bg-surface-raised',
-                    isSelected && 'bg-info/30',
+                    isSelected && 'bg-info',
                     rowClassName?.(row)
                   )}
                 >

@@ -15,6 +15,12 @@ import { PaymentList } from '@/pages/payments/PaymentList'
 import { PaymentDetail } from '@/pages/payments/PaymentDetail'
 import { NewPayment } from '@/pages/payments/NewPayment'
 import { ApprovalQueue } from '@/pages/payments/ApprovalQueue'
+import { BeneficiaryList } from '@/pages/BeneficiaryList'
+import { BeneficiaryNew } from '@/pages/BeneficiaryNew'
+import { BeneficiaryDetail } from '@/pages/BeneficiaryDetail'
+import { FxRates } from '@/pages/FxRates'
+import { KycStatus } from '@/pages/KYC/KycStatus'
+import { KycVerify } from '@/pages/KYC/KycVerify'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -46,8 +52,15 @@ function App() {
               <Route path="/payments/new" element={<NewPayment />} />
               <Route path="/payments/approval-queue" element={<ApprovalQueue />} />
               <Route path="/payments/:id" element={<PaymentDetail />} />
-              {/* Placeholder — filled by later phases */}
-              <Route path="/beneficiaries/*" element={<ComingSoon title="Beneficiaries" />} />
+              {/* Beneficiaries */}
+              <Route path="/beneficiaries" element={<BeneficiaryList />} />
+              <Route path="/beneficiaries/new" element={<BeneficiaryNew />} />
+              <Route path="/beneficiaries/:id" element={<BeneficiaryDetail />} />
+              {/* FX */}
+              <Route path="/fx-rates" element={<FxRates />} />
+              {/* KYC */}
+              <Route path="/kyc" element={<KycStatus />} />
+              <Route path="/kyc/verify" element={<KycVerify />} />
             </Route>
           </Route>
 
@@ -55,15 +68,6 @@ function App() {
         </Routes>
       </BrowserRouter>
     </QueryClientProvider>
-  )
-}
-
-function ComingSoon({ title }: { title: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-24 text-center">
-      <p className="text-2xl font-bold text-foreground">{title}</p>
-      <p className="mt-2 text-sm text-muted-fg">Coming in the next phase.</p>
-    </div>
   )
 }
 

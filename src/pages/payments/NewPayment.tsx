@@ -139,8 +139,8 @@ function Step1({ onNext }: { onNext: () => void }) {
             className={cn(
               'flex items-center gap-3 rounded-lg border p-3 text-left transition-all',
               selected === b.id
-                ? 'border-primary bg-primary/5 ring-1 ring-primary'
-                : 'border-border bg-surface hover:border-primary/40'
+                ? 'border-primary bg-primary-subtle ring-1 ring-primary'
+                : 'border-border bg-surface hover:border-primary'
             )}
           >
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-overlay font-semibold text-sm text-foreground">
@@ -443,7 +443,7 @@ function Step4({ onBack }: { onBack: () => void }) {
       </p>
 
       {isError && (
-        <div className="rounded-md bg-danger/10 border border-danger/30 px-4 py-2 text-sm text-danger-fg">
+        <div className="rounded-md bg-danger border border-danger-border px-4 py-2 text-sm text-danger-fg">
           {(error as Error).message || 'Submission failed. Please try again.'}
         </div>
       )}

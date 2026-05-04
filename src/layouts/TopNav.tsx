@@ -39,7 +39,7 @@ export function TopNav({ logo, navItems, user, onLogout, tenantName }: TopNavPro
             className={({ isActive }) => cn(
               'relative flex items-center gap-1.5 rounded px-3 py-1.5 text-sm font-medium transition-colors',
               isActive
-                ? 'bg-primary/10 text-primary'
+                ? 'bg-primary-subtle text-primary'
                 : 'text-foreground-subtle hover:text-foreground hover:bg-surface-overlay'
             )}
           >

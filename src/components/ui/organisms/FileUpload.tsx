@@ -46,7 +46,7 @@ export function FileUpload({
       <div
         className={cn(
           'relative flex flex-col items-center justify-center rounded-lg border-2 border-dashed px-6 py-8 text-center transition-colors',
-          dragOver ? 'border-primary bg-info/10' : 'border-border hover:border-border-strong bg-surface',
+          dragOver ? 'border-primary bg-info' : 'border-border hover:border-border-strong bg-surface',
           disabled && 'opacity-50 pointer-events-none'
         )}
         onDragOver={e => { e.preventDefault(); setDragOver(true) }}
