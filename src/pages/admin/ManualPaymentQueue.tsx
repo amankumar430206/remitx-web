@@ -12,34 +12,39 @@ import type { ManualPaymentQueueItem } from '@/api/admin'
 import type { Column } from '@/components/ui/organisms/DataTable'
 
 export function ManualPaymentQueue() {
-  const [page, setPage] = useState(1)
   const [processTarget, setProcessTarget] = useState<ManualPaymentQueueItem | null>(null)
   const [failTarget, setFailTarget] = useState<ManualPaymentQueueItem | null>(null)
   const [processNote, setProcessNote] = useState('')
   const [failReason, setFailReason] = useState('')
 
-  const { data, isLoading } = useManualPaymentQueue({ page, limit: 20 })
+  const { data, isLoading } = useManualPaymentQueue()
   const processMutation = useProcessManualPayment()
   const failMutation = useFailManualPayment()
 
-  const total = data?.meta?.total ?? 0
-  const totalPages = Math.ceil(total / 20)
-
   const columns: Column<ManualPaymentQueueItem>[] = [
     { key: 'reference', header: 'Reference', render: row => <span className="font-mono text-xs">{row.reference}</span> },
-    { key: 'tenantName', header: 'Tenant' },
-    { key: 'beneficiaryName', header: 'Beneficiary' },
     {
-      key: 'amount',
+      key: 'source_amount',
       header: 'Amount',
-      render: row => <span className="font-medium">{row.amount} {row.currency}</span>,
+      render: row => (
+        <span className="font-medium">
+          {Number(row.source_amount).toLocaleString()} {row.source_currency}
+          {row.dest_currency !== row.source_currency && (
+            <span className="text-muted-fg text-xs ml-1">→ {row.dest_currency}</span>
+          )}
+        </span>
+      ),
     },
     {
       key: 'status',
       header: 'Status',
       render: row => <StatusBadge status={row.status} />,
     },
-    { key: 'createdAt', header: 'Created', render: row => new Date(row.createdAt).toLocaleDateString() },
+    {
+      key: 'created_at',
+      header: 'Created',
+      render: row => new Date(row.created_at).toLocaleDateString(),
+    },
     {
       key: 'actions',
       header: '',
@@ -66,24 +71,13 @@ export function ManualPaymentQueue() {
       <ContentCard padding="none">
         <DataTable
           columns={columns}
-          data={data?.data ?? []}
+          data={data ?? []}
           loading={isLoading}
           getRowId={row => row.id}
           emptyTitle="Queue is empty"
           emptyDescription="No manual payments awaiting processing."
         />
       </ContentCard>
-
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between text-sm text-muted-fg">
-          <span>{total} payments</span>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => setPage(p => p - 1)} disabled={page <= 1}>Previous</Button>
-            <span>Page {page} of {totalPages}</span>
-            <Button variant="outline" size="sm" onClick={() => setPage(p => p + 1)} disabled={page >= totalPages}>Next</Button>
-          </div>
-        </div>
-      )}
 
       <ConfirmDialog
         open={!!processTarget}
@@ -94,7 +88,7 @@ export function ManualPaymentQueue() {
         onConfirm={() => {
           if (processTarget) {
             processMutation.mutate(
-              { id: processTarget.id, note: processNote || undefined },
+              { id: processTarget.id, notes: processNote || undefined },
               { onSuccess: () => setProcessTarget(null) }
             )
           }
@@ -117,7 +111,7 @@ export function ManualPaymentQueue() {
         onConfirm={() => {
           if (failTarget && failReason.trim()) {
             failMutation.mutate(
-              { id: failTarget.id, reason: failReason },
+              { id: failTarget.id, notes: failReason },
               { onSuccess: () => setFailTarget(null) }
             )
           }

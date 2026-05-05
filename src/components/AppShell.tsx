@@ -96,7 +96,7 @@ export function AppShell() {
   return (
     <PageLayout
       navItems={navItems}
-      user={user ? { name: user.name, email: user.email } : undefined}
+      user={user ? { name: [user.first_name, user.last_name].filter(Boolean).join(' ') || user.email, email: user.email } : undefined}
       onLogout={handleLogout}
       tenantName={tenantSlug ?? undefined}
     >

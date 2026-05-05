@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 import type { TenantTheme } from '@/api/tenants'
 
 interface ThemeState {
@@ -19,29 +20,40 @@ function darken(hex: string, amount = 0.15): string {
   return `#${[d(r), d(g), d(b)].map(v => v.toString(16).padStart(2, '0')).join('')}`
 }
 
-export const useThemeStore = create<ThemeState>()((set) => ({
-  theme: null,
+function applyCssVars(theme: TenantTheme) {
+  const root = document.documentElement
+  if (theme.primaryColor) {
+    const { r, g, b } = hexToRgb(theme.primaryColor)
+    root.style.setProperty('--color-primary', theme.primaryColor)
+    root.style.setProperty('--color-primary-hover', darken(theme.primaryColor))
+    root.style.setProperty('--color-primary-subtle', `rgba(${r}, ${g}, ${b}, 0.08)`)
+    root.style.setProperty('--color-primary-subtle-border', `rgba(${r}, ${g}, ${b}, 0.3)`)
+  }
+  if (theme.secondaryColor) {
+    root.style.setProperty('--color-secondary', theme.secondaryColor)
+    root.style.setProperty('--color-secondary-hover', darken(theme.secondaryColor))
+  }
+  if (theme.fontFamily) root.style.setProperty('--font-sans', theme.fontFamily)
+}
 
-  setTheme: (theme) => set({ theme }),
+export const useThemeStore = create<ThemeState>()(
+  persist(
+    (set) => ({
+      theme: null,
 
-  applyTheme: (theme) => {
-    const root = document.documentElement
+      setTheme: (theme) => set({ theme }),
 
-    if (theme.primaryColor) {
-      const { r, g, b } = hexToRgb(theme.primaryColor)
-      root.style.setProperty('--color-primary', theme.primaryColor)
-      root.style.setProperty('--color-primary-hover', darken(theme.primaryColor))
-      root.style.setProperty('--color-primary-subtle', `rgba(${r}, ${g}, ${b}, 0.08)`)
-      root.style.setProperty('--color-primary-subtle-border', `rgba(${r}, ${g}, ${b}, 0.3)`)
+      applyTheme: (theme) => {
+        applyCssVars(theme)
+        set({ theme })
+      },
+    }),
+    {
+      name: 'tenant-theme',
+      partialize: (s) => ({ theme: s.theme }),
+      onRehydrateStorage: () => (state) => {
+        if (state?.theme) applyCssVars(state.theme)
+      },
     }
-
-    if (theme.secondaryColor) {
-      root.style.setProperty('--color-secondary', theme.secondaryColor)
-      root.style.setProperty('--color-secondary-hover', darken(theme.secondaryColor))
-    }
-
-    if (theme.fontFamily) root.style.setProperty('--font-sans', theme.fontFamily)
-
-    set({ theme })
-  },
-}))
+  )
+)
