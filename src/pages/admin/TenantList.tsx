@@ -4,7 +4,6 @@ import { PageHeader } from '@/components/ui/organisms/PageHeader'
 import { DataTable } from '@/components/ui/organisms/DataTable'
 import { FilterBar } from '@/components/ui/organisms/FilterBar'
 import { Badge } from '@/components/ui/atoms/Badge'
-import { Button } from '@/components/ui/atoms/Button'
 import { Select } from '@/components/ui/atoms/Select'
 import { ContentCard } from '@/layouts/ContentCard'
 import { useAdminTenants } from '@/hooks/useAdmin'
@@ -20,26 +19,26 @@ const STATUS_VARIANT: Record<string, 'success' | 'warning' | 'danger' | 'default
 const columns: Column<AdminTenant>[] = [
   { key: 'name', header: 'Name' },
   { key: 'slug', header: 'Slug', render: row => <span className="font-mono text-xs">{row.slug}</span> },
-  { key: 'plan', header: 'Plan', render: row => <Badge variant="secondary" className="capitalize">{row.plan}</Badge> },
   {
     key: 'status',
     header: 'Status',
     render: row => <Badge variant={STATUS_VARIANT[row.status] ?? 'default'} className="capitalize">{row.status}</Badge>,
   },
-  { key: 'usersCount', header: 'Users', render: row => String(row.usersCount) },
-  { key: 'paymentsCount', header: 'Payments', render: row => String(row.paymentsCount) },
-  { key: 'createdAt', header: 'Created', render: row => new Date(row.createdAt).toLocaleDateString() },
+  { key: 'created_at', header: 'Created', render: row => new Date(row.created_at).toLocaleDateString() },
 ]
 
 export function TenantList() {
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('')
-  const [page, setPage] = useState(1)
 
-  const { data, isLoading } = useAdminTenants({ page, limit: 20, status: status || undefined })
-  const total = data?.meta?.total ?? 0
-  const totalPages = Math.ceil(total / 20)
+  const { data, isLoading } = useAdminTenants()
+
+  const filtered = (data ?? []).filter(t => {
+    const matchesSearch = !search || t.name.toLowerCase().includes(search.toLowerCase()) || t.slug.toLowerCase().includes(search.toLowerCase())
+    const matchesStatus = !status || t.status === status
+    return matchesSearch && matchesStatus
+  })
 
   return (
     <div className="flex flex-col gap-6">
@@ -69,24 +68,13 @@ export function TenantList() {
       <ContentCard padding="none">
         <DataTable
           columns={columns}
-          data={data?.data ?? []}
+          data={filtered}
           loading={isLoading}
           getRowId={row => row.id}
           onRowClick={row => navigate(`/admin/tenants/${row.id}`)}
           emptyTitle="No tenants"
         />
       </ContentCard>
-
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between text-sm text-muted-fg">
-          <span>{total} tenants</span>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => setPage(p => p - 1)} disabled={page <= 1}>Previous</Button>
-            <span>Page {page} of {totalPages}</span>
-            <Button variant="outline" size="sm" onClick={() => setPage(p => p + 1)} disabled={page >= totalPages}>Next</Button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
