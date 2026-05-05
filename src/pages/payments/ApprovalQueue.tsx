@@ -27,9 +27,9 @@ export function ApprovalQueue() {
   const [showRejectDialog, setShowRejectDialog] = useState(false)
   const [rejectNote, setRejectNote] = useState('')
 
-  const { data, isLoading, isError, refetch } = useApprovalQueue({ page })
+  const { data, isLoading, isError, refetch } = useApprovalQueue()
   const payments = data?.data ?? []
-  const total = data?.meta?.total ?? 0
+  const total = payments.length
   const totalPages = Math.ceil(total / 20)
 
   const isChecker = user?.role === 'admin' || user?.role === 'checker'
@@ -66,27 +66,27 @@ export function ApprovalQueue() {
       header: 'Recipient',
       render: (p: Payment) => (
         <div>
-          <p className="font-medium text-foreground">{p.beneficiary?.name ?? '—'}</p>
-          <p className="text-xs text-muted-fg">{p.beneficiary?.countryCode}</p>
+          <p className="font-medium text-foreground">{p.beneficiary_name ?? '—'}</p>
+          <p className="text-xs text-muted-fg">{p.beneficiary_country_code}</p>
         </div>
       ),
     },
     {
       key: 'amount',
       header: 'You send',
-      render: (p: Payment) => <AmountDisplay amount={p.sourceAmount} currency={p.sourceCurrency} />,
+      render: (p: Payment) => <AmountDisplay amount={p.source_amount} currency={p.source_currency} />,
     },
     {
       key: 'destination',
       header: 'They receive',
-      render: (p: Payment) => <AmountDisplay amount={p.destinationAmount} currency={p.destinationCurrency} />,
+      render: (p: Payment) => <AmountDisplay amount={p.dest_amount} currency={p.dest_currency} />,
     },
     {
       key: 'rate',
       header: 'Rate',
       render: (p: Payment) => (
         <span className="text-xs text-muted-fg">
-          1 {p.sourceCurrency} = {parseFloat(p.exchangeRate).toFixed(4)} {p.destinationCurrency}
+          1 {p.source_currency} = {parseFloat(p.exchange_rate).toFixed(4)} {p.dest_currency}
         </span>
       ),
     },
@@ -99,7 +99,7 @@ export function ApprovalQueue() {
       key: 'submitted',
       header: 'Submitted',
       render: (p: Payment) => (
-        <span className="text-xs text-muted-fg">{new Date(p.createdAt).toLocaleString()}</span>
+        <span className="text-xs text-muted-fg">{new Date(p.created_at).toLocaleString()}</span>
       ),
     },
   ]

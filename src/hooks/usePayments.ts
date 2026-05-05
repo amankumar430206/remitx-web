@@ -16,10 +16,10 @@ export function usePayment(id: string) {
   })
 }
 
-export function useApprovalQueue(params?: { page?: number }) {
+export function useApprovalQueue() {
   return useQuery({
-    queryKey: ['approval-queue', params],
-    queryFn: () => paymentsApi.approvalQueue(params).then(r => r.data),
+    queryKey: ['approval-queue'],
+    queryFn: () => paymentsApi.approvalQueue().then(r => r.data),
     refetchInterval: 30_000,
   })
 }

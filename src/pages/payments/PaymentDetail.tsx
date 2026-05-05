@@ -63,15 +63,15 @@ export function PaymentDetail() {
   )
 
   const canApprove = payment.status === 'pending_approval' && (user?.role === 'admin' || user?.role === 'checker')
-  const isOwnPayment = payment.initiatorId === user?.id
+  const isOwnPayment = payment.user_id === user?.id
   const canCancel = ['pending_approval', 'approved'].includes(payment.status) && isOwnPayment
 
-  const timelineEvents = (payment.statusHistory ?? []).map(h => ({
+  const timelineEvents = (payment.status_history ?? []).map(h => ({
     id: h.id,
     status: h.status,
-    note: h.note,
-    timestamp: h.createdAt,
-    actor: h.actorType,
+    note: h.notes,
+    timestamp: h.created_at,
+    actor: h.actor_type,
   }))
 
   return (
@@ -123,10 +123,10 @@ export function PaymentDetail() {
         <div className="flex items-center justify-between">
           <div>
             <p className="text-3xl font-bold text-foreground">
-              <AmountDisplay amount={payment.sourceAmount} currency={payment.sourceCurrency} size="lg" />
+              <AmountDisplay amount={payment.source_amount} currency={payment.source_currency} size="lg" />
             </p>
             <p className="text-sm text-muted-fg mt-1">
-              → <AmountDisplay amount={payment.destinationAmount} currency={payment.destinationCurrency} /> to {payment.beneficiary?.name ?? '—'}
+              → <AmountDisplay amount={payment.dest_amount} currency={payment.dest_currency} /> to {payment.beneficiary_name ?? '—'}
             </p>
           </div>
           <StatusBadge status={payment.status} />
@@ -137,9 +137,9 @@ export function PaymentDetail() {
         {/* Payment info */}
         <ContentCard>
           <h3 className="text-sm font-semibold text-foreground mb-3">Transfer details</h3>
-          <DetailRow label="Exchange rate" value={`1 ${payment.sourceCurrency} = ${parseFloat(payment.exchangeRate).toFixed(4)} ${payment.destinationCurrency}`} />
-          <DetailRow label="Fee" value={<AmountDisplay amount={payment.feeAmount} currency={payment.sourceCurrency} />} />
-          <DetailRow label="Purpose" value={payment.purposeCode} />
+          <DetailRow label="Exchange rate" value={`1 ${payment.source_currency} = ${parseFloat(payment.exchange_rate).toFixed(4)} ${payment.dest_currency}`} />
+          <DetailRow label="Fee" value={<AmountDisplay amount={payment.fee_amount} currency={payment.source_currency} />} />
+          <DetailRow label="Purpose" value={payment.purpose_code} />
           {payment.reference && <DetailRow label="Reference" value={payment.reference} />}
           <DetailRow label="Payment ID" value={<span className="font-mono text-xs">{payment.id}</span>} />
         </ContentCard>
@@ -147,10 +147,10 @@ export function PaymentDetail() {
         {/* Recipient info */}
         <ContentCard>
           <h3 className="text-sm font-semibold text-foreground mb-3">Recipient</h3>
-          <DetailRow label="Name" value={payment.beneficiary?.name ?? '—'} />
-          <DetailRow label="Country" value={payment.beneficiary?.countryCode ?? '—'} />
-          <DetailRow label="Submitted" value={new Date(payment.createdAt).toLocaleString()} />
-          {payment.completedAt && <DetailRow label="Completed" value={new Date(payment.completedAt).toLocaleString()} />}
+          <DetailRow label="Name" value={payment.beneficiary_name ?? '—'} />
+          <DetailRow label="Country" value={payment.beneficiary_country_code ?? '—'} />
+          <DetailRow label="Submitted" value={new Date(payment.created_at).toLocaleString()} />
+          {payment.completed_at && <DetailRow label="Completed" value={new Date(payment.completed_at).toLocaleString()} />}
         </ContentCard>
       </div>
 

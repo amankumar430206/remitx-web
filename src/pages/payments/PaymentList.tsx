@@ -37,24 +37,24 @@ function PaymentQuickView({ id, onOpenFull }: { id: string; onOpenFull: () => vo
     <div className="flex flex-col gap-4">
       <div className="text-center py-3 border-b border-border">
         <p className="text-2xl font-bold text-foreground">
-          <AmountDisplay amount={payment.sourceAmount} currency={payment.sourceCurrency} size="lg" />
+          <AmountDisplay amount={payment.source_amount} currency={payment.source_currency} size="lg" />
         </p>
         <p className="text-sm text-muted-fg mt-1">
-          → <AmountDisplay amount={payment.destinationAmount} currency={payment.destinationCurrency} />
+          → <AmountDisplay amount={payment.dest_amount} currency={payment.dest_currency} />
         </p>
         <div className="mt-2 flex justify-center">
           <StatusBadge status={payment.status} />
         </div>
       </div>
 
-      <DetailRow label="Recipient" value={payment.beneficiary?.name ?? '—'} />
-      <DetailRow label="Country" value={payment.beneficiary?.countryCode ?? '—'} />
-      <DetailRow label="Exchange rate" value={`1 ${payment.sourceCurrency} = ${parseFloat(payment.exchangeRate).toFixed(4)} ${payment.destinationCurrency}`} />
-      <DetailRow label="Fee" value={<AmountDisplay amount={payment.feeAmount} currency={payment.sourceCurrency} />} />
-      <DetailRow label="Purpose" value={payment.purposeCode} />
+      <DetailRow label="Recipient" value={payment.beneficiary_name ?? '—'} />
+      <DetailRow label="Country" value={payment.beneficiary_country_code ?? '—'} />
+      <DetailRow label="Exchange rate" value={`1 ${payment.source_currency} = ${parseFloat(payment.exchange_rate).toFixed(4)} ${payment.dest_currency}`} />
+      <DetailRow label="Fee" value={<AmountDisplay amount={payment.fee_amount} currency={payment.source_currency} />} />
+      <DetailRow label="Purpose" value={payment.purpose_code} />
       {payment.reference && <DetailRow label="Reference" value={payment.reference} />}
-      <DetailRow label="Submitted" value={new Date(payment.createdAt).toLocaleString()} />
-      {payment.completedAt && <DetailRow label="Completed" value={new Date(payment.completedAt).toLocaleString()} />}
+      <DetailRow label="Submitted" value={new Date(payment.created_at).toLocaleString()} />
+      {payment.completed_at && <DetailRow label="Completed" value={new Date(payment.completed_at).toLocaleString()} />}
 
       <Button variant="outline" size="sm" className="w-full mt-2" onClick={onOpenFull}>
         View full details
@@ -94,20 +94,20 @@ export function PaymentList() {
       header: 'Recipient',
       render: (p: Payment) => (
         <div>
-          <p className="font-medium text-foreground">{p.beneficiary?.name ?? '—'}</p>
-          <p className="text-xs text-muted-fg">{p.beneficiary?.countryCode}</p>
+          <p className="font-medium text-foreground">{p.beneficiary_name ?? '—'}</p>
+          <p className="text-xs text-muted-fg">{p.beneficiary_country_code}</p>
         </div>
       ),
     },
     {
       key: 'amount',
       header: 'You send',
-      render: (p: Payment) => <AmountDisplay amount={p.sourceAmount} currency={p.sourceCurrency} />,
+      render: (p: Payment) => <AmountDisplay amount={p.source_amount} currency={p.source_currency} />,
     },
     {
       key: 'destination',
       header: 'They receive',
-      render: (p: Payment) => <AmountDisplay amount={p.destinationAmount} currency={p.destinationCurrency} />,
+      render: (p: Payment) => <AmountDisplay amount={p.dest_amount} currency={p.dest_currency} />,
     },
     {
       key: 'status',
@@ -118,7 +118,7 @@ export function PaymentList() {
       key: 'date',
       header: 'Date',
       render: (p: Payment) => (
-        <span className="text-xs text-muted-fg">{new Date(p.createdAt).toLocaleDateString()}</span>
+        <span className="text-xs text-muted-fg">{new Date(p.created_at).toLocaleDateString()}</span>
       ),
     },
   ]

@@ -78,7 +78,7 @@ export function AppShell() {
     navigate('/login')
   }
 
-  const pendingApprovals = approvalData?.meta?.total ?? 0
+  const pendingApprovals = approvalData?.data?.length ?? 0
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin'
 
   const navItems = [

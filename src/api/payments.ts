@@ -3,28 +3,29 @@ import { apiClient } from './client'
 export interface Payment {
   id: string
   status: string
-  sourceAmount: string
-  sourceCurrency: string
-  destinationAmount: string
-  destinationCurrency: string
-  feeAmount: string
-  exchangeRate: string
-  purposeCode: string
+  source_amount: string
+  source_currency: string
+  dest_amount: string
+  dest_currency: string
+  fee_amount: string
+  exchange_rate: string
+  purpose_code: string
   reference?: string
-  idempotencyKey: string
-  initiatorId: string
-  beneficiaryId: string
-  createdAt: string
-  updatedAt: string
-  completedAt?: string
-  beneficiary?: { name: string; countryCode: string }
-  statusHistory?: Array<{
+  idempotency_key: string
+  user_id: string
+  beneficiary_id: string
+  created_at: string
+  updated_at: string
+  completed_at?: string
+  beneficiary_name?: string | null
+  beneficiary_country_code?: string | null
+  status_history?: Array<{
     id: string
     status: string
-    actorId: string
-    actorType: string
-    note?: string
-    createdAt: string
+    actor_id: string
+    actor_type: string
+    notes?: string
+    created_at: string
   }>
 }
 
@@ -53,14 +54,14 @@ const payments = {
   approve: (id: string, note?: string) =>
     apiClient.put<{ success: boolean; data: Payment }>(`/payments/${id}/approve`, { note }),
 
-  reject: (id: string, note: string) =>
-    apiClient.put<{ success: boolean; data: Payment }>(`/payments/${id}/reject`, { note }),
+  reject: (id: string, reason: string) =>
+    apiClient.put<{ success: boolean; data: Payment }>(`/payments/${id}/reject`, { reason }),
 
   cancel: (id: string) =>
     apiClient.put<{ success: boolean; data: Payment }>(`/payments/${id}/cancel`),
 
-  approvalQueue: (params?: { page?: number; limit?: number }) =>
-    apiClient.get<{ success: boolean; data: Payment[]; meta: { page: number; limit: number; total: number } }>('/payments/approval-queue', { params }),
+  approvalQueue: () =>
+    apiClient.get<{ success: boolean; data: Payment[] }>('/payments/approval-queue'),
 }
 
 export default payments
