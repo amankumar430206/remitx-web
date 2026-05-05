@@ -1,7 +1,6 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import { io } from 'socket.io-client'
 import { StatCard, PageHeader, DataTable, StatusBadge, AmountDisplay, LoadingState, ErrorState } from '@/components/ui/index'
 import { Button } from '@/components/ui/atoms/Button'
 import { useAccounts } from '@/hooks/useAccounts'
@@ -16,18 +15,27 @@ export function Dashboard() {
   const { data: accounts, isLoading: loadingAccounts } = useAccounts()
   const { data: paymentsData, isLoading: loadingPayments, isError: paymentsError } = usePayments({ limit: 10 })
 
-  // Socket.io — real-time payment status updates
+  // SSE — real-time payment status updates via /notifications/stream
   useEffect(() => {
     if (!accessToken) return
-    const socket = io(import.meta.env.VITE_API_BASE ?? 'http://localhost:3000', {
-      auth: { token: accessToken },
-      transports: ['websocket'],
-    })
-    socket.on('payment.status_changed', () => {
-      queryClient.invalidateQueries({ queryKey: ['payments'] })
-      queryClient.invalidateQueries({ queryKey: ['accounts'] })
-    })
-    return () => { socket.disconnect() }
+    const base = import.meta.env.VITE_API_BASE ?? 'http://localhost:3000'
+    const url = `${base}/api/v1/notifications/stream`
+    const evtSource = new EventSource(`${url}?token=${encodeURIComponent(accessToken)}`)
+
+    evtSource.onmessage = (e) => {
+      try {
+        const msg = JSON.parse(e.data)
+        if (msg.type === 'payment.status_changed') {
+          queryClient.invalidateQueries({ queryKey: ['payments'] })
+          queryClient.invalidateQueries({ queryKey: ['accounts'] })
+        }
+        if (msg.type !== 'connected') {
+          queryClient.invalidateQueries({ queryKey: ['notifications'] })
+        }
+      } catch { /* ignore parse errors */ }
+    }
+
+    return () => { evtSource.close() }
   }, [accessToken, queryClient])
 
   const totalBalance = (accounts ?? []).reduce((sum, a) => sum + parseFloat(a.balance), 0)

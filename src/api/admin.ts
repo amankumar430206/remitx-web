@@ -4,110 +4,94 @@ export interface AdminTenant {
   id: string
   name: string
   slug: string
-  status: 'active' | 'suspended' | 'pending'
-  plan: string
-  usersCount: number
-  paymentsCount: number
-  createdAt: string
-  primaryColor?: string
-  secondaryColor?: string
-}
-
-export interface AdminTenantDetail extends AdminTenant {
-  logoUrl?: string
-  fontFamily?: string
-  kycEnabled: boolean
-  maxPaymentAmount: string
-  allowedCurrencies: string[]
+  status: 'active' | 'suspended' | 'inactive'
+  created_at: string
 }
 
 export interface KycQueueItem {
   id: string
-  userId: string
-  userName: string
-  userEmail: string
-  tenantName: string
-  status: 'submitted' | 'under_review'
-  submittedAt: string
-  documents: Array<{ id: string; type: string; filename: string; status: string }>
+  user_id: string
+  email: string
+  first_name: string | null
+  last_name: string | null
+  status: 'submitted' | 'pending'
+  documents: Array<{ filename: string; type: string; path: string }>
+  created_at: string
 }
 
 export interface ManualPaymentQueueItem {
   id: string
   reference: string
-  tenantName: string
-  amount: string
-  currency: string
+  source_currency: string
+  source_amount: string
+  dest_currency: string
+  dest_amount: string
   status: string
-  beneficiaryName: string
-  createdAt: string
+  created_at: string
 }
 
-export interface ProviderConfig {
+export interface CorridorConfig {
   id: string
-  name: string
-  type: string
-  enabled: boolean
+  tenant_id: string
+  source_currency: string
+  dest_currency: string | null
+  provider_name: string
   priority: number
-  currencies: string[]
-  config: Record<string, string>
+  is_active: boolean
 }
 
 const admin = {
   tenants: {
-    list: (params?: { page?: number; limit?: number; status?: string }) =>
-      apiClient.get<{ success: boolean; data: AdminTenant[]; meta: { page: number; limit: number; total: number } }>(
-        '/admin/tenants',
-        { params }
-      ),
+    list: () =>
+      apiClient.get<{ success: boolean; data: AdminTenant[] }>('/admin/tenants'),
 
     get: (id: string) =>
-      apiClient.get<{ success: boolean; data: AdminTenantDetail }>(`/admin/tenants/${id}`),
+      apiClient.get<{ success: boolean; data: AdminTenant }>(`/admin/tenants/${id}`),
 
-    update: (id: string, payload: Partial<AdminTenantDetail>) =>
-      apiClient.put<{ success: boolean; data: AdminTenantDetail }>(`/admin/tenants/${id}`, payload),
+    create: (payload: { slug: string; name: string; adminEmail: string }) =>
+      apiClient.post<{ success: boolean; data: { tenant: AdminTenant; inviteToken: string } }>(
+        '/admin/tenants',
+        payload,
+      ),
 
-    suspend: (id: string) =>
-      apiClient.put(`/admin/tenants/${id}/suspend`),
+    update: (id: string, payload: { name?: string }) =>
+      apiClient.put<{ success: boolean; data: AdminTenant }>(`/admin/tenants/${id}`, payload),
 
-    activate: (id: string) =>
-      apiClient.put(`/admin/tenants/${id}/activate`),
+    setStatus: (id: string, status: 'active' | 'suspended' | 'inactive') =>
+      apiClient.put<{ success: boolean; data: AdminTenant }>(`/admin/tenants/${id}/status`, { status }),
   },
 
   kyc: {
-    queue: (params?: { page?: number; limit?: number }) =>
-      apiClient.get<{ success: boolean; data: KycQueueItem[]; meta: { page: number; limit: number; total: number } }>(
-        '/admin/kyc/queue',
-        { params }
-      ),
+    queue: () =>
+      apiClient.get<{ success: boolean; data: KycQueueItem[] }>('/admin/kyc-queue'),
 
-    approve: (id: string, note?: string) =>
-      apiClient.put(`/admin/kyc/${id}/approve`, { note }),
+    approve: (tenantId: string, userId: string, note?: string) =>
+      apiClient.put(`/admin/tenants/${tenantId}/kyc/${userId}/approve`, { note }),
 
-    reject: (id: string, reason: string) =>
-      apiClient.put(`/admin/kyc/${id}/reject`, { reason }),
+    reject: (tenantId: string, userId: string, reason: string) =>
+      apiClient.put(`/admin/tenants/${tenantId}/kyc/${userId}/reject`, { reason }),
   },
 
   payments: {
-    manualQueue: (params?: { page?: number; limit?: number }) =>
+    list: (params?: { page?: number; limit?: number; tenantId?: string; status?: string }) =>
       apiClient.get<{ success: boolean; data: ManualPaymentQueueItem[]; meta: { page: number; limit: number; total: number } }>(
-        '/admin/payments/manual-queue',
-        { params }
+        '/admin/payments',
+        { params },
       ),
 
-    process: (id: string, note?: string) =>
-      apiClient.put(`/admin/payments/${id}/process`, { note }),
+    manualQueue: () =>
+      apiClient.get<{ success: boolean; data: ManualPaymentQueueItem[] }>('/admin/payments/manual-queue'),
 
-    fail: (id: string, reason: string) =>
-      apiClient.put(`/admin/payments/${id}/fail`, { reason }),
+    process: (id: string, action: 'complete' | 'fail', notes?: string, providerRef?: string) =>
+      apiClient.put(`/admin/payments/${id}/process`, { action, notes, providerRef }),
   },
 
   providers: {
-    list: () =>
-      apiClient.get<{ success: boolean; data: ProviderConfig[] }>('/admin/providers'),
+    get: (tenantId: string) =>
+      apiClient.get<{ success: boolean; data: CorridorConfig[] }>(`/admin/tenants/${tenantId}/provider-config`),
 
-    update: (id: string, payload: Partial<ProviderConfig>) =>
-      apiClient.put<{ success: boolean; data: ProviderConfig }>(`/admin/providers/${id}`, payload),
+    update: (tenantId: string, corridors: Array<{ sourceCurrency: string; destCurrency?: string; providerName: string; priority?: number }>) =>
+      apiClient.put<{ success: boolean; data: CorridorConfig[] }>(`/admin/tenants/${tenantId}/provider-config`, { corridors }),
   },
 }
 

@@ -11,8 +11,8 @@ import { useAuthStore } from '@/stores/authStore'
 import { useUpdateProfile, useChangePassword } from '@/hooks/useUsers'
 
 const profileSchema = z.object({
-  name: z.string().min(2, 'Name is required'),
-  email: z.string().email('Valid email is required'),
+  firstName: z.string().min(1, 'First name is required'),
+  lastName: z.string().optional(),
 })
 
 const passwordSchema = z.object({
@@ -47,7 +47,7 @@ export function Profile() {
   } = useForm<PasswordValues>({ resolver: zodResolver(passwordSchema) })
 
   useEffect(() => {
-    if (user) resetProfile({ name: user.name, email: user.email })
+    if (user) resetProfile({ firstName: user.first_name ?? '', lastName: user.last_name ?? '' })
   }, [user, resetProfile])
 
   const onProfileSave = (values: ProfileValues) => {
@@ -70,12 +70,16 @@ export function Profile() {
           <div className="flex flex-col gap-4">
             <h3 className="text-sm font-semibold text-foreground">Personal information</h3>
 
-            <FormField label="Full name" error={profileErrors.name?.message} required htmlFor="name">
-              <Input id="name" {...regProfile('name')} error={!!profileErrors.name} />
+            <FormField label="First name" error={profileErrors.firstName?.message} required htmlFor="firstName">
+              <Input id="firstName" {...regProfile('firstName')} error={!!profileErrors.firstName} />
             </FormField>
 
-            <FormField label="Email address" error={profileErrors.email?.message} required htmlFor="email">
-              <Input id="email" type="email" {...regProfile('email')} error={!!profileErrors.email} />
+            <FormField label="Last name" error={profileErrors.lastName?.message} htmlFor="lastName">
+              <Input id="lastName" {...regProfile('lastName')} error={!!profileErrors.lastName} />
+            </FormField>
+
+            <FormField label="Email address" htmlFor="email">
+              <Input id="email" type="email" value={user?.email ?? ''} disabled className="opacity-60" />
             </FormField>
 
             {updateProfile.isError && (

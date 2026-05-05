@@ -4,9 +4,12 @@ import { persist } from 'zustand/middleware'
 export interface AuthUser {
   id: string
   email: string
-  name: string
+  first_name: string | null
+  last_name: string | null
   role: string
-  kycStatus?: string
+  tenant_id: string
+  status: string
+  kyc_status?: string
 }
 
 interface AuthState {

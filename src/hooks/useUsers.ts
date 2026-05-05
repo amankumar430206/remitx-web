@@ -1,11 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import usersApi from '@/api/users'
-import type { InvitePayload, UpdateUserPayload } from '@/api/users'
+import type { InvitePayload } from '@/api/users'
 
-export function useUsers(params?: { page?: number; limit?: number }) {
+export function useUsers() {
   return useQuery({
-    queryKey: ['users', params],
-    queryFn: () => usersApi.list(params).then(r => r.data),
+    queryKey: ['users'],
+    queryFn: () => usersApi.list().then(r => r.data.data),
   })
 }
 
@@ -17,32 +17,34 @@ export function useInviteUser() {
   })
 }
 
-export function useUpdateUser() {
+export function useUpdateUserStatus() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, payload }: { id: string; payload: UpdateUserPayload }) =>
-      usersApi.update(id, payload).then(r => r.data.data),
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      usersApi.updateStatus(id, status).then(r => r.data.data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['users'] }),
   })
 }
 
-export function useRemoveUser() {
+export function useUpdateUserPermissions() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (id: string) => usersApi.remove(id),
+    mutationFn: ({ id, role }: { id: string; role: string }) =>
+      usersApi.updatePermissions(id, role).then(r => r.data.data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['users'] }),
   })
 }
 
 export function useUpdateProfile() {
   return useMutation({
-    mutationFn: (payload: { name: string; email: string }) => usersApi.updateProfile(payload),
+    mutationFn: (payload: { firstName?: string; lastName?: string }) =>
+      usersApi.updateProfile(payload).then(r => r.data.data),
   })
 }
 
 export function useChangePassword() {
   return useMutation({
     mutationFn: (payload: { currentPassword: string; newPassword: string }) =>
-      usersApi.changePassword(payload),
+      usersApi.changePassword(payload).then(r => r.data),
   })
 }

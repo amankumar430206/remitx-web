@@ -8,27 +8,34 @@ import { Input } from '@/components/ui/atoms/Input'
 import { Textarea } from '@/components/ui/atoms/Textarea'
 import { ContentCard } from '@/layouts/ContentCard'
 import { useKycQueue, useApproveKyc, useRejectKyc } from '@/hooks/useAdmin'
+import { useAuthStore } from '@/stores/authStore'
 import type { KycQueueItem } from '@/api/admin'
 import type { Column } from '@/components/ui/organisms/DataTable'
 
 export function KycQueue() {
-  const [page, setPage] = useState(1)
+  const tenantId = useAuthStore(s => s.user?.tenant_id ?? '')
   const [approveTarget, setApproveTarget] = useState<KycQueueItem | null>(null)
   const [rejectTarget, setRejectTarget] = useState<KycQueueItem | null>(null)
   const [rejectReason, setRejectReason] = useState('')
   const [approveNote, setApproveNote] = useState('')
 
-  const { data, isLoading } = useKycQueue({ page, limit: 20 })
+  const { data, isLoading } = useKycQueue()
   const approveMutation = useApproveKyc()
   const rejectMutation = useRejectKyc()
 
-  const total = data?.meta?.total ?? 0
-  const totalPages = Math.ceil(total / 20)
-
   const columns: Column<KycQueueItem>[] = [
-    { key: 'userName', header: 'User' },
-    { key: 'userEmail', header: 'Email' },
-    { key: 'tenantName', header: 'Tenant' },
+    {
+      key: 'email',
+      header: 'User',
+      render: row => (
+        <div>
+          <p className="font-medium text-foreground text-sm">
+            {[row.first_name, row.last_name].filter(Boolean).join(' ') || '—'}
+          </p>
+          <p className="text-xs text-muted-fg">{row.email}</p>
+        </div>
+      ),
+    },
     {
       key: 'status',
       header: 'Status',
@@ -43,7 +50,11 @@ export function KycQueue() {
       header: 'Docs',
       render: row => <span className="text-muted-fg text-xs">{row.documents.length} uploaded</span>,
     },
-    { key: 'submittedAt', header: 'Submitted', render: row => new Date(row.submittedAt).toLocaleDateString() },
+    {
+      key: 'created_at',
+      header: 'Submitted',
+      render: row => new Date(row.created_at).toLocaleDateString(),
+    },
     {
       key: 'actions',
       header: '',
@@ -70,7 +81,7 @@ export function KycQueue() {
       <ContentCard padding="none">
         <DataTable
           columns={columns}
-          data={data?.data ?? []}
+          data={data ?? []}
           loading={isLoading}
           getRowId={row => row.id}
           emptyTitle="Queue is empty"
@@ -78,29 +89,18 @@ export function KycQueue() {
         />
       </ContentCard>
 
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between text-sm text-muted-fg">
-          <span>{total} applications</span>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => setPage(p => p - 1)} disabled={page <= 1}>Previous</Button>
-            <span>Page {page} of {totalPages}</span>
-            <Button variant="outline" size="sm" onClick={() => setPage(p => p + 1)} disabled={page >= totalPages}>Next</Button>
-          </div>
-        </div>
-      )}
-
       {/* Approve dialog */}
       <ConfirmDialog
         open={!!approveTarget}
         onOpenChange={open => !open && setApproveTarget(null)}
         title="Approve KYC application"
-        description={`Approve identity verification for ${approveTarget?.userName}?`}
+        description={`Approve identity verification for ${approveTarget?.email}?`}
         confirmLabel="Approve"
         onConfirm={() => {
           if (approveTarget) {
             approveMutation.mutate(
-              { id: approveTarget.id, note: approveNote || undefined },
-              { onSuccess: () => { setApproveTarget(null); setApproveNote('') } }
+              { tenantId, userId: approveTarget.user_id, note: approveNote || undefined },
+              { onSuccess: () => { setApproveTarget(null); setApproveNote('') } },
             )
           }
         }}
@@ -121,14 +121,14 @@ export function KycQueue() {
         open={!!rejectTarget}
         onOpenChange={open => !open && setRejectTarget(null)}
         title="Reject KYC application"
-        description={`Reject identity verification for ${rejectTarget?.userName}? The user will be notified.`}
+        description={`Reject identity verification for ${rejectTarget?.email}? The user will be notified.`}
         confirmLabel="Reject"
         variant="danger"
         onConfirm={() => {
           if (rejectTarget && rejectReason.trim()) {
             rejectMutation.mutate(
-              { id: rejectTarget.id, reason: rejectReason },
-              { onSuccess: () => { setRejectTarget(null); setRejectReason('') } }
+              { tenantId, userId: rejectTarget.user_id, reason: rejectReason },
+              { onSuccess: () => { setRejectTarget(null); setRejectReason('') } },
             )
           }
         }}

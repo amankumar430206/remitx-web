@@ -2,47 +2,46 @@ import { apiClient } from './client'
 
 export interface User {
   id: string
-  name: string
   email: string
+  first_name: string | null
+  last_name: string | null
   role: string
-  status: 'active' | 'invited' | 'disabled'
-  mfaEnabled: boolean
-  createdAt: string
+  status: 'active' | 'invited' | 'inactive' | 'suspended'
+  kyc_status: string
+  created_at: string
 }
 
 export interface InvitePayload {
   email: string
-  name: string
   role: string
-}
-
-export interface UpdateUserPayload {
-  name?: string
-  role?: string
-  status?: 'active' | 'disabled'
+  firstName?: string
+  lastName?: string
 }
 
 const users = {
-  list: (params?: { page?: number; limit?: number }) =>
-    apiClient.get<{ success: boolean; data: User[]; meta: { page: number; limit: number; total: number } }>(
-      '/users',
-      { params }
-    ),
+  list: () =>
+    apiClient.get<{ success: boolean; data: User[] }>('/tenants/users'),
+
+  get: (id: string) =>
+    apiClient.get<{ success: boolean; data: User }>(`/tenants/users/${id}`),
 
   invite: (payload: InvitePayload) =>
-    apiClient.post<{ success: boolean; data: User }>('/users/invite', payload),
+    apiClient.post<{ success: boolean; data: { user: User; inviteToken: string } }>(
+      '/tenants/users/invite',
+      payload,
+    ),
 
-  update: (id: string, payload: UpdateUserPayload) =>
-    apiClient.put<{ success: boolean; data: User }>(`/users/${id}`, payload),
+  updateStatus: (id: string, status: string) =>
+    apiClient.put<{ success: boolean; data: User }>(`/tenants/users/${id}/status`, { status }),
 
-  remove: (id: string) =>
-    apiClient.delete(`/users/${id}`),
+  updatePermissions: (id: string, role: string) =>
+    apiClient.put<{ success: boolean; data: User }>(`/tenants/users/${id}/permissions`, { role }),
 
-  updateProfile: (payload: { name: string; email: string }) =>
-    apiClient.put('/users/me/profile', payload),
+  updateProfile: (payload: { firstName?: string; lastName?: string }) =>
+    apiClient.put<{ success: boolean; data: User }>('/auth/me', payload),
 
   changePassword: (payload: { currentPassword: string; newPassword: string }) =>
-    apiClient.put('/users/me/password', payload),
+    apiClient.post<{ success: boolean; data: { message: string } }>('/auth/password/change', payload),
 }
 
 export default users

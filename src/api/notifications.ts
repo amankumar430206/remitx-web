@@ -1,24 +1,29 @@
 import { apiClient } from './client'
 
-export interface NotificationPreferences {
-  paymentSubmitted: boolean
-  paymentApproved: boolean
-  paymentRejected: boolean
-  paymentCompleted: boolean
-  paymentFailed: boolean
-  kycStatusChanged: boolean
-  lowBalance: boolean
-  lowBalanceThreshold: string
-  emailEnabled: boolean
-  inAppEnabled: boolean
+export interface Notification {
+  id: string
+  event_type: string
+  title: string
+  body: string
+  is_read: boolean
+  created_at: string
+}
+
+export interface NotificationListResponse {
+  success: boolean
+  data: Notification[]
+  meta: { page: number; limit: number; total: number }
 }
 
 const notifications = {
-  getPreferences: () =>
-    apiClient.get<{ success: boolean; data: NotificationPreferences }>('/notifications/preferences'),
+  list: (params?: { page?: number; limit?: number; unread?: boolean }) =>
+    apiClient.get<NotificationListResponse>('/notifications', { params }),
 
-  updatePreferences: (payload: Partial<NotificationPreferences>) =>
-    apiClient.put<{ success: boolean; data: NotificationPreferences }>('/notifications/preferences', payload),
+  markRead: (id: string) =>
+    apiClient.put(`/notifications/${id}/read`),
+
+  markAllRead: () =>
+    apiClient.put('/notifications/read-all'),
 }
 
 export default notifications
