@@ -3,31 +3,38 @@ import { apiClient } from './client'
 export interface Beneficiary {
   id: string
   name: string
-  countryCode: string
+  country_code: string
   currency: string
-  bankName: string
-  accountNumber: string
-  routingCode?: string
-  swiftCode?: string
-  type: 'individual' | 'business'
-  status: 'active' | 'inactive'
-  createdAt: string
-  updatedAt: string
+  bank_name?: string | null
+  account_number?: string | null
+  routing_number?: string | null
+  sort_code?: string | null
+  ifsc_code?: string | null
+  iban?: string | null
+  swift_bic?: string | null
+  purpose_code?: string | null
+  screening_status: 'pending' | 'cleared' | 'flagged'
+  is_active: boolean
+  created_at: string
+  updated_at: string
 }
 
 export interface CreateBeneficiaryPayload {
   name: string
   countryCode: string
   currency: string
-  bankName: string
-  accountNumber: string
-  routingCode?: string
-  swiftCode?: string
-  type: 'individual' | 'business'
+  bankName?: string
+  purposeCode: string
+  accountNumber?: string
+  routingNumber?: string
+  sortCode?: string
+  ifscCode?: string
+  iban?: string
+  swiftBic?: string
 }
 
 const beneficiaries = {
-  list: (params?: { page?: number; limit?: number; search?: string; countryCode?: string }) =>
+  list: (params?: { page?: number; limit?: number; search?: string }) =>
     apiClient.get<{ success: boolean; data: Beneficiary[]; meta: { page: number; limit: number; total: number } }>(
       '/beneficiaries',
       { params }

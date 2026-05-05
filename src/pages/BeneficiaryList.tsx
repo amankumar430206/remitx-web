@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { PageHeader } from '@/components/ui/organisms/PageHeader'
 import { DataTable } from '@/components/ui/organisms/DataTable'
 import { SearchInput } from '@/components/ui/molecules/SearchInput'
-import { StatusBadge } from '@/components/ui/molecules/StatusBadge'
 import { LoadingState } from '@/components/ui/molecules/LoadingState'
 import { ErrorState } from '@/components/ui/molecules/ErrorState'
 import { Button } from '@/components/ui/atoms/Button'
@@ -11,6 +10,17 @@ import { Badge } from '@/components/ui/atoms/Badge'
 import { ContentCard } from '@/layouts/ContentCard'
 import { useBeneficiaries } from '@/hooks/useBeneficiaries'
 import type { Beneficiary } from '@/api/beneficiaries'
+
+const SCREENING_VARIANT: Record<string, 'success' | 'warning' | 'danger' | 'default'> = {
+  cleared: 'success',
+  pending: 'warning',
+  flagged: 'danger',
+}
+
+function accountDisplay(b: Beneficiary): string {
+  const raw = b.iban ?? b.account_number ?? ''
+  return raw.length >= 4 ? `••••${raw.slice(-4)}` : raw
+}
 
 function BeneficiaryQuickView({ beneficiary, onClose, onNavigate }: {
   beneficiary: Beneficiary
@@ -21,11 +31,7 @@ function BeneficiaryQuickView({ beneficiary, onClose, onNavigate }: {
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-border">
         <h3 className="text-sm font-semibold text-foreground">Beneficiary details</h3>
-        <button
-          className="text-muted-fg hover:text-foreground"
-          onClick={onClose}
-          aria-label="Close"
-        >
+        <button className="text-muted-fg hover:text-foreground" onClick={onClose} aria-label="Close">
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -36,47 +42,40 @@ function BeneficiaryQuickView({ beneficiary, onClose, onNavigate }: {
         <div>
           <p className="text-xl font-bold text-foreground">{beneficiary.name}</p>
           <div className="flex items-center gap-2 mt-1">
-            <Badge variant={beneficiary.type === 'business' ? 'secondary' : 'default'}>
-              {beneficiary.type}
+            <Badge variant={SCREENING_VARIANT[beneficiary.screening_status] ?? 'default'} className="capitalize">
+              {beneficiary.screening_status}
             </Badge>
-            <StatusBadge status={beneficiary.status} />
           </div>
         </div>
 
         <div className="flex flex-col gap-2 text-sm">
           <div className="flex justify-between py-1.5 border-b border-border">
             <span className="text-muted-fg">Country</span>
-            <span className="font-medium text-foreground">{beneficiary.countryCode}</span>
+            <span className="font-medium text-foreground">{beneficiary.country_code}</span>
           </div>
           <div className="flex justify-between py-1.5 border-b border-border">
             <span className="text-muted-fg">Currency</span>
             <span className="font-medium text-foreground">{beneficiary.currency}</span>
           </div>
-          <div className="flex justify-between py-1.5 border-b border-border">
-            <span className="text-muted-fg">Bank</span>
-            <span className="font-medium text-foreground text-right">{beneficiary.bankName}</span>
-          </div>
-          <div className="flex justify-between py-1.5 border-b border-border">
-            <span className="text-muted-fg">Account</span>
-            <span className="font-mono text-xs font-medium text-foreground">
-              ••••{beneficiary.accountNumber.slice(-4)}
-            </span>
-          </div>
-          {beneficiary.routingCode && (
+          {beneficiary.bank_name && (
             <div className="flex justify-between py-1.5 border-b border-border">
-              <span className="text-muted-fg">Routing code</span>
-              <span className="font-mono text-xs font-medium text-foreground">{beneficiary.routingCode}</span>
+              <span className="text-muted-fg">Bank</span>
+              <span className="font-medium text-foreground text-right">{beneficiary.bank_name}</span>
             </div>
           )}
-          {beneficiary.swiftCode && (
+          <div className="flex justify-between py-1.5 border-b border-border">
+            <span className="text-muted-fg">{beneficiary.iban ? 'IBAN' : 'Account'}</span>
+            <span className="font-mono text-xs font-medium text-foreground">{accountDisplay(beneficiary)}</span>
+          </div>
+          {beneficiary.swift_bic && (
             <div className="flex justify-between py-1.5 border-b border-border">
               <span className="text-muted-fg">SWIFT/BIC</span>
-              <span className="font-mono text-xs font-medium text-foreground">{beneficiary.swiftCode}</span>
+              <span className="font-mono text-xs font-medium text-foreground">{beneficiary.swift_bic}</span>
             </div>
           )}
           <div className="flex justify-between py-1.5">
             <span className="text-muted-fg">Added</span>
-            <span className="text-foreground">{new Date(beneficiary.createdAt).toLocaleDateString()}</span>
+            <span className="text-foreground">{new Date(beneficiary.created_at).toLocaleDateString()}</span>
           </div>
         </div>
       </div>
@@ -106,10 +105,7 @@ export function BeneficiaryList() {
       key: 'name',
       header: 'Name',
       render: (b: Beneficiary) => (
-        <div>
-          <p className="font-medium text-foreground">{b.name}</p>
-          <p className="text-xs text-muted-fg capitalize">{b.type}</p>
-        </div>
+        <p className="font-medium text-foreground">{b.name}</p>
       ),
     },
     {
@@ -117,7 +113,7 @@ export function BeneficiaryList() {
       header: 'Country / Currency',
       render: (b: Beneficiary) => (
         <div>
-          <p className="text-sm text-foreground">{b.countryCode}</p>
+          <p className="text-sm text-foreground">{b.country_code}</p>
           <p className="text-xs text-muted-fg">{b.currency}</p>
         </div>
       ),
@@ -126,20 +122,24 @@ export function BeneficiaryList() {
       key: 'bank',
       header: 'Bank',
       render: (b: Beneficiary) => (
-        <span className="text-sm text-foreground">{b.bankName}</span>
+        <span className="text-sm text-foreground">{b.bank_name ?? '—'}</span>
       ),
     },
     {
       key: 'account',
       header: 'Account',
       render: (b: Beneficiary) => (
-        <span className="font-mono text-xs text-muted-fg">••••{b.accountNumber.slice(-4)}</span>
+        <span className="font-mono text-xs text-muted-fg">{accountDisplay(b)}</span>
       ),
     },
     {
-      key: 'status',
-      header: 'Status',
-      render: (b: Beneficiary) => <StatusBadge status={b.status} />,
+      key: 'screening_status',
+      header: 'Screening',
+      render: (b: Beneficiary) => (
+        <Badge variant={SCREENING_VARIANT[b.screening_status] ?? 'default'} className="capitalize">
+          {b.screening_status}
+        </Badge>
+      ),
     },
   ]
 
@@ -199,13 +199,9 @@ export function BeneficiaryList() {
                 <div className="flex items-center justify-between border-t border-border px-4 py-3">
                   <span className="text-xs text-muted-fg">{total} total</span>
                   <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={() => setPage(p => p - 1)} disabled={page === 1}>
-                      Previous
-                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => setPage(p => p - 1)} disabled={page === 1}>Previous</Button>
                     <Badge variant="secondary">{page} / {totalPages}</Badge>
-                    <Button variant="outline" size="sm" onClick={() => setPage(p => p + 1)} disabled={page === totalPages}>
-                      Next
-                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => setPage(p => p + 1)} disabled={page === totalPages}>Next</Button>
                   </div>
                 </div>
               )}

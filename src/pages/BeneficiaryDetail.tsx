@@ -8,39 +8,21 @@ import { FormField } from '@/components/ui/molecules/FormField'
 import { LoadingState } from '@/components/ui/molecules/LoadingState'
 import { ErrorState } from '@/components/ui/molecules/ErrorState'
 import { ConfirmDialog } from '@/components/ui/molecules/ConfirmDialog'
-import { StatusBadge } from '@/components/ui/molecules/StatusBadge'
 import { Button } from '@/components/ui/atoms/Button'
 import { Badge } from '@/components/ui/atoms/Badge'
 import { Input } from '@/components/ui/atoms/Input'
-import { Select } from '@/components/ui/atoms/Select'
 import { ContentCard } from '@/layouts/ContentCard'
 import { useBeneficiary, useUpdateBeneficiary, useDeleteBeneficiary } from '@/hooks/useBeneficiaries'
 
-const COUNTRY_CONFIGS = {
-  US: { label: 'United States', currency: 'USD', routingLabel: 'ABA Routing Number', accountLabel: 'Account Number' },
-  GB: { label: 'United Kingdom', currency: 'GBP', routingLabel: 'Sort Code', accountLabel: 'Account Number' },
-  EU: { label: 'European Union (SEPA)', currency: 'EUR', swiftLabel: 'BIC / SWIFT', accountLabel: 'IBAN' },
-  IN: { label: 'India', currency: 'INR', routingLabel: 'IFSC Code', accountLabel: 'Account Number' },
-  SG: { label: 'Singapore', currency: 'SGD', swiftLabel: 'SWIFT Code', accountLabel: 'Account Number' },
-  AE: { label: 'United Arab Emirates', currency: 'AED', swiftLabel: 'SWIFT Code', accountLabel: 'IBAN' },
-  AU: { label: 'Australia', currency: 'AUD', routingLabel: 'BSB Code', accountLabel: 'Account Number' },
-  CA: { label: 'Canada', currency: 'CAD', routingLabel: 'Transit Number', accountLabel: 'Account Number' },
-  OTHER: { label: 'Other', currency: '', swiftLabel: 'SWIFT Code', accountLabel: 'Account Number' },
-} as const
-
-type CountryCode = keyof typeof COUNTRY_CONFIGS
-
-const COUNTRY_OPTIONS = Object.entries(COUNTRY_CONFIGS).map(([value, { label }]) => ({ value, label }))
+const SCREENING_VARIANT: Record<string, 'success' | 'warning' | 'danger' | 'default'> = {
+  cleared: 'success',
+  pending: 'warning',
+  flagged: 'danger',
+}
 
 const editSchema = z.object({
-  name: z.string().min(2, 'Name is required'),
-  type: z.enum(['individual', 'business']),
-  bankName: z.string().min(2, 'Bank name is required'),
-  currency: z.string().min(1, 'Currency is required'),
-  countryCode: z.string().min(2, 'Country is required'),
-  accountNumber: z.string().min(1, 'Account number is required'),
-  routingCode: z.string().optional().default(''),
-  swiftCode: z.string().optional().default(''),
+  name:    z.string().min(2, 'Name is required'),
+  bankName: z.string().min(1, 'Bank name is required'),
 })
 
 type EditValues = z.infer<typeof editSchema>
@@ -49,7 +31,7 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
   return (
     <div className="flex items-start justify-between gap-4 py-2.5 border-b border-border last:border-0">
       <span className="text-sm text-muted-fg shrink-0 w-40">{label}</span>
-      <span className="text-sm font-medium text-foreground text-right flex-1">{value}</span>
+      <span className="text-sm font-medium text-foreground text-right flex-1">{value ?? '—'}</span>
     </div>
   )
 }
@@ -64,46 +46,22 @@ export function BeneficiaryDetail() {
   const updateMutation = useUpdateBeneficiary()
   const deleteMutation = useDeleteBeneficiary()
 
-  const { register, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm<EditValues>({
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<EditValues>({
     resolver: zodResolver(editSchema),
   })
 
   useEffect(() => {
     if (beneficiary) {
-      reset({
-        name: beneficiary.name,
-        type: beneficiary.type,
-        bankName: beneficiary.bankName,
-        currency: beneficiary.currency,
-        countryCode: beneficiary.countryCode,
-        accountNumber: beneficiary.accountNumber,
-        routingCode: beneficiary.routingCode ?? '',
-        swiftCode: beneficiary.swiftCode ?? '',
-      })
+      reset({ name: beneficiary.name, bankName: beneficiary.bank_name ?? '' })
     }
   }, [beneficiary, reset])
-
-  const countryCode = watch('countryCode')
-  const config = COUNTRY_CONFIGS[countryCode as CountryCode]
 
   if (isLoading) return <LoadingState message="Loading beneficiary…" />
   if (isError || !beneficiary) return <ErrorState title="Beneficiary not found" onRetry={refetch} />
 
   const onSave = (values: EditValues) => {
     updateMutation.mutate(
-      {
-        id: beneficiary.id,
-        data: {
-          name: values.name,
-          type: values.type,
-          bankName: values.bankName,
-          currency: values.currency,
-          countryCode: values.countryCode,
-          accountNumber: values.accountNumber,
-          routingCode: values.routingCode || undefined,
-          swiftCode: values.swiftCode || undefined,
-        },
-      },
+      { id: beneficiary.id, data: { name: values.name, bankName: values.bankName } },
       { onSuccess: () => setEditing(false) }
     )
   }
@@ -113,6 +71,10 @@ export function BeneficiaryDetail() {
       onSuccess: () => navigate('/beneficiaries'),
     })
   }
+
+  const accountDisplay = beneficiary.iban ?? beneficiary.account_number
+  const routingDisplay = beneficiary.routing_number ?? beneficiary.sort_code ?? beneficiary.ifsc_code
+  const routingLabel = beneficiary.sort_code ? 'Sort code' : beneficiary.ifsc_code ? 'IFSC code' : 'Routing number'
 
   return (
     <div className="flex flex-col gap-6 max-w-2xl mx-auto">
@@ -141,69 +103,17 @@ export function BeneficiaryDetail() {
           <ContentCard>
             <div className="flex flex-col gap-4">
               <h3 className="text-sm font-semibold text-foreground">Edit details</h3>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <FormField label="Name" error={errors.name?.message} required htmlFor="name" className="sm:col-span-2">
-                  <Input id="name" {...register('name')} error={!!errors.name} />
-                </FormField>
-
-                <FormField label="Type" error={errors.type?.message} required>
-                  <Select
-                    value={watch('type')}
-                    onValueChange={v => setValue('type', v as 'individual' | 'business')}
-                    options={[
-                      { value: 'individual', label: 'Individual' },
-                      { value: 'business', label: 'Business' },
-                    ]}
-                    error={!!errors.type}
-                  />
-                </FormField>
-
-                <FormField label="Country" error={errors.countryCode?.message} required>
-                  <Select
-                    value={watch('countryCode')}
-                    onValueChange={v => setValue('countryCode', v)}
-                    options={COUNTRY_OPTIONS}
-                    error={!!errors.countryCode}
-                  />
-                </FormField>
-
-                <FormField label="Currency" error={errors.currency?.message} required htmlFor="currency">
-                  <Input id="currency" {...register('currency')} error={!!errors.currency} />
-                </FormField>
-
-                <FormField label="Bank name" error={errors.bankName?.message} required htmlFor="bankName">
-                  <Input id="bankName" {...register('bankName')} error={!!errors.bankName} />
-                </FormField>
-
-                {config && 'routingLabel' in config && (
-                  <FormField label={config.routingLabel} error={errors.routingCode?.message} htmlFor="routingCode">
-                    <Input id="routingCode" {...register('routingCode')} className="font-mono" error={!!errors.routingCode} />
-                  </FormField>
-                )}
-
-                {config && 'swiftLabel' in config && (
-                  <FormField label={config.swiftLabel} error={errors.swiftCode?.message} htmlFor="swiftCode">
-                    <Input id="swiftCode" {...register('swiftCode')} className="font-mono uppercase" error={!!errors.swiftCode} />
-                  </FormField>
-                )}
-
-                <FormField
-                  label={config?.accountLabel ?? 'Account Number'}
-                  error={errors.accountNumber?.message}
-                  required
-                  htmlFor="accountNumber"
-                >
-                  <Input id="accountNumber" {...register('accountNumber')} className="font-mono" error={!!errors.accountNumber} />
-                </FormField>
-              </div>
-
+              <FormField label="Name" error={errors.name?.message} required htmlFor="name">
+                <Input id="name" {...register('name')} error={!!errors.name} />
+              </FormField>
+              <FormField label="Bank name" error={errors.bankName?.message} required htmlFor="bankName">
+                <Input id="bankName" {...register('bankName')} error={!!errors.bankName} />
+              </FormField>
               {updateMutation.isError && (
                 <div className="rounded-md bg-danger border border-danger-border px-4 py-2 text-sm text-danger-fg">
                   Could not save changes. Please try again.
                 </div>
               )}
-
               <div className="flex justify-end gap-3 pt-2">
                 <Button type="button" variant="outline" onClick={() => { setEditing(false); reset() }}>Cancel</Button>
                 <Button type="submit" loading={updateMutation.isPending}>Save changes</Button>
@@ -216,37 +126,36 @@ export function BeneficiaryDetail() {
           <ContentCard>
             <h3 className="text-sm font-semibold text-foreground mb-3">Recipient info</h3>
             <DetailRow label="Name" value={beneficiary.name} />
-            <DetailRow
-              label="Type"
-              value={
-                <Badge variant={beneficiary.type === 'business' ? 'secondary' : 'default'} className="capitalize">
-                  {beneficiary.type}
-                </Badge>
-              }
-            />
-            <DetailRow label="Status" value={<StatusBadge status={beneficiary.status} />} />
-            <DetailRow label="Country" value={beneficiary.countryCode} />
+            <DetailRow label="Screening" value={
+              <Badge variant={SCREENING_VARIANT[beneficiary.screening_status] ?? 'default'} className="capitalize">
+                {beneficiary.screening_status}
+              </Badge>
+            } />
+            <DetailRow label="Country" value={beneficiary.country_code} />
             <DetailRow label="Currency" value={beneficiary.currency} />
-            <DetailRow label="Added" value={new Date(beneficiary.createdAt).toLocaleDateString()} />
+            <DetailRow label="Purpose" value={beneficiary.purpose_code} />
+            <DetailRow label="Added" value={new Date(beneficiary.created_at).toLocaleDateString()} />
           </ContentCard>
 
           <ContentCard>
             <h3 className="text-sm font-semibold text-foreground mb-3">Bank details</h3>
-            <DetailRow label="Bank name" value={beneficiary.bankName} />
+            <DetailRow label="Bank name" value={beneficiary.bank_name} />
             <DetailRow
-              label="Account number"
-              value={<span className="font-mono text-xs">••••{beneficiary.accountNumber.slice(-4)}</span>}
+              label={beneficiary.iban ? 'IBAN' : 'Account number'}
+              value={accountDisplay
+                ? <span className="font-mono text-xs">••••{accountDisplay.slice(-4)}</span>
+                : null}
             />
-            {beneficiary.routingCode && (
+            {routingDisplay && (
               <DetailRow
-                label="Routing code"
-                value={<span className="font-mono text-xs">{beneficiary.routingCode}</span>}
+                label={routingLabel}
+                value={<span className="font-mono text-xs">{routingDisplay}</span>}
               />
             )}
-            {beneficiary.swiftCode && (
+            {beneficiary.swift_bic && (
               <DetailRow
                 label="SWIFT / BIC"
-                value={<span className="font-mono text-xs">{beneficiary.swiftCode}</span>}
+                value={<span className="font-mono text-xs">{beneficiary.swift_bic}</span>}
               />
             )}
           </ContentCard>
