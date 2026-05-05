@@ -59,15 +59,11 @@ export function KycVerify() {
     }
   }
 
+  const existingDocs = kyc?.application?.documents ?? []
+
   const toUploadedFile = (docType: string): UploadedFile[] => {
     const state = uploads[docType]
-    if (!state || state.status === 'idle') {
-      const existing = (kyc?.documents ?? []).find(d => d.type === docType)
-      if (existing) {
-        return [{ name: existing.filename, size: 0, status: 'success' }]
-      }
-      return []
-    }
+    if (!state || state.status === 'idle') return []
     return [{
       name: state.filename ?? docType,
       size: 0,
@@ -79,11 +75,11 @@ export function KycVerify() {
 
   const idUploaded = DOC_TYPES
     .filter(d => d.group === 'id')
-    .some(d => uploads[d.id]?.status === 'success' || (kyc?.documents ?? []).some(doc => doc.type === d.id))
+    .some(d => uploads[d.id]?.status === 'success') || (existingDocs.length > 0)
 
   const addressUploaded =
     uploads['proof_of_address']?.status === 'success' ||
-    (kyc?.documents ?? []).some(doc => doc.type === 'proof_of_address')
+    existingDocs.length >= 2
 
   const allDone = idUploaded && addressUploaded
 
@@ -111,8 +107,7 @@ export function KycVerify() {
         <div className="flex flex-col gap-6">
           {DOC_TYPES.filter(d => d.group === 'id').map(doc => {
             const alreadyUploaded =
-              uploads[doc.id]?.status === 'success' ||
-              (kyc?.documents ?? []).some(d => d.type === doc.id)
+              uploads[doc.id]?.status === 'success'
             const isUploading = uploads[doc.id]?.status === 'uploading'
 
             return (

@@ -54,8 +54,8 @@ export function AccountList() {
           columns={[
             { key: 'currency', header: 'Currency', render: a => <span className="font-semibold">{a.currency}</span> },
             { key: 'balance', header: 'Balance', render: a => <AmountDisplay amount={a.balance} currency={a.currency} size="md" /> },
-            { key: 'providerRef', header: 'Reference', render: a => <span className="text-muted-fg text-sm font-mono">{a.providerRef}</span> },
-            { key: 'createdAt', header: 'Created', render: a => <span className="text-muted-fg text-xs">{new Date(a.createdAt).toLocaleDateString()}</span> },
+            { key: 'provider_account_id', header: 'Reference', render: a => <span className="text-muted-fg text-sm font-mono">{a.provider_account_id ?? a.account_number ?? '—'}</span> },
+            { key: 'created_at', header: 'Created', render: a => <span className="text-muted-fg text-xs">{new Date(a.created_at).toLocaleDateString()}</span> },
           ]}
           data={accounts ?? []}
           getRowId={a => a.id}

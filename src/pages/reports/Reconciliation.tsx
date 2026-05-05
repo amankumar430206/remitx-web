@@ -68,43 +68,52 @@ export function Reconciliation() {
               <thead className="bg-surface-raised border-b border-border">
                 <tr>
                   <th className="px-4 py-3 text-left font-medium text-muted-fg">Date</th>
-                  <th className="px-4 py-3 text-right font-medium text-muted-fg">Opening</th>
-                  <th className="px-4 py-3 text-right font-medium text-muted-fg">Credits</th>
-                  <th className="px-4 py-3 text-right font-medium text-muted-fg">Debits</th>
-                  <th className="px-4 py-3 text-right font-medium text-muted-fg">Closing</th>
+                  <th className="px-4 py-3 text-right font-medium text-muted-fg">Payments</th>
+                  <th className="px-4 py-3 text-right font-medium text-muted-fg">Total amount</th>
+                  <th className="px-4 py-3 text-right font-medium text-muted-fg">Matched</th>
+                  <th className="px-4 py-3 text-right font-medium text-muted-fg">Unmatched</th>
                   <th className="px-4 py-3 text-center font-medium text-muted-fg">Exceptions</th>
+                  <th className="px-4 py-3 text-center font-medium text-muted-fg">Status</th>
                 </tr>
               </thead>
               <tbody>
-                {rows.map(row => (
-                  <tr
-                    key={row.date}
-                    className={`border-b border-border last:border-0 ${row.exceptions > 0 ? 'bg-warning' : ''}`}
-                  >
-                    <td className="px-4 py-3 text-foreground font-medium">
-                      {new Date(row.date).toLocaleDateString()}
-                    </td>
-                    <td className="px-4 py-3 text-right text-foreground font-mono text-xs">
-                      {row.openingBalance}
-                    </td>
-                    <td className="px-4 py-3 text-right text-success-fg font-mono text-xs">
-                      +{row.credits}
-                    </td>
-                    <td className="px-4 py-3 text-right text-danger-fg font-mono text-xs">
-                      −{row.debits}
-                    </td>
-                    <td className="px-4 py-3 text-right text-foreground font-mono text-xs font-medium">
-                      {row.closingBalance}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      {row.exceptions > 0 ? (
-                        <Badge variant="warning">{row.exceptions}</Badge>
-                      ) : (
-                        <span className="text-muted-fg text-xs">—</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                {rows.map(row => {
+                  const exceptionCount = Array.isArray(row.exceptions) ? row.exceptions.length : 0
+                  return (
+                    <tr
+                      key={row.report_date}
+                      className={`border-b border-border last:border-0 ${exceptionCount > 0 ? 'bg-warning/5' : ''}`}
+                    >
+                      <td className="px-4 py-3 text-foreground font-medium">
+                        {new Date(row.report_date).toLocaleDateString()}
+                      </td>
+                      <td className="px-4 py-3 text-right text-foreground font-mono text-xs">
+                        {row.total_payments}
+                      </td>
+                      <td className="px-4 py-3 text-right text-foreground font-mono text-xs">
+                        {parseFloat(row.total_amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="px-4 py-3 text-right text-success-fg font-mono text-xs">
+                        {row.matched_count}
+                      </td>
+                      <td className="px-4 py-3 text-right text-danger-fg font-mono text-xs">
+                        {row.unmatched_count}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {exceptionCount > 0 ? (
+                          <Badge variant="warning">{exceptionCount}</Badge>
+                        ) : (
+                          <span className="text-muted-fg text-xs">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <Badge variant={row.status === 'matched' ? 'success' : 'warning'} className="capitalize">
+                          {row.status}
+                        </Badge>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>

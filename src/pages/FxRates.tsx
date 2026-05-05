@@ -6,13 +6,6 @@ import { Spinner } from '@/components/ui/atoms/Spinner'
 import { ContentCard } from '@/layouts/ContentCard'
 import { useFxRates, useFxQuote } from '@/hooks/useFxRates'
 
-function RelativeTime({ date }: { date: string }) {
-  const diff = Math.floor((Date.now() - new Date(date).getTime()) / 1000)
-  if (diff < 60) return <span>{diff}s ago</span>
-  if (diff < 3600) return <span>{Math.floor(diff / 60)}m ago</span>
-  return <span>{Math.floor(diff / 3600)}h ago</span>
-}
-
 export function FxRates() {
   const { data: rates, isLoading, isError, refetch } = useFxRates()
 
@@ -132,12 +125,12 @@ export function FxRates() {
                   {rate.from} → {rate.to}
                 </p>
                 <p className="text-xs text-muted-fg mt-0.5">
-                  Updated <RelativeTime date={rate.updatedAt} />
+                  Mid: {parseFloat(rate.midRate).toFixed(4)}
                 </p>
               </div>
               <div className="text-right">
                 <p className="text-base font-bold text-foreground">
-                  {parseFloat(rate.rate).toFixed(4)}
+                  {parseFloat(rate.clientRate).toFixed(4)}
                 </p>
                 <p className="text-xs text-muted-fg">per 1 {rate.from}</p>
               </div>

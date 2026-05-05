@@ -4,19 +4,22 @@ export interface Account {
   id: string
   currency: string
   balance: string
-  providerRef: string
-  createdAt: string
+  account_number?: string
+  provider_name?: string
+  provider_account_id?: string
+  status: string
+  created_at: string
 }
 
 export interface LedgerEntry {
   id: string
-  entryType: 'credit' | 'debit'
+  entry_type: 'credit' | 'debit'
   amount: string
   currency: string
-  balanceAfter: string
+  balance_after: string
   description: string
-  createdAt: string
-  paymentId?: string
+  created_at: string
+  payment_id?: string
 }
 
 export interface PaginatedResponse<T> {

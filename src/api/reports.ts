@@ -1,16 +1,25 @@
 import { apiClient } from './client'
 
+// Raw payment row returned by /reporting/transactions
 export interface TransactionRow {
   id: string
-  date: string
-  description: string
-  amount: string
-  currency: string
-  type: 'credit' | 'debit'
   status: string
-  balance: string
+  source_amount: string
+  source_currency: string
+  dest_amount: string
+  dest_currency: string
+  fee_amount: string
+  exchange_rate: string
+  purpose_code: string
+  reference?: string
+  user_id: string
+  beneficiary_id: string
+  created_at: string
+  updated_at: string
+  completed_at?: string
 }
 
+// Reconciliation report row from reconciliation_reports table
 export interface ReconciliationRow {
   id: string
   report_date: string
@@ -18,8 +27,8 @@ export interface ReconciliationRow {
   total_amount: string
   matched_count: number
   unmatched_count: number
-  status: string
   exceptions: unknown[]
+  status: string
 }
 
 export interface TransactionFilter {

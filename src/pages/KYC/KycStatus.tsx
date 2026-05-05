@@ -49,10 +49,12 @@ export function KycStatus() {
   if (isLoading) return <LoadingState message="Loading KYC status…" />
   if (isError || !kyc) return <ErrorState title="Could not load KYC status" onRetry={refetch} />
 
-  const config = STATUS_CONFIG[kyc.status]
+  const status = kyc.kycStatus
+  const config = STATUS_CONFIG[status]
+  const documents = kyc.application?.documents ?? []
 
   const handleStart = () => {
-    if (kyc.status === 'not_started') {
+    if (status === 'not_started') {
       initiateMutation.mutate(undefined, {
         onSuccess: () => navigate('/kyc/verify'),
       })
@@ -78,31 +80,31 @@ export function KycStatus() {
             </div>
             <p className="text-sm text-muted-fg">{config.description}</p>
 
-            {kyc.status === 'rejected' && kyc.rejectionReason && (
+            {status === 'rejected' && kyc.application?.rejection_reason && (
               <div className="mt-3 rounded-md bg-danger border border-danger-border px-4 py-3">
                 <p className="text-xs font-semibold text-danger-fg mb-1">Rejection reason</p>
-                <p className="text-sm text-danger-fg">{kyc.rejectionReason}</p>
+                <p className="text-sm text-danger-fg">{kyc.application.rejection_reason}</p>
               </div>
             )}
 
-            {kyc.status === 'approved' && kyc.expiresAt && (
+            {status === 'approved' && kyc.kycExpiresAt && (
               <p className="mt-2 text-xs text-muted-fg">
-                Valid until {new Date(kyc.expiresAt).toLocaleDateString()}
+                Valid until {new Date(kyc.kycExpiresAt).toLocaleDateString()}
               </p>
             )}
           </div>
 
-          {(kyc.status === 'not_started' || kyc.status === 'rejected') && (
+          {(status === 'not_started' || status === 'rejected') && (
             <Button
               size="sm"
               loading={initiateMutation.isPending}
               onClick={handleStart}
             >
-              {kyc.status === 'rejected' ? 'Re-verify' : 'Start verification'}
+              {status === 'rejected' ? 'Re-verify' : 'Start verification'}
             </Button>
           )}
 
-          {(kyc.status === 'pending' || kyc.status === 'submitted') && (
+          {(status === 'pending' || status === 'submitted') && (
             <Button size="sm" variant="outline" onClick={() => navigate('/kyc/verify')}>
               Upload documents
             </Button>
@@ -119,8 +121,8 @@ export function KycStatus() {
             { step: 2, title: 'Proof of address', desc: 'Utility bill or bank statement (max 3 months old)' },
             { step: 3, title: 'Review', desc: 'Our team reviews your documents (typically 1–2 business days)' },
           ].map(({ step, title, desc }) => {
-            const done = kyc.status === 'approved' || kyc.status === 'under_review' || kyc.status === 'submitted'
-            const active = (kyc.status === 'pending' || kyc.status === 'not_started') && step === 1
+            const done = status === 'approved' || status === 'under_review' || status === 'submitted'
+            const active = (status === 'pending' || status === 'not_started') && step === 1
             return (
               <li key={step} className="flex items-start gap-3">
                 <div className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
@@ -141,19 +143,17 @@ export function KycStatus() {
       </ContentCard>
 
       {/* Uploaded documents */}
-      {(kyc.documents ?? []).length > 0 && (
+      {documents.length > 0 && (
         <ContentCard>
           <h3 className="text-sm font-semibold text-foreground mb-4">Uploaded documents</h3>
           <ul className="flex flex-col gap-2">
-            {kyc.documents.map(doc => (
-              <li key={doc.id} className="flex items-center justify-between rounded-lg border border-border bg-surface-raised px-3 py-2.5">
+            {documents.map((doc, i) => (
+              <li key={i} className="flex items-center justify-between rounded-lg border border-border bg-surface-raised px-3 py-2.5">
                 <div>
-                  <p className="text-sm font-medium text-foreground capitalize">{doc.type.replace(/_/g, ' ')}</p>
-                  <p className="text-xs text-muted-fg">{doc.filename} · {new Date(doc.uploadedAt).toLocaleDateString()}</p>
+                  <p className="text-sm font-medium text-foreground">{doc.filename}</p>
+                  <p className="text-xs text-muted-fg">{new Date(doc.uploadedAt).toLocaleDateString()}</p>
                 </div>
-                <Badge variant={doc.status === 'approved' ? 'success' : doc.status === 'rejected' ? 'danger' : 'warning'}>
-                  {doc.status}
-                </Badge>
+                <Badge variant="warning">Submitted</Badge>
               </li>
             ))}
           </ul>

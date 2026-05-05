@@ -20,27 +20,39 @@ const STATUS_VARIANT: Record<string, 'success' | 'warning' | 'danger' | 'default
 
 const columns: Column<TransactionRow>[] = [
   {
-    key: 'date',
+    key: 'created_at',
     header: 'Date',
-    render: row => new Date(row.date).toLocaleDateString(),
+    render: row => <span className="text-xs text-muted-fg">{new Date(row.created_at).toLocaleDateString()}</span>,
   },
-  { key: 'description', header: 'Description' },
   {
-    key: 'amount',
-    header: 'Amount',
+    key: 'purpose_code',
+    header: 'Purpose',
+    render: row => <span className="capitalize text-sm">{row.purpose_code?.toLowerCase().replace(/_/g, ' ') ?? '—'}</span>,
+  },
+  {
+    key: 'source_amount',
+    header: 'You sent',
     render: row => (
-      <span className={row.type === 'credit' ? 'text-success-fg font-medium' : 'text-danger-fg font-medium'}>
-        {row.type === 'credit' ? '+' : '−'}{row.amount} {row.currency}
+      <span className="font-mono text-sm text-danger-fg">
+        −{row.source_amount} {row.source_currency}
       </span>
     ),
   },
-  { key: 'balance', header: 'Balance', render: row => `${row.balance} ${row.currency}` },
+  {
+    key: 'dest_amount',
+    header: 'Recipient got',
+    render: row => (
+      <span className="font-mono text-sm text-success-fg">
+        +{row.dest_amount} {row.dest_currency}
+      </span>
+    ),
+  },
   {
     key: 'status',
     header: 'Status',
     render: row => (
       <Badge variant={STATUS_VARIANT[row.status] ?? 'default'} className="capitalize">
-        {row.status}
+        {row.status.replace(/_/g, ' ')}
       </Badge>
     ),
   },

@@ -103,20 +103,20 @@ export function Dashboard() {
                 header: 'Recipient',
                 render: p => (
                   <div>
-                    <p className="font-medium text-foreground">{p.beneficiary?.name ?? '—'}</p>
-                    <p className="text-xs text-muted-fg">{p.beneficiary?.countryCode}</p>
+                    <p className="font-medium text-foreground">{p.beneficiary_name ?? '—'}</p>
+                    <p className="text-xs text-muted-fg">{p.beneficiary_country_code}</p>
                   </div>
                 ),
               },
               {
                 key: 'amount',
                 header: 'Amount',
-                render: p => <AmountDisplay amount={p.sourceAmount} currency={p.sourceCurrency} />,
+                render: p => <AmountDisplay amount={p.source_amount} currency={p.source_currency} />,
               },
               {
                 key: 'fx',
-                header: 'You send',
-                render: p => <AmountDisplay amount={p.destinationAmount} currency={p.destinationCurrency} />,
+                header: 'They receive',
+                render: p => <AmountDisplay amount={p.dest_amount} currency={p.dest_currency} />,
               },
               {
                 key: 'status',
@@ -124,9 +124,9 @@ export function Dashboard() {
                 render: p => <StatusBadge status={p.status} />,
               },
               {
-                key: 'createdAt',
+                key: 'created_at',
                 header: 'Date',
-                render: p => <span className="text-muted-fg text-xs">{new Date(p.createdAt).toLocaleDateString()}</span>,
+                render: p => <span className="text-muted-fg text-xs">{new Date(p.created_at).toLocaleDateString()}</span>,
               },
             ]}
             data={paymentsData?.data ?? []}

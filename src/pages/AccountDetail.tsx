@@ -59,7 +59,7 @@ export function AccountDetail() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title={`${account.currency} Account`}
-        description={`Ref: ${account.providerRef}`}
+        description={`Ref: ${account.provider_account_id ?? account.account_number ?? '—'}`}
         breadcrumbs={[{ label: 'Accounts', href: '/accounts' }, { label: account.currency }]}
         actions={
           <div className="flex items-center gap-2">
@@ -84,10 +84,10 @@ export function AccountDetail() {
             <Timeline
               events={(account.recentEntries ?? []).slice(0, 5).map(e => ({
                 id: e.id,
-                status: e.entryType === 'credit' ? 'completed' : 'processing',
+                status: e.entry_type === 'credit' ? 'completed' : 'processing',
                 label: e.description,
-                description: `Balance after: ${e.currency} ${parseFloat(e.balanceAfter).toLocaleString()}`,
-                timestamp: e.createdAt,
+                description: `Balance after: ${e.currency} ${parseFloat(e.balance_after).toLocaleString()}`,
+                timestamp: e.created_at,
               }))}
             />
           ) : (
@@ -109,7 +109,7 @@ export function AccountDetail() {
           <>
             <DataTable
               columns={[
-                { key: 'createdAt', header: 'Date', render: e => <span className="text-xs text-muted-fg">{new Date(e.createdAt).toLocaleString()}</span> },
+                { key: 'created_at', header: 'Date', render: e => <span className="text-xs text-muted-fg">{new Date(e.created_at).toLocaleString()}</span> },
                 { key: 'description', header: 'Description' },
                 {
                   key: 'amount',
@@ -118,15 +118,15 @@ export function AccountDetail() {
                     <AmountDisplay
                       amount={e.amount}
                       currency={e.currency}
-                      positive={e.entryType === 'credit'}
-                      negative={e.entryType === 'debit'}
+                      positive={e.entry_type === 'credit'}
+                      negative={e.entry_type === 'debit'}
                     />
                   ),
                 },
                 {
-                  key: 'balanceAfter',
+                  key: 'balance_after',
                   header: 'Balance',
-                  render: e => <AmountDisplay amount={e.balanceAfter} currency={e.currency} />,
+                  render: e => <AmountDisplay amount={e.balance_after} currency={e.currency} />,
                 },
               ]}
               data={ledgerData?.data ?? []}

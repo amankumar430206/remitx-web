@@ -1,6 +1,12 @@
 import { apiClient } from './client'
 
-export interface FxRate { from: string; to: string; rate: string; updatedAt: string }
+export interface FxRate {
+  from: string
+  to: string
+  clientRate: string
+  midRate: string
+}
+
 export interface FxQuote {
   quoteId: string
   from: string

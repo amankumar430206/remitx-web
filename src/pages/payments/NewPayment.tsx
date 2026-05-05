@@ -135,7 +135,7 @@ function Step1({ onNext }: { onNext: () => void }) {
         {(data?.data ?? []).map(b => (
           <button
             key={b.id}
-            onClick={() => handleSelect(b.id, b.name, b.countryCode)}
+            onClick={() => handleSelect(b.id, b.name, b.country_code)}
             className={cn(
               'flex items-center gap-3 rounded-lg border p-3 text-left transition-all',
               selected === b.id
@@ -148,7 +148,7 @@ function Step1({ onNext }: { onNext: () => void }) {
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-medium text-foreground">{b.name}</p>
-              <p className="text-xs text-muted-fg truncate">{b.bankName} · {b.accountNumber} · {b.countryCode}</p>
+              <p className="text-xs text-muted-fg truncate">{b.bank_name} · {b.account_number ?? b.iban} · {b.country_code}</p>
             </div>
             {selected === b.id && (
               <svg className="h-4 w-4 shrink-0 text-primary" fill="currentColor" viewBox="0 0 20 20">
