@@ -63,8 +63,9 @@ export function Dashboard() {
           <>
             <StatCard
               title="Total balance"
-              value={<AmountDisplay amount={totalBalance} currency="USD" size="lg" />}
-              description="Across all accounts"
+              value={`${new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(totalBalance)}`}
+              description="Across all accounts · USD"
+              variant="gradient"
             />
             {accounts?.slice(0, 3).map(a => (
               <StatCard

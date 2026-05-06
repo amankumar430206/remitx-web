@@ -10,7 +10,7 @@ export function ContentCard({ className, padding = 'md', children, ...props }: C
   return (
     <div
       className={cn(
-        'rounded-xl border border-border bg-surface shadow-sm',
+        'rounded-2xl border border-border bg-surface card-shadow',
         paddingMap[padding],
         className
       )}

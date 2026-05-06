@@ -29,6 +29,15 @@ export default {
         muted:                 'var(--color-muted)',
         foreground:            'var(--color-foreground)',
         'foreground-subtle':   'var(--color-foreground-subtle)',
+
+        /* Dark nav */
+        'nav-bg':              'var(--color-nav-bg)',
+        'nav-fg':              'var(--color-nav-fg)',
+        'nav-fg-active':       'var(--color-nav-fg-active)',
+        'nav-border':          'var(--color-nav-border)',
+        'nav-item-active':     'var(--color-nav-item-active)',
+        'nav-item-hover':      'var(--color-nav-item-hover)',
+
         success:               'var(--color-success)',
         'success-fg':          'var(--color-success-fg)',
         warning:               'var(--color-warning)',

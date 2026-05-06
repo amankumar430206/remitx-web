@@ -3,70 +3,155 @@
 @tailwind utilities;
 
 :root {
-  /* Primary brand — overridden at runtime from tenant config */
+  /* ── Primary brand ───────────────────────────────── */
   --color-primary: #2563eb;
   --color-primary-hover: #1d4ed8;
   --color-primary-fg: #ffffff;
-  --color-primary-subtle: rgba(37, 99, 235, 0.08);         /* light primary bg — nav active, selected cards */
-  --color-primary-subtle-border: rgba(37, 99, 235, 0.3);   /* subtle primary border */
+  --color-primary-subtle: rgba(37, 99, 235, 0.08);
+  --color-primary-subtle-border: rgba(37, 99, 235, 0.25);
 
-  /* Secondary brand */
+  /* ── Secondary brand ─────────────────────────────── */
   --color-secondary: #7c3aed;
   --color-secondary-hover: #6d28d9;
   --color-secondary-fg: #ffffff;
 
-  /* Surfaces */
+  /* ── Navigation (light mode) ─────────────────────── */
+  --color-nav-bg: rgba(255, 255, 255, 0.82);
+  --color-nav-fg: #475569;
+  --color-nav-fg-active: #0f172a;
+  --color-nav-border: rgba(0, 0, 0, 0.07);
+  --color-nav-item-active: rgba(37, 99, 235, 0.09);
+  --color-nav-item-hover: rgba(0, 0, 0, 0.04);
+
+  /* ── Hero (login page left panel) ────────────────── */
+  --color-hero-card: rgba(255, 255, 255, 0.04);
+  --color-hero-card-border: rgba(255, 255, 255, 0.09);
+
+  /* ── Surfaces ────────────────────────────────────── */
   --color-surface: #ffffff;
-  --color-surface-raised: #f8fafc;
-  --color-surface-overlay: #f1f5f9;
+  --color-surface-raised: #f6f9fc;
+  --color-surface-overlay: #edf1f7;
 
-  /* Borders */
-  --color-border: #e2e8f0;
-  --color-border-strong: #cbd5e1;
+  /* ── Borders ─────────────────────────────────────── */
+  --color-border: #e8edf4;
+  --color-border-strong: #cdd5e0;
 
-  /* Muted */
+  /* ── Muted ───────────────────────────────────────── */
   --color-muted: #f1f5f9;
   --color-muted-fg: #64748b;
 
-  /* Text */
+  /* ── Text ────────────────────────────────────────── */
   --color-foreground: #0f172a;
   --color-foreground-subtle: #475569;
 
-  /* Semantic — success */
+  /* ── Semantic: success ───────────────────────────── */
   --color-success: #dcfce7;
-  --color-success-fg: #15803d;
+  --color-success-fg: #16a34a;
 
-  /* Semantic — warning */
+  /* ── Semantic: warning ───────────────────────────── */
   --color-warning: #fef9c3;
-  --color-warning-fg: #a16207;
+  --color-warning-fg: #ca8a04;
 
-  /* Semantic — danger */
-  --color-danger: #fee2e2;          /* light pink — badge bg, error banner bg */
-  --color-danger-border: #fca5a5;   /* medium pink — error banner border */
-  --color-danger-fg: #dc2626;       /* bold red — text and icons */
-  --color-danger-solid: #dc2626;    /* solid red — buttons */
-  --color-danger-solid-hover: #b91c1c; /* darker — button hover */
+  /* ── Semantic: danger ────────────────────────────── */
+  --color-danger: #fff1f2;
+  --color-danger-border: #fecdd3;
+  --color-danger-fg: #e11d48;
+  --color-danger-solid: #e11d48;
+  --color-danger-solid-hover: #be123c;
 
-  /* Semantic — info */
-  --color-info: #dbeafe;
+  /* ── Semantic: info ──────────────────────────────── */
+  --color-info: #eff6ff;
   --color-info-fg: #1d4ed8;
 
-  /* Shape */
+  /* ── Shape ───────────────────────────────────────── */
   --radius: 0.5rem;
   --radius-sm: 0.25rem;
   --radius-lg: 0.75rem;
 
-  /* Typography */
+  /* ── Typography ──────────────────────────────────── */
   --font-sans: 'Inter', system-ui, sans-serif;
 }
 
+/* ── Dark mode overrides ──────────────────────────────────────── */
+[data-theme="dark"] {
+  --color-primary: #3b82f6;
+  --color-primary-hover: #2563eb;
+  --color-primary-subtle: rgba(59, 130, 246, 0.12);
+  --color-primary-subtle-border: rgba(59, 130, 246, 0.28);
+
+  --color-secondary: #8b5cf6;
+  --color-secondary-hover: #7c3aed;
+
+  --color-nav-bg: rgba(4, 8, 20, 0.75);
+  --color-nav-fg: #94a3b8;
+  --color-nav-fg-active: #ffffff;
+  --color-nav-border: rgba(255, 255, 255, 0.06);
+  --color-nav-item-active: rgba(99, 102, 241, 0.22);
+  --color-nav-item-hover: rgba(255, 255, 255, 0.07);
+
+  --color-surface: #1e293b;
+  --color-surface-raised: #0f172a;
+  --color-surface-overlay: #334155;
+
+  --color-border: rgba(148, 163, 184, 0.1);
+  --color-border-strong: rgba(148, 163, 184, 0.2);
+
+  --color-muted: rgba(255, 255, 255, 0.05);
+  --color-muted-fg: #94a3b8;
+
+  --color-foreground: #f1f5f9;
+  --color-foreground-subtle: #94a3b8;
+
+  --color-success: rgba(22, 163, 74, 0.15);
+  --color-success-fg: #4ade80;
+
+  --color-warning: rgba(234, 179, 8, 0.15);
+  --color-warning-fg: #fbbf24;
+
+  --color-danger: rgba(225, 29, 72, 0.12);
+  --color-danger-border: rgba(225, 29, 72, 0.25);
+  --color-danger-fg: #fb7185;
+  --color-danger-solid: #e11d48;
+  --color-danger-solid-hover: #be123c;
+
+  --color-info: rgba(59, 130, 246, 0.15);
+  --color-info-fg: #60a5fa;
+
+  --color-hero-card: rgba(255, 255, 255, 0.04);
+  --color-hero-card-border: rgba(255, 255, 255, 0.07);
+}
+
+/* Dark mode shadow overrides (pure black-based for better depth on dark surfaces) */
+[data-theme="dark"] .nav-glass {
+  box-shadow: 0 1px 0 rgba(255,255,255,0.04), 0 4px 24px rgba(0,0,0,0.35);
+}
+[data-theme="dark"] .sidebar-glass {
+  box-shadow: 2px 0 20px rgba(0,0,0,0.4);
+}
+[data-theme="dark"] .sidebar-border {
+  border-right: 1px solid rgba(255, 255, 255, 0.04);
+}
+[data-theme="dark"] .card-shadow {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+[data-theme="dark"] .card-shadow-md {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45), 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+[data-theme="dark"] .card-shadow-hover {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), 0 1px 6px rgba(0, 0, 0, 0.3);
+}
+[data-theme="dark"] .card-glow {
+  box-shadow:
+    0 0 0 1px rgba(59, 130, 246, 0.2),
+    0 4px 20px rgba(59, 130, 246, 0.12),
+    0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
 @layer base {
-  * {
-    box-sizing: border-box;
-  }
+  * { box-sizing: border-box; }
 
   body {
-    background-color: var(--color-surface);
+    background-color: var(--color-surface-raised);
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
@@ -76,10 +161,130 @@
   h1, h2, h3, h4, h5, h6 {
     @apply font-semibold tracking-tight;
   }
+
+  /* ── Sleek scrollbar (Webkit) ─────────────────────────── */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border-strong) transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 4px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: var(--color-border-strong);
+    border-radius: 99px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: var(--color-muted-fg);
+  }
 }
 
 @layer utilities {
+  /* ── Focus ───────────────────────────────────────── */
   .focus-ring {
     @apply outline-none ring-2 ring-primary ring-offset-2;
+  }
+
+  /* ── Hero gradient (login left panel) ────────────── */
+  .hero-gradient {
+    background: linear-gradient(140deg, #080e1d 0%, #111827 35%, #1a1040 70%, #0d1b3e 100%);
+  }
+
+  .hero-grid {
+    background-image:
+      linear-gradient(rgba(255,255,255,0.022) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.022) 1px, transparent 1px);
+    background-size: 48px 48px;
+  }
+
+  /* ── Brand gradient (button, logo accent, bar) ───── */
+  .btn-gradient {
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+    color: #ffffff;
+  }
+  .btn-gradient:hover {
+    background: linear-gradient(135deg, var(--color-primary-hover) 0%, #6d28d9 100%);
+    opacity: 1;
+  }
+
+  /* ── Text gradient ───────────────────────────────── */
+  .text-gradient-brand {
+    background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* ── Glassmorphism navbar & sidebar ─────────────── */
+  .sidebar-glass {
+    background: var(--color-nav-bg);
+    backdrop-filter: blur(18px) saturate(160%);
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
+  }
+
+  .sidebar-border {
+    border-right: 1px solid rgba(0, 0, 0, 0.08);
+  }
+
+  .nav-glass {
+    background: var(--color-nav-bg);
+    backdrop-filter: blur(18px) saturate(160%);
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
+    border-bottom: 1px solid var(--color-nav-border);
+    box-shadow: 0 1px 0 var(--color-nav-border), 0 4px 20px rgba(0,0,0,0.07);
+  }
+
+  /* ── Glass card (used in login hero) ─────────────── */
+  .glass-card {
+    background: var(--color-hero-card);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--color-hero-card-border);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.2);
+  }
+
+  /* ── Card shadows ────────────────────────────────── */
+  .card-shadow {
+    box-shadow:
+      0 1px 2px rgba(15, 23, 42, 0.04),
+      0 4px 12px rgba(15, 23, 42, 0.06);
+  }
+
+  .card-shadow-md {
+    box-shadow:
+      0 2px 8px rgba(15, 23, 42, 0.06),
+      0 8px 24px rgba(15, 23, 42, 0.08);
+  }
+
+  .card-shadow-hover {
+    box-shadow:
+      0 4px 20px rgba(15, 23, 42, 0.1),
+      0 1px 4px rgba(15, 23, 42, 0.06);
+  }
+
+  .card-glow {
+    box-shadow:
+      0 0 0 1px rgba(37, 99, 235, 0.14),
+      0 4px 20px rgba(37, 99, 235, 0.1),
+      0 1px 4px rgba(15, 23, 42, 0.06);
+  }
+
+  /* ── Stat card gradient ──────────────────────────── */
+  .stat-card-hero {
+    background: linear-gradient(135deg, #1d4ed8 0%, #6d28d9 100%);
+    border-color: transparent;
+  }
+
+  /* ── Tabular numbers ─────────────────────────────── */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── Gradient progress bar ───────────────────────── */
+  .bar-gradient {
+    background: linear-gradient(90deg, var(--color-primary), var(--color-secondary));
   }
 }
