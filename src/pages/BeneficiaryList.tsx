@@ -7,6 +7,7 @@ import { LoadingState } from '@/components/ui/molecules/LoadingState'
 import { ErrorState } from '@/components/ui/molecules/ErrorState'
 import { Button } from '@/components/ui/atoms/Button'
 import { Badge } from '@/components/ui/atoms/Badge'
+import { Pagination } from '@/components/ui/atoms/Pagination'
 import { ContentCard } from '@/layouts/ContentCard'
 import { useBeneficiaries } from '@/hooks/useBeneficiaries'
 import type { Beneficiary } from '@/api/beneficiaries'
@@ -163,7 +164,7 @@ export function BeneficiaryList() {
           <div className="flex items-center gap-3">
             <SearchInput
               value={search}
-              onChange={setSearch}
+              onChange={e => setSearch(e.target.value)}
               placeholder="Search by name, bank…"
               className="max-w-xs"
             />
@@ -195,16 +196,7 @@ export function BeneficiaryList() {
                 emptyTitle="No beneficiaries found"
                 emptyDescription="Try adjusting your search."
               />
-              {totalPages > 1 && (
-                <div className="flex items-center justify-between border-t border-border px-4 py-3">
-                  <span className="text-xs text-muted-fg">{total} total</span>
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={() => setPage(p => p - 1)} disabled={page === 1}>Previous</Button>
-                    <Badge variant="secondary">{page} / {totalPages}</Badge>
-                    <Button variant="outline" size="sm" onClick={() => setPage(p => p + 1)} disabled={page === totalPages}>Next</Button>
-                  </div>
-                </div>
-              )}
+              <Pagination page={page} totalPages={totalPages} total={total} pageSize={20} onChange={setPage} />
             </ContentCard>
           )}
         </div>

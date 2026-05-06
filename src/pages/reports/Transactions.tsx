@@ -5,12 +5,37 @@ import { FilterBar } from '@/components/ui/organisms/FilterBar'
 import { DateRangePicker } from '@/components/ui/molecules/DateRangePicker'
 import { Button } from '@/components/ui/atoms/Button'
 import { Badge } from '@/components/ui/atoms/Badge'
+import { Pagination } from '@/components/ui/atoms/Pagination'
 import { ContentCard } from '@/layouts/ContentCard'
 import { useTransactions } from '@/hooks/useReports'
 import reportsApi from '@/api/reports'
 import type { DateRange } from '@/components/ui/molecules/DateRangePicker'
 import type { Column } from '@/components/ui/organisms/DataTable'
 import type { TransactionRow } from '@/api/reports'
+
+type Preset = '7d' | '30d' | '3m' | '6m' | 'ytd' | 'custom'
+
+const PRESETS: { label: string; value: Preset }[] = [
+  { label: '7 days', value: '7d' },
+  { label: '30 days', value: '30d' },
+  { label: '3 months', value: '3m' },
+  { label: '6 months', value: '6m' },
+  { label: 'Year to date', value: 'ytd' },
+]
+
+function presetToRange(preset: Preset): DateRange {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const from = new Date(today)
+
+  if (preset === '7d') from.setDate(today.getDate() - 6)
+  else if (preset === '30d') from.setDate(today.getDate() - 29)
+  else if (preset === '3m') from.setMonth(today.getMonth() - 3)
+  else if (preset === '6m') from.setMonth(today.getMonth() - 6)
+  else if (preset === 'ytd') from.setMonth(0, 1)
+
+  return { from, to: today }
+}
 
 const STATUS_VARIANT: Record<string, 'success' | 'warning' | 'danger' | 'default'> = {
   completed: 'success',
@@ -60,9 +85,22 @@ const columns: Column<TransactionRow>[] = [
 
 export function Transactions() {
   const [page, setPage] = useState(1)
-  const [dateRange, setDateRange] = useState<DateRange>({})
+  const [preset, setPreset] = useState<Preset>('30d')
+  const [dateRange, setDateRange] = useState<DateRange>(() => presetToRange('30d'))
   const [search, setSearch] = useState('')
   const [exporting, setExporting] = useState(false)
+
+  const handlePreset = (p: Preset) => {
+    setPreset(p)
+    setDateRange(presetToRange(p))
+    setPage(1)
+  }
+
+  const handleCustomRange = (range: DateRange) => {
+    setPreset('custom')
+    setDateRange(range)
+    setPage(1)
+  }
 
   const params = {
     page,
@@ -107,18 +145,30 @@ export function Transactions() {
         }
       />
 
-      <FilterBar
-        search={search}
-        onSearchChange={setSearch}
-        searchPlaceholder="Search transactions…"
-        filters={
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          {PRESETS.map(p => (
+            <Button
+              key={p.value}
+              size="sm"
+              variant={preset === p.value ? 'primary' : 'outline'}
+              onClick={() => handlePreset(p.value)}
+            >
+              {p.label}
+            </Button>
+          ))}
           <DateRangePicker
-            value={dateRange}
-            onChange={setDateRange}
-            placeholder="All dates"
+            value={preset === 'custom' ? dateRange : {}}
+            onChange={handleCustomRange}
+            placeholder="Custom range…"
           />
-        }
-      />
+        </div>
+        <FilterBar
+          search={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Search transactions…"
+        />
+      </div>
 
       <ContentCard padding="none">
         <DataTable
@@ -129,20 +179,9 @@ export function Transactions() {
         />
       </ContentCard>
 
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between text-sm text-muted-fg">
-          <span>{total} transactions</span>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => setPage(p => p - 1)} disabled={page <= 1}>
-              Previous
-            </Button>
-            <span>Page {page} of {totalPages}</span>
-            <Button variant="outline" size="sm" onClick={() => setPage(p => p + 1)} disabled={page >= totalPages}>
-              Next
-            </Button>
-          </div>
-        </div>
-      )}
+      <ContentCard padding="none">
+        <Pagination page={page} totalPages={totalPages} total={total} pageSize={20} onChange={setPage} />
+      </ContentCard>
     </div>
   )
 }

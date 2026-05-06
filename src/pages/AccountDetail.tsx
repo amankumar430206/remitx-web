@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { PageHeader, DataTable, AmountDisplay, LoadingState, ErrorState, DateRangePicker, FilterBar, Timeline } from '@/components/ui/index'
 import { Button } from '@/components/ui/atoms/Button'
 import { Select } from '@/components/ui/atoms/Select'
+import { Pagination } from '@/components/ui/atoms/Pagination'
 import { ContentCard } from '@/layouts/ContentCard'
 import { useAccount, useAccountLedger } from '@/hooks/useAccounts'
 import accountsApi from '@/api/accounts'
@@ -134,17 +135,7 @@ export function AccountDetail() {
               emptyTitle="No transactions"
               emptyDescription="No ledger entries for this period."
             />
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between px-5 py-3 border-t border-border">
-                <span className="text-xs text-muted-fg">
-                  Page {page} of {totalPages} · {ledgerData?.meta?.total} entries
-                </span>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>Previous</Button>
-                  <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>Next</Button>
-                </div>
-              </div>
-            )}
+            <Pagination page={page} totalPages={totalPages} total={ledgerData?.meta?.total} pageSize={20} onChange={setPage} />
           </>
         )}
       </ContentCard>
