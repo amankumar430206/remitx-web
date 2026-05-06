@@ -1,1 +1,1 @@
-/// <reference types="vite/client" />
+/// <reference types="vite/client" />\n/// <reference types="vite-plugin-pwa/react" />
