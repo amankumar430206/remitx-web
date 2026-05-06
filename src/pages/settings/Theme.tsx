@@ -9,6 +9,9 @@ import { Input } from '@/components/ui/atoms/Input'
 import { Select } from '@/components/ui/atoms/Select'
 import { ContentCard } from '@/layouts/ContentCard'
 import { useThemeStore } from '@/stores/themeStore'
+import { ThemeToggle } from '@/components/ui/atoms/ThemeToggle'
+import { useLayoutStore, type LayoutMode } from '@/stores/layoutStore'
+import { cn } from '@/lib/utils'
 
 const schema = z.object({
   primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Must be a valid hex color'),
@@ -26,9 +29,38 @@ const FONT_OPTIONS = [
   { value: 'system-ui, sans-serif', label: 'System UI' },
 ]
 
+const LAYOUT_OPTIONS: { value: LayoutMode; label: string; description: string; preview: React.ReactNode }[] = [
+  {
+    value: 'topnav',
+    label: 'Top navigation',
+    description: 'Classic horizontal bar across the top',
+    preview: (
+      <div className="w-full h-16 rounded-lg border border-border overflow-hidden bg-surface-raised flex flex-col gap-1 p-1.5">
+        <div className="h-3 w-full rounded bg-muted-fg/20" />
+        <div className="flex gap-1 flex-1">
+          <div className="flex-1 rounded bg-muted" />
+        </div>
+      </div>
+    ),
+  },
+  {
+    value: 'sidebar',
+    label: 'Sidebar navigation',
+    description: 'Vertical sidebar pinned to the left',
+    preview: (
+      <div className="w-full h-16 rounded-lg border border-border overflow-hidden bg-surface-raised flex gap-1 p-1.5">
+        <div className="w-5 h-full rounded bg-muted-fg/20" />
+        <div className="flex-1 rounded bg-muted" />
+      </div>
+    ),
+  },
+]
+
 export function Theme() {
   const theme = useThemeStore(s => s.theme)
   const applyTheme = useThemeStore(s => s.applyTheme)
+  const layout = useLayoutStore(s => s.layout)
+  const setLayout = useLayoutStore(s => s.setLayout)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
@@ -74,6 +106,47 @@ export function Theme() {
       <PageHeader title="Theme" breadcrumbs={[{ label: 'Settings' }, { label: 'Theme' }]} />
 
       <ContentCard>
+        <div className="flex flex-col gap-3 pb-5 mb-5 border-b border-border">
+          <h3 className="text-sm font-semibold text-foreground">Color mode</h3>
+          <p className="text-xs text-muted-fg">Choose how the interface appears to you.</p>
+          <ThemeToggle variant="segmented" />
+        </div>
+
+        <div className="flex flex-col gap-3 pb-5 mb-5 border-b border-border">
+          <h3 className="text-sm font-semibold text-foreground">Navigation layout</h3>
+          <p className="text-xs text-muted-fg">Choose where the navigation lives.</p>
+          <div className="grid grid-cols-2 gap-3">
+            {LAYOUT_OPTIONS.map(opt => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setLayout(opt.value)}
+                className={cn(
+                  'flex flex-col gap-2.5 rounded-xl border-2 p-3 text-left transition-all duration-150',
+                  layout === opt.value
+                    ? 'border-primary bg-primary-subtle'
+                    : 'border-border hover:border-border-strong bg-surface-raised'
+                )}
+              >
+                {opt.preview}
+                <div>
+                  <p className={cn('text-xs font-semibold', layout === opt.value ? 'text-primary' : 'text-foreground')}>
+                    {opt.label}
+                  </p>
+                  <p className="text-[11px] text-muted-fg mt-0.5">{opt.description}</p>
+                </div>
+                {layout === opt.value && (
+                  <span className="ml-auto flex h-4 w-4 items-center justify-center rounded-full bg-primary">
+                    <svg className="h-2.5 w-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <form onSubmit={handleSubmit(onSave)}>
           <div className="flex flex-col gap-4">
             <h3 className="text-sm font-semibold text-foreground">Brand settings</h3>
