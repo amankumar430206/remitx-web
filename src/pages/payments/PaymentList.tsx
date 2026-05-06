@@ -3,16 +3,41 @@ import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { PageHeader } from '@/components/ui/organisms/PageHeader'
 import { DataTable } from '@/components/ui/organisms/DataTable'
+import { FilterBar } from '@/components/ui/organisms/FilterBar'
 import { StatusBadge } from '@/components/ui/molecules/StatusBadge'
 import { AmountDisplay } from '@/components/ui/molecules/AmountDisplay'
 import { LoadingState } from '@/components/ui/molecules/LoadingState'
 import { ErrorState } from '@/components/ui/molecules/ErrorState'
+import { DateRangePicker } from '@/components/ui/molecules/DateRangePicker'
 import { Button } from '@/components/ui/atoms/Button'
 import { Badge } from '@/components/ui/atoms/Badge'
+import { Select } from '@/components/ui/atoms/Select'
+import { Pagination } from '@/components/ui/atoms/Pagination'
 import { ContentCard } from '@/layouts/ContentCard'
 import { SplitPane } from '@/layouts/SplitPane'
 import { usePayments, usePayment } from '@/hooks/usePayments'
 import type { Payment } from '@/api/payments'
+import type { DateRange } from '@/components/ui/molecules/DateRangePicker'
+
+type Preset = '7d' | '30d' | '3m' | '6m' | 'custom'
+
+const PRESETS: { label: string; value: Preset }[] = [
+  { label: '7 days', value: '7d' },
+  { label: '30 days', value: '30d' },
+  { label: '3 months', value: '3m' },
+  { label: '6 months', value: '6m' },
+]
+
+function presetToRange(preset: Preset): DateRange {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const from = new Date(today)
+  if (preset === '7d') from.setDate(today.getDate() - 6)
+  else if (preset === '30d') from.setDate(today.getDate() - 29)
+  else if (preset === '3m') from.setMonth(today.getMonth() - 3)
+  else if (preset === '6m') from.setMonth(today.getMonth() - 6)
+  return { from, to: today }
+}
 
 const STATUS_OPTIONS = [
   { label: 'All statuses', value: '' },
@@ -80,9 +105,22 @@ export function PaymentList() {
 
   const [page, setPage] = useState(1)
   const [status, setStatus] = useState('')
+  const [search, setSearch] = useState('')
+  const [preset, setPreset] = useState<Preset>('30d')
+  const [dateRange, setDateRange] = useState<DateRange>(() => presetToRange('30d'))
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
-  const { data, isLoading, isError } = usePayments({ page, limit: 20, status: status || undefined })
+  const handlePreset = (p: Preset) => { setPreset(p); setDateRange(presetToRange(p)); setPage(1) }
+  const handleCustomRange = (range: DateRange) => { setPreset('custom'); setDateRange(range); setPage(1) }
+
+  const { data, isLoading, isError } = usePayments({
+    page,
+    limit: 20,
+    status: status || undefined,
+    search: search || undefined,
+    from: dateRange.from ? dateRange.from.toISOString().slice(0, 10) : undefined,
+    to: dateRange.to ? dateRange.to.toISOString().slice(0, 10) : undefined,
+  })
 
   const payments = data?.data ?? []
   const total = data?.meta?.total ?? 0
@@ -123,24 +161,49 @@ export function PaymentList() {
     },
   ]
 
+  const activeFilters = [status, dateRange.from].filter(Boolean).length
+  const clearAll = () => { setStatus(''); setSearch(''); handlePreset('30d') }
+
   const list = (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-3">
-        <select
-          value={status}
-          onChange={e => { setStatus(e.target.value); setPage(1) }}
-          className="rounded-md border border-input bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-        >
-          {STATUS_OPTIONS.map(opt => (
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
-          ))}
-        </select>
-        {status && (
-          <button
-            onClick={() => { setStatus(''); setPage(1) }}
-            className="text-xs text-muted-fg hover:text-foreground"
+    <div className="flex flex-col gap-3">
+      {/* Date presets + range picker row */}
+      <div className="flex items-center gap-2 flex-wrap">
+        {PRESETS.map(p => (
+          <Button
+            key={p.value}
+            size="sm"
+            variant={preset === p.value ? 'primary' : 'outline'}
+            onClick={() => handlePreset(p.value)}
           >
-            Clear
+            {p.label}
+          </Button>
+        ))}
+        <DateRangePicker
+          value={preset === 'custom' ? dateRange : {}}
+          onChange={handleCustomRange}
+          placeholder="Custom range…"
+        />
+      </div>
+
+      {/* Search + status + clear row */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <FilterBar
+          search={search}
+          onSearchChange={v => { setSearch(v); setPage(1) }}
+          searchPlaceholder="Search recipient, reference…"
+        />
+        <Select
+          value={status}
+          onValueChange={v => { setStatus(v); setPage(1) }}
+          options={STATUS_OPTIONS}
+          className="w-44"
+        />
+        {activeFilters > 0 && (
+          <button
+            onClick={clearAll}
+            className="text-xs text-muted-fg hover:text-foreground transition-colors px-2 py-1.5 rounded-md hover:bg-surface-overlay"
+          >
+            Clear filters
           </button>
         )}
       </div>
@@ -162,21 +225,7 @@ export function PaymentList() {
               emptyDescription="Try changing the filters or send your first payment."
             />
 
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between border-t border-border px-4 py-3">
-                <span className="text-xs text-muted-fg">{total} payments total</span>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" onClick={() => setPage(p => p - 1)} disabled={page === 1}>
-                    Previous
-                  </Button>
-                  <Badge variant="secondary">{page} / {totalPages}</Badge>
-                  <Button variant="outline" size="sm" onClick={() => setPage(p => p + 1)} disabled={page === totalPages}>
-                    Next
-                  </Button>
-                </div>
-              </div>
-            )}
+            <Pagination page={page} totalPages={totalPages} total={total} pageSize={20} onChange={setPage} />
           </>
         )}
       </ContentCard>

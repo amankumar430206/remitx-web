@@ -48,7 +48,7 @@ const payments = {
 
   submit: (payload: SubmitPaymentPayload, idempotencyKey: string) =>
     apiClient.post<{ success: boolean; data: Payment }>('/payments', payload, {
-      headers: { 'X-Idempotency-Key': idempotencyKey },
+      headers: { 'Idempotency-Key': idempotencyKey },
     }),
 
   approve: (id: string, note?: string) =>

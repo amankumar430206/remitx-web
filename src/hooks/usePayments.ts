@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import paymentsApi from '@/api/payments'
 
-export function usePayments(params?: { page?: number; limit?: number; status?: string }) {
+export function usePayments(params?: { page?: number; limit?: number; status?: string; from?: string; to?: string; search?: string }) {
   return useQuery({
     queryKey: ['payments', params],
     queryFn: () => paymentsApi.list(params).then(r => r.data),
