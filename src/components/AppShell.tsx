@@ -4,6 +4,8 @@ import { useQuery } from '@tanstack/react-query'
 import { PageLayout } from '@/layouts/PageLayout'
 import { useAuthStore } from '@/stores/authStore'
 import { useThemeStore } from '@/stores/themeStore'
+import { useFeatureFlagStore } from '@/stores/featureFlagStore'
+import { useFeatureFlag } from '@/hooks/useFeatureFlag'
 import { useApprovalQueue } from '@/hooks/usePayments'
 import tenantsApi from '@/api/tenants'
 
@@ -61,11 +63,18 @@ export function AppShell() {
   const tenantSlug = useAuthStore(s => s.tenantSlug)
   const navigate = useNavigate()
   const applyTheme = useThemeStore(s => s.applyTheme)
+  const setFlags = useFeatureFlagStore(s => s.setFlags)
   const { data: approvalData } = useApprovalQueue()
 
   useQuery({
     queryKey: ['tenant-theme'],
     queryFn: () => tenantsApi.theme().then(r => { applyTheme(r.data.data); return r.data.data }),
+    retry: false,
+  })
+
+  useQuery({
+    queryKey: ['feature-flags'],
+    queryFn: () => tenantsApi.getFeatureFlags().then(r => { setFlags(r.data.data); return r.data.data }),
     retry: false,
   })
 
@@ -81,14 +90,21 @@ export function AppShell() {
   const pendingApprovals = approvalData?.data?.length ?? 0
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin'
 
+  const flagPayments = useFeatureFlag('payments')
+  const flagAccounts = useFeatureFlag('accounts')
+  const flagBeneficiaries = useFeatureFlag('beneficiaries')
+  const flagFxRates = useFeatureFlag('fx_rates')
+  const flagKyc = useFeatureFlag('kyc')
+  const flagReports = useFeatureFlag('reports')
+
   const navItems = [
     { label: 'Dashboard', href: '/dashboard', icon: NAV_ICONS.dashboard },
-    { label: 'Payments', href: '/payments', icon: NAV_ICONS.payments, badge: pendingApprovals },
-    { label: 'Accounts', href: '/accounts', icon: NAV_ICONS.accounts },
-    { label: 'Beneficiaries', href: '/beneficiaries', icon: NAV_ICONS.beneficiaries },
-    { label: 'FX Rates', href: '/fx-rates', icon: NAV_ICONS.fxRates },
-    { label: 'KYC', href: '/kyc', icon: NAV_ICONS.kyc },
-    { label: 'Reports', href: '/reports/transactions', icon: NAV_ICONS.reports },
+    ...(flagPayments ? [{ label: 'Payments', href: '/payments', icon: NAV_ICONS.payments, badge: pendingApprovals }] : []),
+    ...(flagAccounts ? [{ label: 'Accounts', href: '/accounts', icon: NAV_ICONS.accounts }] : []),
+    ...(flagBeneficiaries ? [{ label: 'Beneficiaries', href: '/beneficiaries', icon: NAV_ICONS.beneficiaries }] : []),
+    ...(flagFxRates ? [{ label: 'FX Rates', href: '/fx-rates', icon: NAV_ICONS.fxRates }] : []),
+    ...(flagKyc ? [{ label: 'KYC', href: '/kyc', icon: NAV_ICONS.kyc }] : []),
+    ...(flagReports ? [{ label: 'Reports', href: '/reports/transactions', icon: NAV_ICONS.reports }] : []),
     { label: 'Settings', href: '/settings', icon: NAV_ICONS.settings },
     ...(isAdmin ? [{ label: 'Admin', href: '/admin/tenants', icon: NAV_ICONS.admin }] : []),
   ]
@@ -96,7 +112,7 @@ export function AppShell() {
   return (
     <PageLayout
       navItems={navItems}
-      user={user ? { name: [user.first_name, user.last_name].filter(Boolean).join(' ') || user.email, email: user.email } : undefined}
+      user={user ? { name: [user.first_name, user.last_name].filter(Boolean).join(' ') || user.email, email: user.email, role: user.role } : undefined}
       onLogout={handleLogout}
       tenantName={tenantSlug ?? undefined}
     >
