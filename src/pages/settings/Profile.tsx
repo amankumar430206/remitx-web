@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/atoms/Input'
 import { ContentCard } from '@/layouts/ContentCard'
 import { useAuthStore } from '@/stores/authStore'
 import { useUpdateProfile, useChangePassword } from '@/hooks/useUsers'
+import { getApiError } from '@/lib/apiError'
 
 const profileSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
@@ -84,7 +85,7 @@ export function Profile() {
 
             {updateProfile.isError && (
               <div className="rounded-md bg-danger border border-danger-border px-4 py-2 text-sm text-danger-fg">
-                Could not update profile. Please try again.
+                {getApiError(updateProfile.error, 'Could not update profile. Please try again.')}
               </div>
             )}
 
@@ -120,7 +121,7 @@ export function Profile() {
 
             {changePassword.isError && (
               <div className="rounded-md bg-danger border border-danger-border px-4 py-2 text-sm text-danger-fg">
-                Could not change password. Check your current password and try again.
+                {getApiError(changePassword.error, 'Could not change password. Check your current password and try again.')}
               </div>
             )}
 

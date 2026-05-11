@@ -14,6 +14,7 @@ import { ContentCard } from '@/layouts/ContentCard'
 import { usePayment } from '@/hooks/usePayments'
 import { useAuthStore } from '@/stores/authStore'
 import paymentsApi from '@/api/payments'
+import { getApiError } from '@/lib/apiError'
 
 function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -165,7 +166,7 @@ export function PaymentDetail() {
       {/* Approve/reject errors */}
       {(approveMutation.isError || rejectMutation.isError) && (
         <div className="rounded-md bg-danger border border-danger-border px-4 py-2 text-sm text-danger-fg">
-          Action failed. Please try again.
+          {getApiError(approveMutation.error ?? rejectMutation.error, 'Action failed. Please try again.')}
         </div>
       )}
 

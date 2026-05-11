@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/atoms/Input'
 import { Select } from '@/components/ui/atoms/Select'
 import { ContentCard } from '@/layouts/ContentCard'
 import { useCreateBeneficiary } from '@/hooks/useBeneficiaries'
+import { getApiError } from '@/lib/apiError'
 import type { CreateBeneficiaryPayload } from '@/api/beneficiaries'
 
 // Countries and their routing field mappings
@@ -189,7 +190,7 @@ export function BeneficiaryNew() {
 
             {createMutation.isError && (
               <div className="rounded-md bg-danger border border-danger-border px-4 py-2 text-sm text-danger-fg">
-                Could not add beneficiary. Please check the details and try again.
+                {getApiError(createMutation.error, 'Could not add beneficiary. Please check the details and try again.')}
               </div>
             )}
 

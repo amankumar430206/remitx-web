@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { getApiError } from '@/lib/apiError'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -32,8 +33,8 @@ export function Mfa() {
     try {
       await authApi.mfaVerify(code)
       setDone(true)
-    } catch {
-      setServerError('Invalid code. Try scanning the QR code again.')
+    } catch (err) {
+      setServerError(getApiError(err, 'Invalid code. Try scanning the QR code again.'))
     }
   }
 

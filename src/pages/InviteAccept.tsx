@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { getApiError } from '@/lib/apiError'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -33,8 +34,8 @@ export function InviteAccept() {
       const res = (data as { data: Parameters<typeof setAuth>[0] & { accessToken: string; refreshToken: string } }).data
       setAuth(res, res.accessToken, res.refreshToken, tenantSlug)
       navigate('/dashboard')
-    } catch {
-      setServerError('Invalid or expired invite link.')
+    } catch (err) {
+      setServerError(getApiError(err, 'Invalid or expired invite link.'))
     }
   }
 

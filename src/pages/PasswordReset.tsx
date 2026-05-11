@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { getApiError } from '@/lib/apiError'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -31,8 +32,8 @@ export function PasswordReset() {
     try {
       await authApi.passwordResetRequest(email)
       setSent(true)
-    } catch {
-      setServerError('Could not send reset email. Check the address and try again.')
+    } catch (err) {
+      setServerError(getApiError(err, 'Could not send reset email. Check the address and try again.'))
     }
   }
 
@@ -41,8 +42,8 @@ export function PasswordReset() {
     try {
       await authApi.passwordReset(token!, password)
       setDone(true)
-    } catch {
-      setServerError('Reset link expired or invalid.')
+    } catch (err) {
+      setServerError(getApiError(err, 'Reset link expired or invalid.'))
     }
   }
 

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { getApiError } from '@/lib/apiError'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -30,8 +31,8 @@ export function MfaChallenge() {
       const res = data.data
       setAuth(res.user, res.accessToken, res.refreshToken, tenantSlug)
       navigate('/dashboard')
-    } catch {
-      setServerError('Invalid code. Please try again.')
+    } catch (err) {
+      setServerError(getApiError(err, 'Invalid code. Please try again.'))
     }
   }
 

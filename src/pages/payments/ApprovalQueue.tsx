@@ -15,6 +15,7 @@ import { ContentCard } from '@/layouts/ContentCard'
 import { useApprovalQueue } from '@/hooks/usePayments'
 import { useAuthStore } from '@/stores/authStore'
 import paymentsApi from '@/api/payments'
+import { getApiError } from '@/lib/apiError'
 import type { Payment } from '@/api/payments'
 
 export function ApprovalQueue() {
@@ -148,7 +149,7 @@ export function ApprovalQueue() {
 
       {(approveMutation.isError || rejectMutation.isError) && (
         <div className="rounded-md bg-danger border border-danger-border px-4 py-2 text-sm text-danger-fg">
-          Action failed. Please try again.
+          {getApiError(approveMutation.error ?? rejectMutation.error, 'Action failed. Please try again.')}
         </div>
       )}
 

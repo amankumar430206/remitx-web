@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { getApiError } from '@/lib/apiError'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -152,7 +153,7 @@ export function Users() {
               </div>
               {inviteMutation.isError && (
                 <div className="rounded-md bg-danger border border-danger-border px-4 py-2 text-sm text-danger-fg">
-                  Could not send invitation. Please try again.
+                  {getApiError(inviteMutation.error, 'Could not send invitation. Please try again.')}
                 </div>
               )}
               {inviteMutation.isSuccess && (

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { getApiError } from '@/lib/apiError'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -50,8 +51,8 @@ export function Statement() {
       a.download = `statement-${values.from}-${values.to}.${values.format}`
       a.click()
       window.URL.revokeObjectURL(url)
-    } catch {
-      setError('Failed to export statement. Please try again.')
+    } catch (err) {
+      setError(getApiError(err, 'Failed to export statement. Please try again.'))
     } finally {
       setDownloading(false)
     }

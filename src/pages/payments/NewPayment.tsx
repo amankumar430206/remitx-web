@@ -18,6 +18,7 @@ import fxApi, { type FxQuote } from '@/api/fx'
 import paymentsApi from '@/api/payments'
 import accountsApi from '@/api/accounts'
 import { cn } from '@/lib/utils'
+import { getApiError } from '@/lib/apiError'
 
 // ─── Step indicator ──────────────────────────────────────────────────────────
 
@@ -212,8 +213,8 @@ function Step2({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
       const q = res.data.data
       setQuote(q)
       setData({ quote: q })
-    } catch {
-      setQuoteError('Failed to get rate. Please try again.')
+    } catch (err) {
+      setQuoteError(getApiError(err, 'Failed to get rate. Please try again.'))
       setQuote(null)
     } finally {
       setQuoteLoading(false)
@@ -454,7 +455,7 @@ function Step4({ onBack }: { onBack: () => void }) {
 
       {isError && (
         <div className="rounded-md bg-danger border border-danger-border px-4 py-2 text-sm text-danger-fg">
-          {(error as Error).message || 'Submission failed. Please try again.'}
+          {getApiError(error, 'Submission failed. Please try again.')}
         </div>
       )}
 

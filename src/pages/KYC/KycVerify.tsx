@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { getApiError } from '@/lib/apiError'
 import { useNavigate } from 'react-router-dom'
 import { PageHeader } from '@/components/ui/organisms/PageHeader'
 import { FileUpload } from '@/components/ui/organisms/FileUpload'
@@ -51,10 +52,10 @@ export function KycVerify() {
         [docType]: { status: 'success', progress: 100, filename: file.name },
       }))
       refetch()
-    } catch {
+    } catch (err) {
       setUploads(prev => ({
         ...prev,
-        [docType]: { status: 'error', progress: 0, filename: file.name, error: 'Upload failed. Please try again.' },
+        [docType]: { status: 'error', progress: 0, filename: file.name, error: getApiError(err, 'Upload failed. Please try again.') },
       }))
     }
   }
