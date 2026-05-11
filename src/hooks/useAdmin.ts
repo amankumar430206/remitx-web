@@ -1,6 +1,23 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import adminApi from '@/api/admin'
 
+export function useCreateTenant() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (payload: { slug: string; name: string; adminEmail: string }) =>
+      adminApi.tenants.create(payload).then(r => r.data.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-tenants'] }),
+  })
+}
+
+export function useTenantUsers(tenantId: string) {
+  return useQuery({
+    queryKey: ['admin-tenant-users', tenantId],
+    queryFn: () => adminApi.users.list(tenantId).then(r => r.data.data),
+    enabled: !!tenantId,
+  })
+}
+
 export function useAdminTenants() {
   return useQuery({
     queryKey: ['admin-tenants'],

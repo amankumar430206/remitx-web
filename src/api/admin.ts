@@ -40,6 +40,17 @@ export interface CorridorConfig {
   is_active: boolean
 }
 
+export interface TenantUser {
+  id: string
+  email: string
+  first_name: string | null
+  last_name: string | null
+  role: string
+  status: string
+  kyc_status: string | null
+  created_at: string
+}
+
 const admin = {
   tenants: {
     list: () =>
@@ -59,6 +70,11 @@ const admin = {
 
     setStatus: (id: string, status: 'active' | 'suspended' | 'inactive') =>
       apiClient.put<{ success: boolean; data: AdminTenant }>(`/admin/tenants/${id}/status`, { status }),
+  },
+
+  users: {
+    list: (tenantId: string) =>
+      apiClient.get<{ success: boolean; data: TenantUser[] }>(`/admin/tenants/${tenantId}/users`),
   },
 
   kyc: {
