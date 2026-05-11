@@ -24,7 +24,7 @@ export function AccountDetail() {
   const [exportFormat, setExportFormat] = useState('csv')
   const [exporting, setExporting] = useState(false)
 
-  const { data: account, isLoading: loadingAccount, isError: accountError } = useAccount(id!)
+  const { data: account, isLoading: loadingAccount, isError: accountError, refetch, isFetching } = useAccount(id!)
   const { data: ledgerData, isLoading: loadingLedger } = useAccountLedger(id!, {
     page,
     from: dateRange.from ? format(dateRange.from, 'yyyy-MM-dd') : undefined,
@@ -64,6 +64,11 @@ export function AccountDetail() {
         breadcrumbs={[{ label: 'Accounts', href: '/accounts' }, { label: account.currency }]}
         actions={
           <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => refetch()} disabled={isFetching} title="Refresh balance">
+              <svg className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </Button>
             <Select options={FORMAT_OPTIONS} value={exportFormat} onValueChange={setExportFormat} className="w-28" />
             <DateRangePicker value={dateRange} onChange={setDateRange} />
             <Button variant="outline" onClick={handleExport} loading={exporting} disabled={!dateRange.from || !dateRange.to}>

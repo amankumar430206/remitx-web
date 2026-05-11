@@ -19,7 +19,7 @@ const CURRENCIES = [
 export function AccountList() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const { data: accounts, isLoading, isError } = useAccounts()
+  const { data: accounts, isLoading, isError, isFetching } = useAccounts()
   const [createOpen, setCreateOpen] = useState(false)
   const [currency, setCurrency] = useState('')
 
@@ -38,12 +38,24 @@ export function AccountList() {
         title="Accounts"
         description="Manage your multi-currency accounts."
         actions={
-          <Button onClick={() => setCreateOpen(true)}>
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            New account
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => queryClient.invalidateQueries({ queryKey: ['accounts'] })}
+              disabled={isFetching}
+            >
+              <svg className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              {isFetching ? 'Refreshing…' : 'Refresh'}
+            </Button>
+            <Button onClick={() => setCreateOpen(true)}>
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              New account
+            </Button>
+          </div>
         }
       />
 
