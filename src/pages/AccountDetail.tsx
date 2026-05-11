@@ -5,8 +5,13 @@ import { Button } from '@/components/ui/atoms/Button'
 import { Select } from '@/components/ui/atoms/Select'
 import { Pagination } from '@/components/ui/atoms/Pagination'
 import { ContentCard } from '@/layouts/ContentCard'
-import { useAccount, useAccountLedger } from '@/hooks/useAccounts'
+import { useAccount, useAccountLedger, useAdjustBalance } from '@/hooks/useAccounts'
 import accountsApi from '@/api/accounts'
+import { useAuthStore } from '@/stores/authStore'
+import { getApiError } from '@/lib/apiError'
+import { Input } from '@/components/ui/atoms/Input'
+import { ConfirmDialog } from '@/components/ui/molecules/ConfirmDialog'
+import { FormField } from '@/components/ui/molecules/FormField'
 import type { DateRange } from '@/components/ui/molecules/DateRangePicker'
 import { format } from 'date-fns'
 
@@ -16,13 +21,26 @@ const FORMAT_OPTIONS = [
   { value: 'mt940', label: 'MT940' },
 ]
 
+const ADMIN_ROLES = new Set(['super_admin', 'client_admin'])
+
 export function AccountDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const user = useAuthStore(s => s.user)
+  const isAdmin = ADMIN_ROLES.has(user?.role ?? '')
+
   const [page, setPage] = useState(1)
   const [dateRange, setDateRange] = useState<DateRange>({})
   const [exportFormat, setExportFormat] = useState('csv')
   const [exporting, setExporting] = useState(false)
+
+  const [adjustOpen, setAdjustOpen] = useState(false)
+  const [adjustType, setAdjustType] = useState<'credit' | 'debit'>('credit')
+  const [adjustAmount, setAdjustAmount] = useState('')
+  const [adjustDesc, setAdjustDesc] = useState('')
+  const [adjustError, setAdjustError] = useState('')
+
+  const adjustMutation = useAdjustBalance(id!)
 
   const { data: account, isLoading: loadingAccount, isError: accountError, refetch, isFetching } = useAccount(id!)
   const { data: ledgerData, isLoading: loadingLedger } = useAccountLedger(id!, {
@@ -51,6 +69,34 @@ export function AccountDetail() {
     }
   }
 
+  const closeAdjust = () => {
+    setAdjustOpen(false)
+    setAdjustAmount('')
+    setAdjustDesc('')
+    setAdjustError('')
+    setAdjustType('credit')
+  }
+
+  const handleAdjust = () => {
+    setAdjustError('')
+    const amt = parseFloat(adjustAmount)
+    if (!adjustAmount || isNaN(amt) || amt <= 0) {
+      setAdjustError('Enter a valid positive amount.')
+      return
+    }
+    if (!adjustDesc.trim()) {
+      setAdjustError('Description is required.')
+      return
+    }
+    adjustMutation.mutate(
+      { type: adjustType, amount: adjustAmount, description: adjustDesc.trim() },
+      {
+        onSuccess: closeAdjust,
+        onError: (err) => setAdjustError(getApiError(err, 'Adjustment failed. Please try again.')),
+      }
+    )
+  }
+
   if (loadingAccount) return <LoadingState />
   if (accountError || !account) return <ErrorState onRetry={() => navigate('/accounts')} />
 
@@ -64,6 +110,14 @@ export function AccountDetail() {
         breadcrumbs={[{ label: 'Accounts', href: '/accounts' }, { label: account.currency }]}
         actions={
           <div className="flex items-center gap-2">
+            {isAdmin && (
+              <Button variant="outline" onClick={() => setAdjustOpen(true)}>
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                Adjust balance
+              </Button>
+            )}
             <Button variant="outline" onClick={() => refetch()} disabled={isFetching} title="Refresh balance">
               <svg className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -144,6 +198,66 @@ export function AccountDetail() {
           </>
         )}
       </ContentCard>
+
+      {/* Adjust balance dialog — admin only */}
+      <ConfirmDialog
+        open={adjustOpen}
+        onOpenChange={open => { if (!open) closeAdjust() }}
+        title="Adjust balance"
+        description={`Manually credit or debit the ${account.currency} account. A ledger entry will be created with the reason you provide.`}
+        confirmLabel={adjustType === 'credit' ? 'Credit account' : 'Debit account'}
+        variant={adjustType === 'debit' ? 'danger' : 'primary'}
+        onConfirm={handleAdjust}
+        loading={adjustMutation.isPending}
+      >
+        <div className="flex flex-col gap-4">
+          {/* Credit / Debit toggle */}
+          <div className="flex rounded-lg border border-border overflow-hidden">
+            {(['credit', 'debit'] as const).map(t => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setAdjustType(t)}
+                className={`flex-1 py-2 text-sm font-semibold capitalize transition-colors ${
+                  adjustType === t
+                    ? t === 'credit'
+                      ? 'bg-success text-success-fg'
+                      : 'bg-danger text-danger-fg'
+                    : 'bg-surface text-muted-fg hover:bg-surface/80'
+                }`}
+              >
+                {t === 'credit' ? '+ Credit' : '− Debit'}
+              </button>
+            ))}
+          </div>
+
+          <FormField label={`Amount (${account.currency})`} required htmlFor="adj-amount">
+            <Input
+              id="adj-amount"
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="0.00"
+              value={adjustAmount}
+              onChange={e => setAdjustAmount(e.target.value)}
+              className="font-mono"
+            />
+          </FormField>
+
+          <FormField label="Reason / description" required htmlFor="adj-desc">
+            <Input
+              id="adj-desc"
+              placeholder="e.g. Manual top-up, Fee reversal…"
+              value={adjustDesc}
+              onChange={e => setAdjustDesc(e.target.value)}
+            />
+          </FormField>
+
+          {adjustError && (
+            <p className="text-sm text-danger-fg">{adjustError}</p>
+          )}
+        </div>
+      </ConfirmDialog>
     </div>
   )
 }

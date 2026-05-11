@@ -41,6 +41,11 @@ const accounts = {
   create: (currency: string) =>
     apiClient.post<{ success: boolean; data: Account }>('/accounts', { currency }),
 
+  adjust: (id: string, payload: { type: 'credit' | 'debit'; amount: string; description: string }) =>
+    apiClient.post<{ success: boolean; data: { accountId: string; type: string; amount: string; description: string; balanceAfter: string } }>(
+      `/accounts/${id}/adjust`, payload
+    ),
+
   downloadStatement: (id: string, params: { from: string; to: string; format: 'csv' | 'pdf' | 'mt940' }) =>
     apiClient.get(`/reporting/statement`, { params: { accountId: id, ...params }, responseType: 'blob' }),
 }
