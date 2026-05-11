@@ -45,6 +45,7 @@ const KycQueue            = lazy(() => import('@/pages/admin/KycQueue').then(m =
 const ManualPaymentQueue  = lazy(() => import('@/pages/admin/ManualPaymentQueue').then(m => ({ default: m.ManualPaymentQueue })))
 const ProviderConfig      = lazy(() => import('@/pages/admin/ProviderConfig').then(m => ({ default: m.ProviderConfig })))
 const DesignSystem        = lazy(() => import('@/pages/DesignSystem').then(m => ({ default: m.DesignSystem })))
+const CorridorMap         = lazy(() => import('@/pages/CorridorMap').then(m => ({ default: m.CorridorMap })))
 
 // Wraps each route element with an isolated error boundary + suspense skeleton.
 // A crash or slow load in one page never affects the rest of the app.
@@ -99,6 +100,9 @@ function App() {
 
               {/* FX */}
               <Route path="/fx-rates" element={page(<FxRates />)} />
+
+              {/* Network */}
+              <Route path="/network" element={page(<CorridorMap />)} />
 
               {/* KYC */}
               <Route path="/kyc" element={page(<KycStatus />)} />
