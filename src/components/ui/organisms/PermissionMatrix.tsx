@@ -4,6 +4,7 @@ import { Toggle } from '@/components/ui/atoms/Toggle'
 
 export interface PermissionMatrixProps {
   roles: string[]
+  roleLabels?: Record<string, string>
   permissions: Array<{ key: string; label: string; group?: string }>
   value: Record<string, string[]>
   onChange?: (role: string, permission: string, granted: boolean) => void
@@ -11,7 +12,7 @@ export interface PermissionMatrixProps {
   className?: string
 }
 
-export function PermissionMatrix({ roles, permissions, value, onChange, readOnly, className }: PermissionMatrixProps) {
+export function PermissionMatrix({ roles, roleLabels, permissions, value, onChange, readOnly, className }: PermissionMatrixProps) {
   const groups = Array.from(new Set(permissions.map(p => p.group ?? 'General')))
 
   return (
@@ -22,7 +23,7 @@ export function PermissionMatrix({ roles, permissions, value, onChange, readOnly
             <th className="px-4 py-3 text-left font-medium text-muted-fg w-48">Permission</th>
             {roles.map(role => (
               <th key={role} className="px-4 py-3 text-center font-medium text-foreground whitespace-nowrap">
-                {role.replace(/_/g, ' ')}
+                {roleLabels?.[role] ?? role.replace(/_/g, ' ')}
               </th>
             ))}
           </tr>
