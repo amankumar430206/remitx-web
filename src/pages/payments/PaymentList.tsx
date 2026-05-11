@@ -8,16 +8,17 @@ import { StatusBadge } from '@/components/ui/molecules/StatusBadge'
 import { AmountDisplay } from '@/components/ui/molecules/AmountDisplay'
 import { LoadingState } from '@/components/ui/molecules/LoadingState'
 import { ErrorState } from '@/components/ui/molecules/ErrorState'
-import { DateRangePicker } from '@/components/ui/molecules/DateRangePicker'
+import { DateRangePickerButton } from '@/components/ui/molecules/DateRangePicker'
 import { Button } from '@/components/ui/atoms/Button'
 import { Badge } from '@/components/ui/atoms/Badge'
 import { Select } from '@/components/ui/atoms/Select'
 import { Pagination } from '@/components/ui/atoms/Pagination'
 import { ContentCard } from '@/layouts/ContentCard'
-import { SplitPane } from '@/layouts/SplitPane'
+import { Drawer } from '@/components/ui/molecules/Drawer'
 import { usePayments, usePayment } from '@/hooks/usePayments'
 import type { Payment } from '@/api/payments'
 import type { DateRange } from '@/components/ui/molecules/DateRangePicker'
+
 
 type Preset = '7d' | '30d' | '3m' | '6m' | 'custom'
 
@@ -31,12 +32,12 @@ const PRESETS: { label: string; value: Preset }[] = [
 function presetToRange(preset: Preset): DateRange {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-  const from = new Date(today)
-  if (preset === '7d') from.setDate(today.getDate() - 6)
-  else if (preset === '30d') from.setDate(today.getDate() - 29)
-  else if (preset === '3m') from.setMonth(today.getMonth() - 3)
-  else if (preset === '6m') from.setMonth(today.getMonth() - 6)
-  return { from, to: today }
+  const startDate = new Date(today)
+  if (preset === '7d') startDate.setDate(today.getDate() - 6)
+  else if (preset === '30d') startDate.setDate(today.getDate() - 29)
+  else if (preset === '3m') startDate.setMonth(today.getMonth() - 3)
+  else if (preset === '6m') startDate.setMonth(today.getMonth() - 6)
+  return { startDate, endDate: today }
 }
 
 const STATUS_OPTIONS = [
@@ -111,15 +112,17 @@ export function PaymentList() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
   const handlePreset = (p: Preset) => { setPreset(p); setDateRange(presetToRange(p)); setPage(1) }
-  const handleCustomRange = (range: DateRange) => { setPreset('custom'); setDateRange(range); setPage(1) }
+  const handleCustomRange = (range: DateRange) => {
+    if (range.startDate) { setPreset('custom'); setDateRange(range); setPage(1) }
+  }
 
   const { data, isLoading, isError } = usePayments({
     page,
     limit: 20,
     status: status || undefined,
     search: search || undefined,
-    from: dateRange.from ? dateRange.from.toISOString().slice(0, 10) : undefined,
-    to: dateRange.to ? dateRange.to.toISOString().slice(0, 10) : undefined,
+    from: dateRange.startDate ? dateRange.startDate.toISOString().slice(0, 10) : undefined,
+    to: dateRange.endDate ? dateRange.endDate.toISOString().slice(0, 10) : undefined,
   })
 
   const payments = data?.data ?? []
@@ -161,7 +164,7 @@ export function PaymentList() {
     },
   ]
 
-  const activeFilters = [status, dateRange.from].filter(Boolean).length
+  const activeFilters = [status, dateRange.startDate].filter(Boolean).length
   const clearAll = () => { setStatus(''); setSearch(''); handlePreset('30d') }
 
   const list = (
@@ -178,8 +181,11 @@ export function PaymentList() {
             {p.label}
           </Button>
         ))}
-        <DateRangePicker
-          value={preset === 'custom' ? dateRange : {}}
+        <DateRangePickerButton
+          selectMode="range"
+          showShortcuts
+          initialStartDate={preset === 'custom' ? dateRange.startDate : null}
+          initialEndDate={preset === 'custom' ? dateRange.endDate : null}
           onChange={handleCustomRange}
           placeholder="Custom range…"
         />
@@ -246,18 +252,20 @@ export function PaymentList() {
         }
       />
 
-      <SplitPane
-        left={list}
-        leftWidth="flex-1"
-        right={selectedId ? (
+      {list}
+
+      <Drawer
+        open={!!selectedId}
+        onClose={() => setSelectedId(null)}
+        title="Payment details"
+      >
+        {selectedId && (
           <PaymentQuickView
             id={selectedId}
             onOpenFull={() => navigate(`/payments/${selectedId}`)}
           />
-        ) : undefined}
-        rightTitle={selectedId ? 'Payment details' : undefined}
-        onCloseRight={selectedId ? () => setSelectedId(null) : undefined}
-      />
+        )}
+      </Drawer>
     </div>
   )
 }

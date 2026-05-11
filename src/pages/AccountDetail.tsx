@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { PageHeader, DataTable, AmountDisplay, LoadingState, ErrorState, DateRangePicker, FilterBar, Timeline } from '@/components/ui/index'
+import { PageHeader, DataTable, AmountDisplay, LoadingState, ErrorState, FilterBar, Timeline } from '@/components/ui/index'
+import { DateRangePickerButton } from '@/components/ui/molecules/DateRangePicker'
 import { Button } from '@/components/ui/atoms/Button'
 import { Badge } from '@/components/ui/atoms/Badge'
 import { Select } from '@/components/ui/atoms/Select'
@@ -56,7 +57,7 @@ export function AccountDetail() {
   const isAdmin = ADMIN_ROLES.has(user?.role ?? '')
 
   const [page, setPage] = useState(1)
-  const [dateRange, setDateRange] = useState<DateRange>({})
+  const [dateRange, setDateRange] = useState<DateRange>({ startDate: null, endDate: null })
   const [exportFormat, setExportFormat] = useState('csv')
   const [exporting, setExporting] = useState(false)
 
@@ -71,17 +72,17 @@ export function AccountDetail() {
   const { data: account, isLoading: loadingAccount, isError: accountError, refetch, isFetching } = useAccount(id!)
   const { data: ledgerData, isLoading: loadingLedger } = useAccountLedger(id!, {
     page,
-    from: dateRange.from ? format(dateRange.from, 'yyyy-MM-dd') : undefined,
-    to: dateRange.to ? format(dateRange.to, 'yyyy-MM-dd') : undefined,
+    from: dateRange.startDate ? format(dateRange.startDate, 'yyyy-MM-dd') : undefined,
+    to: dateRange.endDate ? format(dateRange.endDate, 'yyyy-MM-dd') : undefined,
   })
 
   const handleExport = async () => {
-    if (!id || !dateRange.from || !dateRange.to) return
+    if (!id || !dateRange.startDate || !dateRange.endDate) return
     setExporting(true)
     try {
       const res = await accountsApi.downloadStatement(id, {
-        from: format(dateRange.from, 'yyyy-MM-dd'),
-        to: format(dateRange.to, 'yyyy-MM-dd'),
+        from: format(dateRange.startDate, 'yyyy-MM-dd'),
+        to: format(dateRange.endDate, 'yyyy-MM-dd'),
         format: exportFormat as 'csv' | 'pdf' | 'mt940',
       })
       const url = URL.createObjectURL(new Blob([res.data]))
@@ -257,12 +258,19 @@ export function AccountDetail() {
             </div>
             <div>
               <p className="mb-1.5 text-xs font-medium text-muted-fg">Date range</p>
-              <DateRangePicker value={dateRange} onChange={setDateRange} />
+              <DateRangePickerButton
+                selectMode="range"
+                showShortcuts
+                initialStartDate={dateRange.startDate}
+                initialEndDate={dateRange.endDate}
+                onChange={setDateRange}
+                placeholder="Select date range…"
+              />
             </div>
             <Button
               onClick={handleExport}
               loading={exporting}
-              disabled={!dateRange.from || !dateRange.to}
+              disabled={!dateRange.startDate || !dateRange.endDate}
               className="w-full"
             >
               <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -270,7 +278,7 @@ export function AccountDetail() {
               </svg>
               {exporting ? 'Exporting…' : `Download ${exportFormat.toUpperCase()}`}
             </Button>
-            {(!dateRange.from || !dateRange.to) && (
+            {(!dateRange.startDate || !dateRange.endDate) && (
               <p className="text-center text-xs text-muted-fg">Select a date range to enable export</p>
             )}
           </div>
@@ -287,9 +295,18 @@ export function AccountDetail() {
             )}
           </div>
           <FilterBar
-            filters={<DateRangePicker value={dateRange} onChange={range => { setDateRange(range); setPage(1) }} />}
-            hasActiveFilters={!!(dateRange.from || dateRange.to)}
-            onReset={() => { setDateRange({}); setPage(1) }}
+            filters={
+              <DateRangePickerButton
+                selectMode="range"
+                showShortcuts
+                initialStartDate={dateRange.startDate}
+                initialEndDate={dateRange.endDate}
+                onChange={range => { setDateRange(range); setPage(1) }}
+                placeholder="Filter by date…"
+              />
+            }
+            hasActiveFilters={!!(dateRange.startDate || dateRange.endDate)}
+            onReset={() => { setDateRange({ startDate: null, endDate: null }); setPage(1) }}
           />
         </div>
 

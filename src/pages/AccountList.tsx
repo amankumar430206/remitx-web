@@ -16,14 +16,71 @@ const CURRENCIES = [
   { value: 'INR', label: 'INR — Indian Rupee' },
 ]
 
-const CURRENCY_META: Record<string, { flag: string; color: string; bg: string; border: string }> = {
-  USD: { flag: '🇺🇸', color: 'text-blue-700 dark:text-blue-400',   bg: 'bg-blue-50 dark:bg-blue-950/40',   border: 'border-blue-200 dark:border-blue-800' },
-  GBP: { flag: '🇬🇧', color: 'text-violet-700 dark:text-violet-400', bg: 'bg-violet-50 dark:bg-violet-950/40', border: 'border-violet-200 dark:border-violet-800' },
-  EUR: { flag: '🇪🇺', color: 'text-indigo-700 dark:text-indigo-400', bg: 'bg-indigo-50 dark:bg-indigo-950/40', border: 'border-indigo-200 dark:border-indigo-800' },
-  AED: { flag: '🇦🇪', color: 'text-emerald-700 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-950/40', border: 'border-emerald-200 dark:border-emerald-800' },
-  INR: { flag: '🇮🇳', color: 'text-orange-700 dark:text-orange-400', bg: 'bg-orange-50 dark:bg-orange-950/40', border: 'border-orange-200 dark:border-orange-800' },
+const CURRENCY_META: Record<string, {
+  flag: string
+  cardGradient: string   // full card bg gradient (theme-neutral)
+  chipGradient: string   // currency chip bg
+  chipBorder: string
+  chipText: string
+  accentFrom: string     // top accent line color
+  dot: string            // status dot color override
+}> = {
+  USD: {
+    flag: '🇺🇸',
+    cardGradient: 'from-blue-500/[0.13] via-blue-400/[0.06] to-indigo-500/[0.04]',
+    chipGradient: 'from-blue-500/25 to-blue-600/20',
+    chipBorder:   'border-blue-500/30',
+    chipText:     'text-blue-500 dark:text-blue-400',
+    accentFrom:   'from-blue-500/0 via-blue-400/70 to-blue-500/0',
+    dot:          'bg-blue-400',
+  },
+  GBP: {
+    flag: '🇬🇧',
+    cardGradient: 'from-violet-500/[0.13] via-violet-400/[0.06] to-purple-500/[0.04]',
+    chipGradient: 'from-violet-500/25 to-violet-600/20',
+    chipBorder:   'border-violet-500/30',
+    chipText:     'text-violet-500 dark:text-violet-400',
+    accentFrom:   'from-violet-500/0 via-violet-400/70 to-violet-500/0',
+    dot:          'bg-violet-400',
+  },
+  EUR: {
+    flag: '🇪🇺',
+    cardGradient: 'from-indigo-500/[0.13] via-indigo-400/[0.06] to-blue-500/[0.04]',
+    chipGradient: 'from-indigo-500/25 to-indigo-600/20',
+    chipBorder:   'border-indigo-500/30',
+    chipText:     'text-indigo-500 dark:text-indigo-400',
+    accentFrom:   'from-indigo-500/0 via-indigo-400/70 to-indigo-500/0',
+    dot:          'bg-indigo-400',
+  },
+  AED: {
+    flag: '🇦🇪',
+    cardGradient: 'from-emerald-500/[0.13] via-emerald-400/[0.06] to-teal-500/[0.04]',
+    chipGradient: 'from-emerald-500/25 to-emerald-600/20',
+    chipBorder:   'border-emerald-500/30',
+    chipText:     'text-emerald-600 dark:text-emerald-400',
+    accentFrom:   'from-emerald-500/0 via-emerald-400/70 to-emerald-500/0',
+    dot:          'bg-emerald-400',
+  },
+  INR: {
+    flag: '🇮🇳',
+    cardGradient: 'from-orange-500/[0.13] via-orange-400/[0.06] to-amber-500/[0.04]',
+    chipGradient: 'from-orange-500/25 to-orange-600/20',
+    chipBorder:   'border-orange-500/30',
+    chipText:     'text-orange-600 dark:text-orange-400',
+    accentFrom:   'from-orange-500/0 via-orange-400/70 to-orange-500/0',
+    dot:          'bg-orange-400',
+  },
 }
-const currencyMeta = (c: string) => CURRENCY_META[c] ?? { flag: '💱', color: 'text-slate-700 dark:text-slate-400', bg: 'bg-slate-50 dark:bg-slate-900/40', border: 'border-slate-200 dark:border-slate-700' }
+const DEFAULT_META = {
+  flag: '💱',
+  cardGradient: 'from-slate-500/[0.10] via-slate-400/[0.05] to-transparent',
+  chipGradient: 'from-slate-500/20 to-slate-600/15',
+  chipBorder:   'border-slate-500/25',
+  chipText:     'text-slate-500 dark:text-slate-400',
+  accentFrom:   'from-slate-500/0 via-slate-400/60 to-slate-500/0',
+  dot:          'bg-slate-400',
+}
+const currencyMeta = (c: string) => CURRENCY_META[c] ?? DEFAULT_META
 
 function AccountCard({ account, onClick }: { account: Account; onClick: () => void }) {
   const meta = currencyMeta(account.currency)
@@ -32,32 +89,39 @@ function AccountCard({ account, onClick }: { account: Account; onClick: () => vo
   return (
     <button
       onClick={onClick}
-      className="group relative flex flex-col gap-4 rounded-xl border border-border bg-surface p-5 text-left transition-all duration-150 hover:border-primary/40 hover:shadow-[0_4px_24px_-4px_rgba(37,99,235,0.12)] hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+      className="group relative flex flex-col gap-4 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#111827] p-5 text-left shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:border-white/[0.14] hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
     >
+      {/* Per-currency gradient wash */}
+      <div className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${meta.cardGradient}`} />
+      {/* Bottom-right ambient blob */}
+      <div className={`pointer-events-none absolute -bottom-8 -right-8 h-32 w-32 rounded-full bg-gradient-to-br ${meta.cardGradient} blur-2xl opacity-70`} />
+
       {/* Top row */}
-      <div className="flex items-start justify-between gap-2">
-        <div className={`flex items-center gap-2.5 rounded-lg border px-3 py-1.5 ${meta.bg} ${meta.border}`}>
-          <span className="text-base leading-none">{meta.flag}</span>
-          <span className={`text-sm font-bold tracking-wide ${meta.color}`}>{account.currency}</span>
+      <div className="relative flex items-start justify-between gap-2">
+        <div className={`flex items-center gap-2 rounded-lg border bg-gradient-to-br px-3 py-1.5 ${meta.chipBorder} ${meta.chipGradient}`}>
+          <span className="text-sm leading-none">{meta.flag}</span>
+          <span className={`text-sm font-bold tracking-wide ${meta.chipText}`}>{account.currency}</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className={`h-1.5 w-1.5 rounded-full ${isActive ? 'bg-success-fg' : 'bg-muted-fg'}`} />
-          <span className="text-xs font-medium capitalize text-muted-fg">{account.status}</span>
+          <span className={`h-1.5 w-1.5 rounded-full ${isActive ? 'bg-emerald-400' : 'bg-slate-500'}`} />
+          <span className="text-xs font-medium capitalize text-slate-400">{account.status}</span>
         </div>
       </div>
 
       {/* Balance */}
-      <div>
-        <p className="mb-0.5 text-xs font-medium uppercase tracking-widest text-muted-fg">Available balance</p>
-        <AmountDisplay amount={account.balance} currency={account.currency} size="xl" />
+      <div className="relative">
+        <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-slate-500">Available balance</p>
+        <div className="[&_.text-foreground]:!text-white [&_.text-muted-fg]:!text-slate-500">
+          <AmountDisplay amount={account.balance} currency={account.currency} size="xl" />
+        </div>
       </div>
 
       {/* Footer */}
-      <div className="flex items-center justify-between border-t border-border pt-3">
-        <span className="font-mono text-xs text-muted-fg">
+      <div className="relative flex items-center justify-between border-t border-white/[0.07] pt-3">
+        <span className="font-mono text-xs text-slate-500">
           {account.provider_account_id ?? account.account_number ?? 'No ref'}
         </span>
-        <div className="flex items-center gap-1 text-xs text-muted-fg opacity-0 transition-opacity group-hover:opacity-100">
+        <div className="flex items-center gap-1 text-xs text-slate-400 opacity-0 transition-opacity group-hover:opacity-100">
           <span>View</span>
           <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
@@ -65,8 +129,8 @@ function AccountCard({ account, onClick }: { account: Account; onClick: () => vo
         </div>
       </div>
 
-      {/* Hover accent line */}
-      <div className="absolute inset-x-0 top-0 h-px rounded-t-xl bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+      {/* Hover accent top line */}
+      <div className={`absolute inset-x-0 top-0 h-px bg-gradient-to-r ${meta.accentFrom} opacity-0 transition-opacity group-hover:opacity-100`} />
     </button>
   )
 }

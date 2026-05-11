@@ -7,6 +7,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { PageHeader } from '@/components/ui/organisms/PageHeader'
 import { Button } from '@/components/ui/atoms/Button'
 import { Input } from '@/components/ui/atoms/Input'
+import { Select } from '@/components/ui/atoms/Select'
 import { Spinner } from '@/components/ui/atoms/Spinner'
 import { FormField } from '@/components/ui/molecules/FormField'
 import { AmountDisplay } from '@/components/ui/molecules/AmountDisplay'
@@ -20,40 +21,48 @@ import accountsApi from '@/api/accounts'
 import { cn } from '@/lib/utils'
 import { getApiError } from '@/lib/apiError'
 
-// ─── Step indicator ──────────────────────────────────────────────────────────
+// ─── Constants ───────────────────────────────────────────────────────────────
 
-const STEPS = ['Recipient', 'Amount & FX', 'Review', 'Confirm'] as const
+const STEPS = ['Recipient', 'Amount', 'Details', 'Confirm'] as const
+const CURRENCIES = ['USD', 'EUR', 'GBP', 'AED', 'SGD', 'AUD', 'CAD', 'INR', 'NGN', 'KES']
+const CURRENCY_OPTIONS = CURRENCIES.map(c => ({ value: c, label: c }))
+const MIN_LOCK_MS = 5 * 60 * 1000 // 5 minute minimum lock display
+
+// ─── Step bar ────────────────────────────────────────────────────────────────
 
 function StepBar({ current }: { current: number }) {
   return (
-    <div className="flex items-center gap-0 mb-8">
+    <div className="flex items-center gap-1.5 mb-8">
       {STEPS.map((label, i) => {
         const idx = i + 1
         const done = idx < current
         const active = idx === current
         return (
-          <div key={label} className="flex items-center flex-1 last:flex-none">
-            <div className="flex flex-col items-center">
-              <div
-                className={cn(
-                  'h-8 w-8 rounded-full flex items-center justify-center text-sm font-semibold transition-colors',
-                  done && 'bg-primary text-white',
-                  active && 'bg-primary text-white ring-4 ring-primary/20',
-                  !done && !active && 'bg-surface-overlay text-muted-fg'
-                )}
-              >
-                {done ? (
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                ) : idx}
-              </div>
-              <span className={cn('mt-1 text-xs whitespace-nowrap', active ? 'text-primary font-medium' : 'text-muted-fg')}>
-                {label}
-              </span>
+          <div key={label} className="flex items-center gap-1.5 flex-1 last:flex-none">
+            <div className={cn(
+              'flex items-center gap-1.5 rounded-full text-xs font-semibold transition-all duration-300 whitespace-nowrap',
+              active ? 'bg-primary text-white px-3 py-1.5 shadow shadow-primary/30' :
+              done   ? 'bg-primary/10 text-primary px-3 py-1.5' :
+                       'text-muted-fg/50 px-1',
+            )}>
+              {done ? (
+                <svg className="h-3 w-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              ) : (
+                <span className={cn(
+                  'h-4 w-4 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0',
+                  active ? 'bg-white/25 text-white' : 'bg-border text-muted-fg',
+                )}>
+                  {idx}
+                </span>
+              )}
+              <span className={cn('hidden sm:inline', !active && !done && 'hidden')}>{label}</span>
             </div>
             {i < STEPS.length - 1 && (
-              <div className={cn('flex-1 h-px mx-2 mb-5', done ? 'bg-primary' : 'bg-border')} />
+              <div className="flex-1 h-px rounded-full overflow-hidden bg-border">
+                <div className={cn('h-full bg-primary rounded-full transition-all duration-500', done ? 'w-full' : 'w-0')} />
+              </div>
             )}
           </div>
         )
@@ -62,9 +71,9 @@ function StepBar({ current }: { current: number }) {
   )
 }
 
-// ─── FX Countdown ────────────────────────────────────────────────────────────
+// ─── Rate lock pill ──────────────────────────────────────────────────────────
 
-function FxCountdown({ expiresAt, onExpire }: { expiresAt: string; onExpire: () => void }) {
+function RateLockPill({ expiresAt, onExpire }: { expiresAt: string; onExpire: () => void }) {
   const [secs, setSecs] = useState(0)
 
   useEffect(() => {
@@ -78,35 +87,28 @@ function FxCountdown({ expiresAt, onExpire }: { expiresAt: string; onExpire: () 
     return () => clearInterval(id)
   }, [expiresAt, onExpire])
 
-  const pct = Math.min(100, (secs / 30) * 100)
-  const urgent = secs <= 10
+  const mins = Math.floor(secs / 60)
+  const s = secs % 60
+  const timeStr = `${mins}:${String(s).padStart(2, '0')}`
+  const urgent = secs > 0 && secs <= 30
+  const expired = secs === 0
 
   return (
-    <div className="flex items-center gap-2">
-      <div className="relative h-7 w-7">
-        <svg className="h-7 w-7 -rotate-90" viewBox="0 0 28 28">
-          <circle cx="14" cy="14" r="11" fill="none" stroke="var(--color-border)" strokeWidth="2.5" className="text-border" />
-          <circle
-            cx="14" cy="14" r="11" fill="none"
-            stroke={urgent ? 'rgb(var(--color-danger))' : 'rgb(var(--color-primary))'}
-            strokeWidth="2.5"
-            strokeDasharray={`${2 * Math.PI * 11}`}
-            strokeDashoffset={`${2 * Math.PI * 11 * (1 - pct / 100)}`}
-            className="transition-all duration-1000"
-          />
-        </svg>
-        <span className={cn('absolute inset-0 flex items-center justify-center text-[9px] font-bold', urgent ? 'text-danger-fg' : 'text-primary')}>
-          {secs}
-        </span>
-      </div>
-      <span className={cn('text-xs', urgent ? 'text-danger-fg' : 'text-muted-fg')}>
-        {urgent ? 'Refreshing soon…' : 'Rate locked'}
-      </span>
-    </div>
+    <span className={cn(
+      'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold tabular-nums transition-colors',
+      expired  ? 'bg-danger/10 border-danger/30 text-danger-fg' :
+      urgent   ? 'bg-warning/10 border-warning/30 text-warning' :
+                 'bg-emerald-500/10 border-emerald-500/25 text-emerald-600 dark:text-emerald-400',
+    )}>
+      <svg className="h-3 w-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+      </svg>
+      {expired ? 'Rate expired' : `Locked · ${timeStr}`}
+    </span>
   )
 }
 
-// ─── Step 1 — Beneficiary ────────────────────────────────────────────────────
+// ─── Step 1 — Recipient ───────────────────────────────────────────────────────
 
 function Step1({ onNext }: { onNext: () => void }) {
   const [search, setSearch] = useState('')
@@ -120,57 +122,89 @@ function Step1({ onNext }: { onNext: () => void }) {
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <p className="text-sm text-muted-fg">Search and select the recipient for this payment.</p>
-      <SearchInput value={search} onChange={e => setSearch(e.target.value)} onClear={() => setSearch('')} placeholder="Search by name or account number…" />
+    <div className="flex flex-col gap-5">
+      <div>
+        <h3 className="text-base font-semibold text-foreground">Who are you sending to?</h3>
+        <p className="text-sm text-muted-fg mt-0.5">Search your saved beneficiaries.</p>
+      </div>
 
-      {isLoading && <div className="flex justify-center py-8"><Spinner size="md" /></div>}
+      <SearchInput
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+        onClear={() => setSearch('')}
+        placeholder="Search by name or account…"
+      />
+
+      {isLoading && (
+        <div className="flex justify-center py-12">
+          <Spinner size="md" />
+        </div>
+      )}
 
       {!isLoading && (data?.data?.length ?? 0) === 0 && (
-        <div className="rounded-lg border border-dashed border-border py-10 text-center">
-          <p className="text-sm text-muted-fg">No beneficiaries found.</p>
-          <p className="mt-1 text-xs text-muted-fg">Try a different search or add a new beneficiary first.</p>
+        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border py-14 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/8 text-primary">
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-foreground">No beneficiaries found</p>
+            <p className="mt-0.5 text-xs text-muted-fg">Try a different name or add a new beneficiary first.</p>
+          </div>
         </div>
       )}
 
       <div className="flex flex-col gap-2">
-        {(data?.data ?? []).map(b => (
-          <button
-            key={b.id}
-            onClick={() => handleSelect(b.id, b.name, b.country_code)}
-            className={cn(
-              'flex items-center gap-3 rounded-lg border p-3 text-left transition-all',
-              selected === b.id
-                ? 'border-primary bg-primary-subtle ring-1 ring-primary'
-                : 'border-border bg-surface hover:border-primary'
-            )}
-          >
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-overlay font-semibold text-sm text-foreground">
-              {b.name.slice(0, 2).toUpperCase()}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-medium text-foreground">{b.name}</p>
-              <p className="text-xs text-muted-fg truncate">{b.bank_name} · {b.account_number ?? b.iban} · {b.country_code}</p>
-            </div>
-            {selected === b.id && (
-              <svg className="h-4 w-4 shrink-0 text-primary" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
-            )}
-          </button>
-        ))}
+        {(data?.data ?? []).map(b => {
+          const isSelected = selected === b.id
+          const initials = b.name.slice(0, 2).toUpperCase()
+          return (
+            <button
+              key={b.id}
+              onClick={() => handleSelect(b.id, b.name, b.country_code)}
+              className={cn(
+                'flex items-center gap-3.5 rounded-2xl border p-4 text-left transition-all duration-150',
+                isSelected
+                  ? 'border-primary bg-primary/5 shadow-sm shadow-primary/10'
+                  : 'border-border bg-surface hover:border-primary/40',
+              )}
+            >
+              <div className={cn(
+                'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sm font-bold select-none',
+                isSelected ? 'bg-primary text-white shadow-sm shadow-primary/30' : 'bg-surface-raised text-foreground',
+              )}>
+                {initials}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-foreground text-sm">{b.name}</p>
+                <p className="text-xs text-muted-fg truncate mt-0.5">
+                  {b.bank_name}{b.bank_name && ' · '}{b.account_number ?? b.iban} · {b.country_code}
+                </p>
+              </div>
+              <div className={cn(
+                'h-5 w-5 shrink-0 rounded-full border-2 flex items-center justify-center transition-all',
+                isSelected ? 'border-primary bg-primary' : 'border-border bg-transparent',
+              )}>
+                {isSelected && (
+                  <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </div>
+            </button>
+          )
+        })}
       </div>
 
-      <div className="flex justify-end pt-2">
-        <Button onClick={onNext} disabled={!selected}>Continue</Button>
+      <div className="flex justify-end pt-1">
+        <Button onClick={onNext} disabled={!selected} className="px-8">Continue</Button>
       </div>
     </div>
   )
 }
 
 // ─── Step 2 — Amount + FX ────────────────────────────────────────────────────
-
-const CURRENCIES = ['USD', 'EUR', 'GBP', 'AED', 'SGD', 'AUD', 'CAD', 'INR', 'NGN', 'KES']
 
 const amountSchema = z.object({
   sourceAmount: z.string().min(1).refine(v => parseFloat(v) > 0, 'Must be positive'),
@@ -191,12 +225,12 @@ function Step2({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
     queryFn: () => accountsApi.list().then(r => r.data.data),
   })
 
-  const { register, watch, handleSubmit, formState: { errors } } = useForm<AmountFormValues>({
+  const { register, watch, handleSubmit, setValue, formState: { errors } } = useForm<AmountFormValues>({
     resolver: zodResolver(amountSchema),
     defaultValues: {
       sourceAmount: stored.sourceAmount ?? '',
       sourceCurrency: stored.sourceCurrency ?? 'USD',
-      destinationCurrency: stored.destinationCurrency ?? 'EUR',
+      destinationCurrency: stored.destinationCurrency ?? 'GBP',
     },
   })
 
@@ -211,8 +245,12 @@ function Step2({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
     try {
       const res = await fxApi.quote(from, to, amount)
       const q = res.data.data
-      setQuote(q)
-      setData({ quote: q })
+      // Ensure minimum 5-minute lock period in the display
+      const apiExpiry = new Date(q.expiresAt).getTime()
+      const minExpiry = Date.now() + MIN_LOCK_MS
+      const adjustedQuote: FxQuote = { ...q, expiresAt: new Date(Math.max(apiExpiry, minExpiry)).toISOString() }
+      setQuote(adjustedQuote)
+      setData({ quote: adjustedQuote })
     } catch (err) {
       setQuoteError(getApiError(err, 'Failed to get rate. Please try again.'))
       setQuote(null)
@@ -221,7 +259,10 @@ function Step2({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
     }
   }, [setData])
 
-  // Debounce quote fetch on amount/currency change
+  const handleExpire = useCallback(() => {
+    fetchQuote(sourceAmount, sourceCurrency, destinationCurrency)
+  }, [fetchQuote, sourceAmount, sourceCurrency, destinationCurrency])
+
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
@@ -248,94 +289,125 @@ function Step2({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
     onNext()
   }
 
+  const CurrencySelect = ({ field }: { field: 'sourceCurrency' | 'destinationCurrency' }) => (
+    <select
+      value={field === 'sourceCurrency' ? sourceCurrency : destinationCurrency}
+      onChange={e => setValue(field, e.target.value)}
+      className="h-10 rounded-xl border border-border bg-surface-raised px-3 text-sm font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
+    >
+      {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
+    </select>
+  )
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">
-      <p className="text-sm text-muted-fg">Enter the amount you want to send.</p>
+      <div>
+        <h3 className="text-base font-semibold text-foreground">How much are you sending?</h3>
+        <p className="text-sm text-muted-fg mt-0.5">Enter the amount and we'll find the best rate.</p>
+      </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <FormField label="You send" error={errors.sourceAmount?.message}>
-          <div className="flex">
-            <Input
+      {/* Stacked amount corridor */}
+      <div className="rounded-2xl border border-border overflow-hidden divide-y divide-border">
+
+        {/* You send */}
+        <div className="bg-surface p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-fg mb-2">You send</p>
+          <div className="flex items-center gap-3">
+            <input
               {...register('sourceAmount')}
               type="number"
               step="0.01"
               placeholder="0.00"
-              className="rounded-r-none"
+              className="flex-1 min-w-0 bg-transparent text-3xl font-bold text-foreground placeholder:text-muted-fg/25 focus:outline-none tabular-nums"
             />
-            <select
-              {...register('sourceCurrency')}
-              className="rounded-l-none border border-l-0 border-input bg-surface-overlay px-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-            >
-              {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
+            <CurrencySelect field="sourceCurrency" />
           </div>
-        </FormField>
+          {errors.sourceAmount && (
+            <p className="mt-1.5 text-xs text-danger-fg">{errors.sourceAmount.message}</p>
+          )}
+        </div>
 
-        <FormField label="Recipient gets" error={errors.destinationCurrency?.message}>
-          <select
-            {...register('destinationCurrency')}
-            className="w-full rounded-md border border-input bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </FormField>
-      </div>
-
-      {/* FX Quote card */}
-      <div className="rounded-lg border border-border bg-surface-overlay p-4">
-        {quoteLoading && (
-          <div className="flex items-center gap-2 text-sm text-muted-fg">
-            <Spinner size="sm" /> Fetching live rate…
-          </div>
-        )}
-        {quoteError && <p className="text-sm text-danger-fg">{quoteError}</p>}
-        {!quoteLoading && !quoteError && !quote && (
-          <p className="text-sm text-muted-fg">Enter an amount to see the live rate.</p>
-        )}
-        {!quoteLoading && quote && (
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-fg">Exchange rate</span>
-              <FxCountdown expiresAt={quote.expiresAt} onExpire={() => fetchQuote(sourceAmount, sourceCurrency, destinationCurrency)} />
+        {/* Rate strip */}
+        <div className="bg-surface-raised px-4 py-2.5 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-xs text-muted-fg min-w-0">
+            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-2xl font-bold text-foreground">
-                1 {quote.from} = {parseFloat(quote.rate).toFixed(4)} {quote.to}
+            {quoteLoading ? (
+              <div className="flex items-center gap-1.5">
+                <Spinner size="sm" />
+                <span>Fetching rate…</span>
+              </div>
+            ) : quote ? (
+              <span className="font-medium tabular-nums">
+                1 {quote.from} = <span className="text-foreground font-semibold">{parseFloat(quote.rate).toFixed(4)}</span> {quote.to}
               </span>
-            </div>
-            <div className="h-px bg-border" />
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              <div>
-                <p className="text-muted-fg">You send</p>
-                <p className="font-semibold text-foreground"><AmountDisplay amount={quote.fromAmount} currency={quote.from} /></p>
-              </div>
-              <div>
-                <p className="text-muted-fg">Recipient gets</p>
-                <p className="font-semibold text-foreground"><AmountDisplay amount={quote.toAmount} currency={quote.to} /></p>
-              </div>
-            </div>
+            ) : (
+              <span>Enter amount to see rate</span>
+            )}
           </div>
-        )}
+          {quote && !quoteLoading && (
+            <RateLockPill expiresAt={quote.expiresAt} onExpire={handleExpire} />
+          )}
+        </div>
+
+        {/* They receive */}
+        <div className="bg-surface p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-fg mb-2">They receive</p>
+          <div className="flex items-center gap-3">
+            <div className="flex-1 min-w-0">
+              {quoteLoading ? (
+                <div className="flex items-center gap-2 h-9">
+                  <Spinner size="sm" />
+                </div>
+              ) : quote ? (
+                <span className="text-3xl font-bold text-foreground tabular-nums">
+                  {parseFloat(quote.toAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              ) : (
+                <span className="text-3xl font-bold text-muted-fg/25">—</span>
+              )}
+            </div>
+            <CurrencySelect field="destinationCurrency" />
+          </div>
+        </div>
       </div>
 
-      <div className="flex justify-between pt-2">
+      {/* Fee breakdown */}
+      {quote && !quoteLoading && (
+        <div className="rounded-xl border border-border bg-surface-raised px-4 py-3 flex items-center justify-between text-xs">
+          <div className="flex items-center gap-1.5 text-muted-fg">
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Total you send
+          </div>
+          <span className="font-semibold text-foreground tabular-nums">
+            <AmountDisplay amount={quote.fromAmount} currency={quote.from} size="sm" />
+          </span>
+        </div>
+      )}
+
+      {quoteError && (
+        <div className="flex items-start gap-2 rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger-fg">
+          <svg className="mt-0.5 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          {quoteError}
+        </div>
+      )}
+
+      <div className="flex justify-between pt-1">
         <Button type="button" variant="outline" onClick={onBack}>Back</Button>
-        <Button type="submit" disabled={!quote || quoteLoading}>Continue</Button>
+        <Button type="submit" disabled={!quote || quoteLoading} className="px-8">Continue</Button>
       </div>
     </form>
   )
 }
 
-// ─── Step 3 — Review ─────────────────────────────────────────────────────────
-
-function ReviewRow({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="flex items-center justify-between py-2.5 border-b border-border last:border-0">
-      <span className="text-sm text-muted-fg">{label}</span>
-      <span className="text-sm font-medium text-foreground">{value}</span>
-    </div>
-  )
-}
+// ─── Step 3 — Details ────────────────────────────────────────────────────────
 
 const detailsSchema = z.object({
   purposeCode: z.string().min(1, 'Required'),
@@ -343,63 +415,91 @@ const detailsSchema = z.object({
 })
 type DetailsFormValues = z.infer<typeof detailsSchema>
 
-const PURPOSE_CODES = [
-  { value: 'TRADE', label: 'Trade / Goods' },
-  { value: 'SUPPLIER', label: 'Supplier Payment' },
-  { value: 'SALARY', label: 'Salary / Wages' },
-  { value: 'SERVICES', label: 'Services' },
+const PURPOSE_OPTIONS = [
+  { value: '',           label: 'Select purpose…' },
+  { value: 'TRADE',      label: 'Trade / Goods' },
+  { value: 'SUPPLIER',   label: 'Supplier Payment' },
+  { value: 'SALARY',     label: 'Salary / Wages' },
+  { value: 'SERVICES',   label: 'Services' },
   { value: 'CONTRACTOR', label: 'Contractor' },
-  { value: 'OTHER', label: 'Other' },
+  { value: 'OTHER',      label: 'Other' },
 ]
 
 function Step3({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
   const { data: stored, setData } = usePaymentStore()
-  const { register, handleSubmit, formState: { errors } } = useForm<DetailsFormValues>({
+  const { handleSubmit, watch, setValue, formState: { errors } } = useForm<DetailsFormValues>({
     resolver: zodResolver(detailsSchema),
     defaultValues: { purposeCode: stored.purposeCode ?? '', note: stored.note ?? '' },
   })
+  const [note, setNote] = useState(stored.note ?? '')
+  const purposeCode = watch('purposeCode', stored.purposeCode ?? '')
+  const q = stored.quote
 
   const onSubmit = (values: DetailsFormValues) => {
     setData({ purposeCode: values.purposeCode, note: values.note ?? '' })
     onNext()
   }
 
-  const q = stored.quote
-
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">
-      <ContentCard>
-        <h3 className="text-sm font-semibold text-foreground mb-2">Recipient</h3>
-        <ReviewRow label="Name" value={stored.beneficiaryName ?? '—'} />
-        <ReviewRow label="Country" value={stored.beneficiaryCountry ?? '—'} />
-      </ContentCard>
+      <div>
+        <h3 className="text-base font-semibold text-foreground">Payment details</h3>
+        <p className="text-sm text-muted-fg mt-0.5">Almost there — a few more details required.</p>
+      </div>
 
+      {/* Transfer summary */}
       {q && (
-        <ContentCard>
-          <h3 className="text-sm font-semibold text-foreground mb-2">Transfer</h3>
-          <ReviewRow label="You send" value={<AmountDisplay amount={q.fromAmount} currency={q.from} />} />
-          <ReviewRow label="Recipient gets" value={<AmountDisplay amount={q.toAmount} currency={q.to} />} />
-          <ReviewRow label="Exchange rate" value={`1 ${q.from} = ${parseFloat(q.rate).toFixed(4)} ${q.to}`} />
-        </ContentCard>
+        <div className="relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-primary/8 via-primary/4 to-transparent p-5">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-primary/70 mb-1">You send</p>
+              <p className="text-2xl font-bold text-foreground tabular-nums">
+                {parseFloat(q.fromAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                <span className="ml-1.5 text-sm font-semibold text-muted-fg">{q.from}</span>
+              </p>
+            </div>
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 border border-primary/20 text-primary">
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+              </svg>
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-primary/70 mb-1">They receive</p>
+              <p className="text-2xl font-bold text-foreground tabular-nums">
+                {parseFloat(q.toAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                <span className="ml-1.5 text-sm font-semibold text-muted-fg">{q.to}</span>
+              </p>
+            </div>
+          </div>
+          <div className="mt-4 pt-3 border-t border-primary/10 flex items-center justify-between text-xs">
+            <span className="text-muted-fg">To: <span className="font-semibold text-foreground">{stored.beneficiaryName}</span></span>
+            <span className="tabular-nums text-muted-fg font-mono">1 {q.from} = {parseFloat(q.rate).toFixed(4)} {q.to}</span>
+          </div>
+        </div>
       )}
 
-      <FormField label="Purpose of payment" error={errors.purposeCode?.message} required>
-        <select
-          {...register('purposeCode')}
-          className="w-full rounded-md border border-input bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-        >
-          <option value="">Select purpose…</option>
-          {PURPOSE_CODES.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
-        </select>
-      </FormField>
+      {/* Form fields */}
+      <div className="flex flex-col gap-4 rounded-2xl border border-border bg-surface p-5">
+        <FormField label="Purpose of payment" error={errors.purposeCode?.message} required>
+          <Select
+            value={purposeCode}
+            onValueChange={v => setValue('purposeCode', v, { shouldValidate: true })}
+            options={PURPOSE_OPTIONS}
+          />
+        </FormField>
+        <FormField label="Note to recipient (optional)">
+          <Input
+            value={note}
+            onChange={e => { setNote(e.target.value); setValue('note', e.target.value) }}
+            placeholder="Invoice #, order reference, or message…"
+            maxLength={1024}
+          />
+        </FormField>
+      </div>
 
-      <FormField label="Note (optional)" error={errors.note?.message}>
-        <Input {...register('note')} placeholder="Invoice #, order ref…" maxLength={1024} />
-      </FormField>
-
-      <div className="flex justify-between pt-2">
+      <div className="flex justify-between pt-1">
         <Button type="button" variant="outline" onClick={onBack}>Back</Button>
-        <Button type="submit">Review & confirm</Button>
+        <Button type="submit" className="px-8">Review payment</Button>
       </div>
     </form>
   )
@@ -407,11 +507,21 @@ function Step3({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
 
 // ─── Step 4 — Confirm ────────────────────────────────────────────────────────
 
+function ConfirmRow({ label, value, mono }: { label: string; value: React.ReactNode; mono?: boolean }) {
+  return (
+    <div className="flex items-center justify-between py-3 border-b border-border last:border-0">
+      <span className="text-xs text-muted-fg">{label}</span>
+      <span className={cn('text-sm font-semibold text-foreground text-right', mono && 'font-mono text-xs')}>{value}</span>
+    </div>
+  )
+}
+
 function Step4({ onBack }: { onBack: () => void }) {
   const navigate = useNavigate()
   const qc = useQueryClient()
   const { data: stored, reset } = usePaymentStore()
   const idempotencyKey = useRef(stored.idempotencyKey || crypto.randomUUID())
+  const q = stored.quote
 
   const { mutate, isPending, isError, error } = useMutation({
     mutationFn: () => {
@@ -426,7 +536,7 @@ function Step4({ onBack }: { onBack: () => void }) {
           purposeCode: stored.purposeCode,
           note: stored.note || undefined,
         },
-        idempotencyKey.current
+        idempotencyKey.current,
       )
     },
     onSuccess: (res) => {
@@ -436,32 +546,68 @@ function Step4({ onBack }: { onBack: () => void }) {
     },
   })
 
-  const q = stored.quote
-
   return (
     <div className="flex flex-col gap-5">
-      <div className="rounded-lg border border-border bg-surface-overlay p-5 text-center">
-        <p className="text-4xl font-bold text-foreground">
-          {q ? <AmountDisplay amount={q.fromAmount} currency={q.from} size="lg" /> : '—'}
+      <div>
+        <h3 className="text-base font-semibold text-foreground">Confirm your payment</h3>
+        <p className="text-sm text-muted-fg mt-0.5">Review everything before sending.</p>
+      </div>
+
+      {/* Amount hero */}
+      <div className="relative overflow-hidden rounded-2xl bg-[#0f172a] border border-white/[0.07] p-6 text-center">
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent" />
+        <p className="relative text-[11px] font-semibold uppercase tracking-widest text-primary/80 mb-3">Sending</p>
+        <p className="relative text-5xl font-bold text-white tabular-nums">
+          {q ? parseFloat(q.fromAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
+          <span className="ml-2 text-2xl font-semibold text-white/50">{q?.from}</span>
         </p>
-        <p className="mt-1 text-sm text-muted-fg">
-          → {q ? <AmountDisplay amount={q.toAmount} currency={q.to} /> : '—'} to {stored.beneficiaryName}
+        {q && (
+          <p className="relative mt-3 text-sm text-white/50">
+            {stored.beneficiaryName} receives{' '}
+            <span className="font-semibold text-white/80 tabular-nums">
+              {parseFloat(q.toAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {q.to}
+            </span>
+          </p>
+        )}
+      </div>
+
+      {/* Summary rows */}
+      <div className="rounded-2xl border border-border bg-surface px-5">
+        {q && (
+          <>
+            <ConfirmRow label="Recipient" value={stored.beneficiaryName ?? '—'} />
+            <ConfirmRow label="Exchange rate" value={`1 ${q.from} = ${parseFloat(q.rate).toFixed(4)} ${q.to}`} mono />
+            <ConfirmRow label="Purpose" value={stored.purposeCode ?? '—'} />
+            {stored.note && <ConfirmRow label="Note" value={stored.note} />}
+          </>
+        )}
+      </div>
+
+      {/* Disclaimer */}
+      <div className="flex items-start gap-3 rounded-xl border border-border bg-surface-raised px-4 py-3.5">
+        <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+          </svg>
+        </div>
+        <p className="text-xs text-muted-fg leading-relaxed">
+          By confirming, you authorise this payment. It will be reviewed before processing and <strong className="text-foreground font-medium">cannot be reversed</strong> once approved.
         </p>
       </div>
 
-      <p className="text-xs text-center text-muted-fg">
-        By confirming, you authorise this payment. Once submitted it will be reviewed before processing.
-      </p>
-
+      {/* Error */}
       {isError && (
-        <div className="rounded-md bg-danger border border-danger-border px-4 py-2 text-sm text-danger-fg">
+        <div className="flex items-start gap-2 rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger-fg">
+          <svg className="mt-0.5 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
           {getApiError(error, 'Submission failed. Please try again.')}
         </div>
       )}
 
-      <div className="flex justify-between pt-2">
+      <div className="flex justify-between pt-1">
         <Button type="button" variant="outline" onClick={onBack} disabled={isPending}>Back</Button>
-        <Button onClick={() => mutate()} loading={isPending}>
+        <Button onClick={() => mutate()} loading={isPending} variant="gradient" className="px-8">
           Confirm & send
         </Button>
       </div>
@@ -469,7 +615,7 @@ function Step4({ onBack }: { onBack: () => void }) {
   )
 }
 
-// ─── Main component ──────────────────────────────────────────────────────────
+// ─── Main ─────────────────────────────────────────────────────────────────────
 
 export function NewPayment() {
   const navigate = useNavigate()
@@ -479,19 +625,20 @@ export function NewPayment() {
   const back = () => { if (step > 1) setStep(step - 1) }
 
   return (
-    <div className="flex flex-col gap-6 max-w-2xl mx-auto">
+    <div className="flex flex-col gap-6 max-w-lg mx-auto">
       <PageHeader
         title="Send payment"
         breadcrumbs={[{ label: 'Payments', href: '/payments' }, { label: 'New payment' }]}
         actions={<Button variant="ghost" size="sm" onClick={() => navigate('/payments')}>Cancel</Button>}
       />
-      <ContentCard>
+
+      <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
         <StepBar current={step} />
         {step === 1 && <Step1 onNext={next} />}
         {step === 2 && <Step2 onNext={next} onBack={back} />}
         {step === 3 && <Step3 onNext={next} onBack={back} />}
         {step === 4 && <Step4 onBack={back} />}
-      </ContentCard>
+      </div>
     </div>
   )
 }

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { PageHeader } from '@/components/ui/organisms/PageHeader'
 import { DataTable } from '@/components/ui/organisms/DataTable'
 import { FilterBar } from '@/components/ui/organisms/FilterBar'
-import { DateRangePicker } from '@/components/ui/molecules/DateRangePicker'
+import { DateRangePickerButton } from '@/components/ui/molecules/DateRangePicker'
 import { Button } from '@/components/ui/atoms/Button'
 import { Badge } from '@/components/ui/atoms/Badge'
 import { Pagination } from '@/components/ui/atoms/Pagination'
@@ -26,15 +26,15 @@ const PRESETS: { label: string; value: Preset }[] = [
 function presetToRange(preset: Preset): DateRange {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-  const from = new Date(today)
+  const startDate = new Date(today)
 
-  if (preset === '7d') from.setDate(today.getDate() - 6)
-  else if (preset === '30d') from.setDate(today.getDate() - 29)
-  else if (preset === '3m') from.setMonth(today.getMonth() - 3)
-  else if (preset === '6m') from.setMonth(today.getMonth() - 6)
-  else if (preset === 'ytd') from.setMonth(0, 1)
+  if (preset === '7d') startDate.setDate(today.getDate() - 6)
+  else if (preset === '30d') startDate.setDate(today.getDate() - 29)
+  else if (preset === '3m') startDate.setMonth(today.getMonth() - 3)
+  else if (preset === '6m') startDate.setMonth(today.getMonth() - 6)
+  else if (preset === 'ytd') startDate.setMonth(0, 1)
 
-  return { from, to: today }
+  return { startDate, endDate: today }
 }
 
 const STATUS_VARIANT: Record<string, 'success' | 'warning' | 'danger' | 'default'> = {
@@ -97,16 +97,14 @@ export function Transactions() {
   }
 
   const handleCustomRange = (range: DateRange) => {
-    setPreset('custom')
-    setDateRange(range)
-    setPage(1)
+    if (range.startDate) { setPreset('custom'); setDateRange(range); setPage(1) }
   }
 
   const params = {
     page,
     limit: 20,
-    from: dateRange.from ? dateRange.from.toISOString().slice(0, 10) : undefined,
-    to: dateRange.to ? dateRange.to.toISOString().slice(0, 10) : undefined,
+    from: dateRange.startDate ? dateRange.startDate.toISOString().slice(0, 10) : undefined,
+    to: dateRange.endDate ? dateRange.endDate.toISOString().slice(0, 10) : undefined,
   }
 
   const { data, isLoading } = useTransactions(params)
@@ -157,8 +155,11 @@ export function Transactions() {
               {p.label}
             </Button>
           ))}
-          <DateRangePicker
-            value={preset === 'custom' ? dateRange : {}}
+          <DateRangePickerButton
+            selectMode="range"
+            showShortcuts
+            initialStartDate={preset === 'custom' ? dateRange.startDate : null}
+            initialEndDate={preset === 'custom' ? dateRange.endDate : null}
             onChange={handleCustomRange}
             placeholder="Custom range…"
           />
