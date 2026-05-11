@@ -40,6 +40,20 @@ export interface CorridorConfig {
   is_active: boolean
 }
 
+export interface FeeConfig {
+  id: string
+  tenant_id: string
+  source_currency: string
+  dest_currency: string | null
+  fee_type: 'flat' | 'percent'
+  fee_value: string
+  min_fee: string | null
+  max_fee: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
 export interface TenantUser {
   id: string
   email: string
@@ -75,6 +89,33 @@ const admin = {
   users: {
     list: (tenantId: string) =>
       apiClient.get<{ success: boolean; data: TenantUser[] }>(`/admin/tenants/${tenantId}/users`),
+  },
+
+  fees: {
+    list: (tenantId: string) =>
+      apiClient.get<{ success: boolean; data: FeeConfig[] }>(`/admin/tenants/${tenantId}/fee-config`),
+
+    create: (tenantId: string, payload: {
+      sourceCurrency: string
+      destCurrency?: string | null
+      feeType: 'flat' | 'percent'
+      feeValue: number
+      minFee?: number | null
+      maxFee?: number | null
+    }) =>
+      apiClient.post<{ success: boolean; data: FeeConfig }>(`/admin/tenants/${tenantId}/fee-config`, payload),
+
+    update: (tenantId: string, feeId: string, payload: {
+      feeType?: 'flat' | 'percent'
+      feeValue?: number
+      minFee?: number | null
+      maxFee?: number | null
+      isActive?: boolean
+    }) =>
+      apiClient.put<{ success: boolean; data: FeeConfig }>(`/admin/tenants/${tenantId}/fee-config/${feeId}`, payload),
+
+    delete: (tenantId: string, feeId: string) =>
+      apiClient.delete(`/admin/tenants/${tenantId}/fee-config/${feeId}`),
   },
 
   kyc: {

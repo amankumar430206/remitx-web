@@ -106,6 +106,41 @@ export function useFailManualPayment() {
   })
 }
 
+export function useFeeConfigs(tenantId: string) {
+  return useQuery({
+    queryKey: ['admin-fee-configs', tenantId],
+    queryFn: () => adminApi.fees.list(tenantId).then(r => r.data.data),
+    enabled: !!tenantId,
+  })
+}
+
+export function useCreateFeeConfig() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ tenantId, ...payload }: { tenantId: string; sourceCurrency: string; destCurrency?: string | null; feeType: 'flat' | 'percent'; feeValue: number; minFee?: number | null; maxFee?: number | null }) =>
+      adminApi.fees.create(tenantId, payload).then(r => r.data.data),
+    onSuccess: (_, { tenantId }) => qc.invalidateQueries({ queryKey: ['admin-fee-configs', tenantId] }),
+  })
+}
+
+export function useUpdateFeeConfig() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ tenantId, feeId, ...payload }: { tenantId: string; feeId: string; feeType?: 'flat' | 'percent'; feeValue?: number; minFee?: number | null; maxFee?: number | null; isActive?: boolean }) =>
+      adminApi.fees.update(tenantId, feeId, payload).then(r => r.data.data),
+    onSuccess: (_, { tenantId }) => qc.invalidateQueries({ queryKey: ['admin-fee-configs', tenantId] }),
+  })
+}
+
+export function useDeleteFeeConfig() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ tenantId, feeId }: { tenantId: string; feeId: string }) =>
+      adminApi.fees.delete(tenantId, feeId),
+    onSuccess: (_, { tenantId }) => qc.invalidateQueries({ queryKey: ['admin-fee-configs', tenantId] }),
+  })
+}
+
 export function useProviderConfig(tenantId: string) {
   return useQuery({
     queryKey: ['admin-providers', tenantId],
