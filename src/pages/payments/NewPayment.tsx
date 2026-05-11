@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { PageHeader } from '@/components/ui/organisms/PageHeader'
 import { Button } from '@/components/ui/atoms/Button'
 import { Input } from '@/components/ui/atoms/Input'
@@ -16,6 +16,7 @@ import { useBeneficiaries } from '@/hooks/useBeneficiaries'
 import { usePaymentStore } from '@/stores/paymentStore'
 import fxApi, { type FxQuote } from '@/api/fx'
 import paymentsApi from '@/api/payments'
+import accountsApi from '@/api/accounts'
 import { cn } from '@/lib/utils'
 
 // ─── Step indicator ──────────────────────────────────────────────────────────
@@ -184,6 +185,11 @@ function Step2({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
   const [quoteError, setQuoteError] = useState('')
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  const { data: accountsData } = useQuery({
+    queryKey: ['accounts'],
+    queryFn: () => accountsApi.list().then(r => r.data.data),
+  })
+
   const { register, watch, handleSubmit, formState: { errors } } = useForm<AmountFormValues>({
     resolver: zodResolver(amountSchema),
     defaultValues: {
@@ -225,7 +231,14 @@ function Step2({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
 
   const onSubmit = (values: AmountFormValues) => {
     if (!quote) return
+    const account = accountsData?.find(a => a.currency === values.sourceCurrency && a.status === 'active')
+      ?? accountsData?.[0]
+    if (!account) {
+      setQuoteError(`No ${values.sourceCurrency} account found. Please provision one first.`)
+      return
+    }
     setData({
+      accountId: account.id,
       sourceAmount: values.sourceAmount,
       sourceCurrency: values.sourceCurrency,
       destinationCurrency: values.destinationCurrency,
@@ -325,16 +338,16 @@ function ReviewRow({ label, value }: { label: string; value: React.ReactNode }) 
 
 const detailsSchema = z.object({
   purposeCode: z.string().min(1, 'Required'),
-  reference: z.string().max(140).optional(),
+  note: z.string().max(1024).optional(),
 })
 type DetailsFormValues = z.infer<typeof detailsSchema>
 
 const PURPOSE_CODES = [
   { value: 'TRADE', label: 'Trade / Goods' },
-  { value: 'SERVICES', label: 'Services' },
+  { value: 'SUPPLIER', label: 'Supplier Payment' },
   { value: 'SALARY', label: 'Salary / Wages' },
-  { value: 'FAMILY', label: 'Family Support' },
-  { value: 'INVESTMENT', label: 'Investment' },
+  { value: 'SERVICES', label: 'Services' },
+  { value: 'CONTRACTOR', label: 'Contractor' },
   { value: 'OTHER', label: 'Other' },
 ]
 
@@ -342,11 +355,11 @@ function Step3({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
   const { data: stored, setData } = usePaymentStore()
   const { register, handleSubmit, formState: { errors } } = useForm<DetailsFormValues>({
     resolver: zodResolver(detailsSchema),
-    defaultValues: { purposeCode: stored.purposeCode ?? '', reference: stored.reference ?? '' },
+    defaultValues: { purposeCode: stored.purposeCode ?? '', note: stored.note ?? '' },
   })
 
   const onSubmit = (values: DetailsFormValues) => {
-    setData({ purposeCode: values.purposeCode, reference: values.reference ?? '' })
+    setData({ purposeCode: values.purposeCode, note: values.note ?? '' })
     onNext()
   }
 
@@ -366,7 +379,6 @@ function Step3({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
           <ReviewRow label="You send" value={<AmountDisplay amount={q.fromAmount} currency={q.from} />} />
           <ReviewRow label="Recipient gets" value={<AmountDisplay amount={q.toAmount} currency={q.to} />} />
           <ReviewRow label="Exchange rate" value={`1 ${q.from} = ${parseFloat(q.rate).toFixed(4)} ${q.to}`} />
-          <ReviewRow label="Spread" value={`${q.spread}%`} />
         </ContentCard>
       )}
 
@@ -380,8 +392,8 @@ function Step3({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
         </select>
       </FormField>
 
-      <FormField label="Reference (optional)" error={errors.reference?.message}>
-        <Input {...register('reference')} placeholder="Invoice #, order ref…" maxLength={140} />
+      <FormField label="Note (optional)" error={errors.note?.message}>
+        <Input {...register('note')} placeholder="Invoice #, order ref…" maxLength={1024} />
       </FormField>
 
       <div className="flex justify-between pt-2">
@@ -402,18 +414,16 @@ function Step4({ onBack }: { onBack: () => void }) {
 
   const { mutate, isPending, isError, error } = useMutation({
     mutationFn: () => {
-      if (!stored.beneficiaryId || !stored.quote || !stored.sourceAmount || !stored.sourceCurrency || !stored.destinationCurrency || !stored.purposeCode) {
+      if (!stored.beneficiaryId || !stored.accountId || !stored.quote || !stored.purposeCode) {
         throw new Error('Missing payment data')
       }
       return paymentsApi.submit(
         {
           beneficiaryId: stored.beneficiaryId,
+          accountId: stored.accountId,
           quoteId: stored.quote.quoteId,
-          sourceAmount: stored.sourceAmount,
-          sourceCurrency: stored.sourceCurrency,
-          destinationCurrency: stored.destinationCurrency,
           purposeCode: stored.purposeCode,
-          reference: stored.reference || undefined,
+          note: stored.note || undefined,
         },
         idempotencyKey.current
       )

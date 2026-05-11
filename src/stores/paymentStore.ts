@@ -7,13 +7,14 @@ export interface PaymentStepState {
   beneficiaryName: string
   beneficiaryCountry: string
   // Step 2
+  accountId: string
   sourceAmount: string
   sourceCurrency: string
   destinationCurrency: string
   quote: FxQuote | null
   // Step 3 / meta
   purposeCode: string
-  reference: string
+  note: string
   // Step 4
   idempotencyKey: string
 }
