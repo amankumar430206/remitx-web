@@ -31,12 +31,10 @@ export interface Payment {
 
 export interface SubmitPaymentPayload {
   beneficiaryId: string
+  accountId: string
   quoteId: string
-  sourceAmount: string
-  sourceCurrency: string
-  destinationCurrency: string
   purposeCode: string
-  reference?: string
+  note?: string
 }
 
 const payments = {

@@ -11,7 +11,7 @@ export function useAuth() {
     const { data } = await authApi.login(payload, slug)
     const res = data.data
     if (res.mfaRequired) {
-      return { mfaRequired: true, mfaChallengeToken: res.mfaChallengeToken }
+      return { mfaRequired: true, mfaChallengeToken: res.tempToken }
     }
     setAuth(res.user, res.accessToken, res.refreshToken, slug)
     return { mfaRequired: false }

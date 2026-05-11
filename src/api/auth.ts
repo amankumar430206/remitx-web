@@ -5,7 +5,7 @@ export interface LoginResponse {
   accessToken: string
   refreshToken: string
   mfaRequired?: boolean
-  mfaChallengeToken?: string
+  tempToken?: string
   user: { id: string; email: string; name: string; role: string }
 }
 
@@ -31,7 +31,7 @@ const auth = {
     apiClient.post('/auth/mfa/verify', { code }),
 
   mfaChallenge: (token: string, code: string) =>
-    apiClient.post<{ success: boolean; data: LoginResponse }>('/auth/mfa/challenge', { challengeToken: token, code }),
+    apiClient.post<{ success: boolean; data: LoginResponse }>('/auth/mfa/challenge', { tempToken: token, code }),
 
   passwordResetRequest: (email: string) =>
     apiClient.post('/auth/password/reset-request', { email }),
@@ -39,8 +39,8 @@ const auth = {
   passwordReset: (token: string, password: string) =>
     apiClient.post('/auth/password/reset', { token, password }),
 
-  inviteAccept: (token: string, password: string) =>
-    apiClient.post('/auth/invite/accept', { token, password }),
+  inviteAccept: (token: string, password: string, firstName: string, lastName: string) =>
+    apiClient.post('/auth/invite/accept', { token, password, firstName, lastName }),
 }
 
 export default auth
