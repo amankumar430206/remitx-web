@@ -13,6 +13,7 @@ import { MfaChallenge } from '@/pages/MfaChallenge'
 import { MfaSetup } from '@/pages/MfaSetup'
 import { PasswordReset } from '@/pages/PasswordReset'
 import { InviteAccept } from '@/pages/InviteAccept'
+import { Onboard } from '@/pages/Onboard'
 
 // Protected pages — lazy loaded (code split per route)
 const Dashboard           = lazy(() => import('@/pages/Dashboard').then(m => ({ default: m.Dashboard })))
@@ -46,6 +47,7 @@ const ManualPaymentQueue  = lazy(() => import('@/pages/admin/ManualPaymentQueue'
 const ProviderConfig      = lazy(() => import('@/pages/admin/ProviderConfig').then(m => ({ default: m.ProviderConfig })))
 const DesignSystem        = lazy(() => import('@/pages/DesignSystem').then(m => ({ default: m.DesignSystem })))
 const CorridorMap         = lazy(() => import('@/pages/CorridorMap').then(m => ({ default: m.CorridorMap })))
+const AIAssistant         = lazy(() => import('@/pages/AIAssistant').then(m => ({ default: m.AIAssistant })))
 
 // Wraps each route element with an isolated error boundary + suspense skeleton.
 // A crash or slow load in one page never affects the rest of the app.
@@ -76,6 +78,7 @@ function App() {
           <Route path="/mfa/setup" element={<MfaSetup />} />
           <Route path="/password-reset" element={<PasswordReset />} />
           <Route path="/invite/accept" element={<InviteAccept />} />
+          <Route path="/onboard" element={<Onboard />} />
           <Route path="/design-system" element={page(<DesignSystem />)} />
 
           {/* Protected — all lazy with per-page error isolation */}
@@ -103,6 +106,9 @@ function App() {
 
               {/* Network */}
               <Route path="/network" element={page(<CorridorMap />)} />
+
+              {/* AI Assistant */}
+              <Route path="/assistant" element={page(<AIAssistant />)} />
 
               {/* KYC */}
               <Route path="/kyc" element={page(<KycStatus />)} />

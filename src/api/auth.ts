@@ -1,4 +1,5 @@
 import { apiClient } from './client'
+import type { AuthUser } from '@/stores/authStore'
 
 export interface LoginPayload { email: string; password: string; mfaCode?: string }
 export interface LoginResponse {
@@ -39,8 +40,14 @@ const auth = {
   passwordReset: (token: string, password: string) =>
     apiClient.post('/auth/password/reset', { token, password }),
 
-  inviteAccept: (token: string, password: string, firstName: string, lastName: string) =>
-    apiClient.post('/auth/invite/accept', { token, password, firstName, lastName }),
+  inviteAccept: (token: string, password: string, firstName: string, lastName: string, phone?: string) =>
+    apiClient.post<{ success: boolean; data: LoginResponse & { user: AuthUser } }>('/auth/invite/accept', { token, password, firstName, lastName, phone }),
+
+  register: (payload: {
+    slug: string; companyName: string; email: string; password: string
+    firstName: string; lastName: string; phone?: string
+  }) =>
+    apiClient.post<{ success: boolean; data: LoginResponse & { user: AuthUser; tenant: { id: string; slug: string; name: string } } }>('/auth/register', payload),
 }
 
 export default auth
