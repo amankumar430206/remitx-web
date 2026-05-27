@@ -55,7 +55,7 @@ export function DataTable<T>({
   }
 
   return (
-    <div className={cn('w-full overflow-auto rounded-lg border border-border', className)}>
+    <div className={cn('w-full overflow-auto rounded-md border border-border', className)}>
       <table className="w-full text-sm">
         <thead className="bg-surface-raised border-b border-border">
           <tr>
