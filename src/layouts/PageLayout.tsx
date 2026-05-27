@@ -23,8 +23,8 @@ export function PageLayout({ navItems, user, onLogout, logo, tenantName, childre
     return (
       <div className="min-h-screen bg-surface-raised flex">
         <Sidebar navItems={navItems} user={user} onLogout={onLogout} tenantName={tenantName} />
-        <MobileNav navItems={navItems} user={user} onLogout={onLogout} logo={logo} tenantName={tenantName} />
         <div className="flex-1 flex flex-col min-w-0">
+          <MobileNav navItems={navItems} user={user} onLogout={onLogout} logo={logo} tenantName={tenantName} />
           <TopBar user={user} tenantName={tenantName} onLogout={onLogout} />
           <main className={cn('flex-1 px-4 md:px-6 lg:px-8 py-6 max-w-screen-xl w-full', className)}>
             {children}
