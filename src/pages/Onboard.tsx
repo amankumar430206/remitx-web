@@ -181,6 +181,26 @@ const HERO_CONTENT = {
       "Documents reviewed within 1 business day",
     ],
   },
+  review: {
+    icon: (
+      <svg className="w-8 h-8 text-indigo-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={1.5}
+          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+        />
+      </svg>
+    ),
+    title: "Almost there",
+    subtitle: "Review your details before we create your account.",
+    items: [
+      "Check your name and contact info",
+      "Your workspace URL cannot be changed later",
+      "Store your password somewhere safe",
+      "Everything else can be updated in Settings",
+    ],
+  },
   complete: {
     icon: (
       <svg className="w-8 h-8 text-emerald-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -502,13 +522,9 @@ function generateStrongPassword(): string {
 function StepPassword({
   onNext,
   onBack,
-  loading,
-  error,
 }: {
   onNext: (password: string) => void;
   onBack: () => void;
-  loading: boolean;
-  error: string;
 }) {
   const [show, setShow] = useState(false);
   const [generatedPwd, setGeneratedPwd] = useState('');
@@ -716,29 +732,135 @@ function StepPassword({
         />
       </FormField>
 
+      <div className="flex gap-3 mt-1">
+        <Button type="button" variant="outline" className="flex-1 h-11" onClick={onBack}>
+          Back
+        </Button>
+        <Button type="submit" variant="gradient" className="flex-1 h-11 font-semibold">
+          Review & confirm
+          <svg className="w-4 h-4 ml-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+// ─── Step: Review ────────────────────────────────────────────────────────────
+
+function ReviewCard({
+  title,
+  onEdit,
+  rows,
+}: {
+  title: string;
+  onEdit: () => void;
+  rows: Array<{ label: string; value: string }>;
+}) {
+  return (
+    <div className="rounded-xl border border-border overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-2.5 bg-surface-raised border-b border-border">
+        <p className="text-xs font-semibold text-foreground uppercase tracking-wide">{title}</p>
+        <button
+          type="button"
+          onClick={onEdit}
+          className="text-xs font-medium text-primary hover:text-primary/80 transition-colors flex items-center gap-1"
+        >
+          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+          </svg>
+          Edit
+        </button>
+      </div>
+      <div className="px-4 py-3 flex flex-col gap-2.5">
+        {rows.map((row) => (
+          <div key={row.label} className="flex items-start justify-between gap-4">
+            <span className="text-xs text-muted-fg shrink-0">{row.label}</span>
+            <span className="text-xs text-foreground font-medium text-right break-all">{row.value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function StepReview({
+  mode,
+  wizardData,
+  onConfirm,
+  onEdit,
+  loading,
+  error,
+}: {
+  mode: Mode;
+  wizardData: Partial<WizardData>;
+  onConfirm: () => void;
+  onEdit: (key: keyof typeof HERO_CONTENT) => void;
+  loading: boolean;
+  error: string;
+}) {
+  const fullName = [wizardData.firstName, wizardData.lastName].filter(Boolean).join(" ") || "—";
+
+  return (
+    <div className="flex flex-col gap-3">
+      {/* Company card — public mode only */}
+      {mode === "public" && (
+        <ReviewCard
+          title="Workspace"
+          onEdit={() => onEdit("company")}
+          rows={[
+            { label: "Company name", value: wizardData.companyName || "—" },
+            { label: "Workspace URL", value: wizardData.slug ? `app.remitx.io/${wizardData.slug}` : "—" },
+          ]}
+        />
+      )}
+
+      {/* Personal info */}
+      <ReviewCard
+        title="Your info"
+        onEdit={() => onEdit("personal")}
+        rows={[
+          { label: "Full name", value: fullName },
+          { label: "Email", value: wizardData.email || "—" },
+          { label: "Phone", value: wizardData.phone || "—" },
+        ]}
+      />
+
+      {/* Password */}
+      <ReviewCard
+        title="Password"
+        onEdit={() => onEdit("password")}
+        rows={[{ label: "Status", value: "✓ Set" }]}
+      />
+
+      {/* Terms note */}
+      <p className="text-xs text-muted-fg text-center px-2 leading-relaxed">
+        By confirming you agree to RemitX's{" "}
+        <a href="#" className="text-primary hover:underline">Terms of Service</a>{" "}
+        and{" "}
+        <a href="#" className="text-primary hover:underline">Privacy Policy</a>.
+      </p>
+
+      {/* Server error */}
       {error && (
         <div className="flex items-center gap-2.5 rounded-lg bg-danger border border-danger-border px-3.5 py-3">
           <svg className="h-4 w-4 text-danger-fg shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <p className="text-sm text-danger-fg">{error}</p>
         </div>
       )}
 
-      <div className="flex gap-3 mt-1">
-        <Button type="button" variant="outline" className="flex-1 h-11" onClick={onBack} disabled={loading}>
-          Back
-        </Button>
-        <Button type="submit" variant="gradient" className="flex-1 h-11 font-semibold" loading={loading}>
-          {loading ? "Creating account…" : "Create account"}
-        </Button>
-      </div>
-    </form>
+      <Button
+        variant="gradient"
+        className="w-full h-11 font-semibold mt-1"
+        loading={loading}
+        onClick={onConfirm}
+      >
+        {loading ? "Creating your account…" : "Confirm & create account"}
+      </Button>
+    </div>
   );
 }
 
@@ -1046,12 +1168,14 @@ export function Onboard() {
   const [step, setStep] = useState(0);
   const [submitError, setSubmitError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [pendingPassword, setPendingPassword] = useState("");
 
   const STEPS: Array<{ key: keyof typeof HERO_CONTENT; label: string }> =
     mode === "invite"
       ? [
           { key: "personal", label: "Your info" },
           { key: "password", label: "Password" },
+          { key: "review", label: "Review" },
           { key: "documents", label: "Identity" },
           { key: "complete", label: "Done" },
         ]
@@ -1059,6 +1183,7 @@ export function Onboard() {
           { key: "company", label: "Workspace" },
           { key: "personal", label: "Your info" },
           { key: "password", label: "Password" },
+          { key: "review", label: "Review" },
           { key: "documents", label: "Identity" },
           { key: "complete", label: "Done" },
         ];
@@ -1075,14 +1200,19 @@ export function Onboard() {
     setStep((s) => s + 1);
   };
 
-  const handlePassword = async (password: string) => {
+  const handlePassword = (password: string) => {
+    setPendingPassword(password);
+    setStep((s) => s + 1);
+  };
+
+  const handleConfirm = async () => {
     setSubmitError("");
     setSubmitting(true);
     try {
       if (mode === "invite") {
         const { data: res } = await authApi.inviteAccept(
           inviteToken,
-          password,
+          pendingPassword,
           wizardData.firstName!,
           wizardData.lastName!,
           wizardData.phone,
@@ -1093,7 +1223,7 @@ export function Onboard() {
           slug: wizardData.slug!,
           companyName: wizardData.companyName!,
           email: wizardData.email!,
-          password,
+          password: pendingPassword,
           firstName: wizardData.firstName!,
           lastName: wizardData.lastName!,
           phone: wizardData.phone,
@@ -1144,12 +1274,14 @@ export function Onboard() {
                 {currentKey === "company" && "Create your workspace"}
                 {currentKey === "personal" && "What's your name?"}
                 {currentKey === "password" && "Set your password"}
+                {currentKey === "review" && "Review your details"}
                 {currentKey === "documents" && "Verify your identity"}
               </h2>
               <p className="mt-1 text-sm text-muted-fg">
                 {currentKey === "company" && "Choose a name and URL for your team."}
                 {currentKey === "personal" && "This is how your team will see you."}
                 {currentKey === "password" && "Must be at least 12 characters with mixed characters."}
+                {currentKey === "review" && "Make sure everything looks correct before we create your account."}
                 {currentKey === "documents" && "Upload your ID and a proof of address. Takes under 2 minutes."}
               </p>
             </div>
@@ -1175,6 +1307,17 @@ export function Onboard() {
             <StepPassword
               onNext={handlePassword}
               onBack={() => setStep((s) => s - 1)}
+            />
+          )}
+          {currentKey === "review" && (
+            <StepReview
+              mode={mode}
+              wizardData={wizardData}
+              onConfirm={handleConfirm}
+              onEdit={(key) => {
+                const idx = STEPS.findIndex((s) => s.key === key);
+                if (idx >= 0) setStep(idx);
+              }}
               loading={submitting}
               error={submitError}
             />
