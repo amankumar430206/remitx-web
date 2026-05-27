@@ -18,6 +18,14 @@ export function useTenantUsers(tenantId: string) {
   })
 }
 
+export function useTenantContact(tenantId: string) {
+  return useQuery({
+    queryKey: ['admin-tenant-contact', tenantId],
+    queryFn: () => adminApi.contact.get(tenantId).then(r => r.data.data),
+    enabled: !!tenantId,
+  })
+}
+
 export function useAdminTenants() {
   return useQuery({
     queryKey: ['admin-tenants'],

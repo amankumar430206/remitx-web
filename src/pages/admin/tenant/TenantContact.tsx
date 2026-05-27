@@ -1,0 +1,237 @@
+import { Badge } from '@/components/ui/atoms/Badge'
+import { Button } from '@/components/ui/atoms/Button'
+import { Avatar } from '@/components/ui/atoms/Avatar'
+import { LoadingState } from '@/components/ui/molecules/LoadingState'
+import { EmptyState } from '@/components/ui/molecules/EmptyState'
+import { ConfirmDialog } from '@/components/ui/molecules/ConfirmDialog'
+import { ContentCard } from '@/layouts/ContentCard'
+import { useTenantContact, useApproveKyc, useRejectKyc } from '@/hooks/useAdmin'
+import { useState } from 'react'
+import type { TenantContact as TenantContactData, TenantContactDocument } from '@/api/admin'
+
+const KYC_STATUS_VARIANT: Record<string, 'success' | 'danger' | 'warning' | 'default'> = {
+  approved: 'success',
+  rejected: 'danger',
+  submitted: 'warning',
+  pending: 'default',
+}
+
+const DOC_TYPE_LABEL: Record<string, string> = {
+  passport: 'Passport',
+  national_id: 'National ID',
+  drivers_license: "Driver's licence",
+  proof_of_address: 'Proof of address',
+  utility_bill: 'Utility bill',
+  bank_statement: 'Bank statement',
+}
+
+function formatBytes(bytes?: number) {
+  if (!bytes) return ''
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function DocumentRow({ doc }: { doc: TenantContactDocument }) {
+  const label = doc.type ? (DOC_TYPE_LABEL[doc.type] ?? doc.type) : 'Document'
+  const uploadedAt = new Date(doc.uploadedAt).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
+
+  return (
+    <div className="flex items-center gap-3 rounded-lg border border-border bg-surface-raised px-4 py-3">
+      {/* File icon */}
+      <div className="h-9 w-9 rounded-lg bg-primary-subtle flex items-center justify-center flex-shrink-0">
+        <svg className="h-4 w-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+      </div>
+
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-foreground truncate">{label}</p>
+        <p className="text-xs text-muted-fg truncate">
+          {doc.filename}
+          {doc.size ? ` · ${formatBytes(doc.size)}` : ''}
+          {' · '}
+          {uploadedAt}
+        </p>
+      </div>
+
+      <span className="text-xs text-muted-fg/60 capitalize shrink-0">
+        {doc.mimetype?.split('/').pop() ?? 'file'}
+      </span>
+    </div>
+  )
+}
+
+function ContactPersonCard({
+  contact,
+  tenantId,
+  onKycAction,
+}: {
+  contact: TenantContactData
+  tenantId: string
+  onKycAction: () => void
+}) {
+  const fullName = [contact.first_name, contact.last_name].filter(Boolean).join(' ') || '—'
+  const initials = [contact.first_name?.[0], contact.last_name?.[0]].filter(Boolean).join('').toUpperCase() || '?'
+
+  const [rejectOpen, setRejectOpen] = useState(false)
+  const approveKyc = useApproveKyc()
+  const rejectKyc = useRejectKyc()
+
+  const handleApprove = () => {
+    approveKyc.mutate({ tenantId, userId: contact.id }, { onSuccess: onKycAction })
+  }
+
+  const handleReject = () => {
+    rejectKyc.mutate(
+      { tenantId, userId: contact.id, reason: 'Documents did not meet requirements' },
+      { onSuccess: () => { setRejectOpen(false); onKycAction() } },
+    )
+  }
+
+  const canAction =
+    contact.kyc_app_status === 'submitted' || contact.kyc_app_status === 'under_review'
+
+  return (
+    <>
+      {/* Person info row */}
+      <div className="flex items-start gap-4 mb-5">
+        <Avatar fallback={initials} size="lg" />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="text-base font-semibold text-foreground">{fullName}</p>
+            <Badge variant={KYC_STATUS_VARIANT[contact.kyc_status ?? 'default'] ?? 'default'} className="capitalize">
+              KYC: {contact.kyc_status ?? 'pending'}
+            </Badge>
+          </div>
+          <p className="text-sm text-muted-fg mt-0.5">{contact.email}</p>
+          {contact.phone && (
+            <p className="text-sm text-muted-fg">{contact.phone}</p>
+          )}
+        </div>
+
+        {canAction && (
+          <div className="flex gap-2 shrink-0">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setRejectOpen(true)}
+              loading={rejectKyc.isPending}
+            >
+              Reject
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleApprove}
+              loading={approveKyc.isPending}
+            >
+              Approve KYC
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* KYC detail row */}
+      <div className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm sm:grid-cols-3 mb-5 pb-5 border-b border-border">
+        <div>
+          <span className="text-xs text-muted-fg">Role</span>
+          <p className="font-medium mt-0.5 text-foreground capitalize">{contact.role.replace('_', ' ')}</p>
+        </div>
+        <div>
+          <span className="text-xs text-muted-fg">Account status</span>
+          <p className="font-medium mt-0.5 text-foreground capitalize">{contact.status}</p>
+        </div>
+        {contact.kyc_app_status && (
+          <div>
+            <span className="text-xs text-muted-fg">KYC application</span>
+            <p className="font-medium mt-0.5 text-foreground capitalize">{contact.kyc_app_status.replace('_', ' ')}</p>
+          </div>
+        )}
+        {contact.reviewed_at && (
+          <div>
+            <span className="text-xs text-muted-fg">KYC reviewed</span>
+            <p className="font-medium mt-0.5 text-foreground">
+              {new Date(contact.reviewed_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+            </p>
+          </div>
+        )}
+        {contact.rejection_reason && (
+          <div className="col-span-2">
+            <span className="text-xs text-muted-fg">Rejection reason</span>
+            <p className="font-medium mt-0.5 text-foreground">{contact.rejection_reason}</p>
+          </div>
+        )}
+        <div>
+          <span className="text-xs text-muted-fg">Joined</span>
+          <p className="font-medium mt-0.5 text-foreground">
+            {new Date(contact.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+          </p>
+        </div>
+      </div>
+
+      {/* KYC documents */}
+      <div>
+        <p className="text-xs font-semibold text-muted-fg uppercase tracking-wider mb-3">
+          Identity documents
+          {contact.kyc_documents?.length ? ` · ${contact.kyc_documents.length}` : ''}
+        </p>
+        {contact.kyc_documents && contact.kyc_documents.length > 0 ? (
+          <div className="flex flex-col gap-2">
+            {contact.kyc_documents.map((doc, i) => (
+              <DocumentRow key={i} doc={doc} />
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-fg">No documents uploaded yet.</p>
+        )}
+      </div>
+
+      <ConfirmDialog
+        open={rejectOpen}
+        onOpenChange={setRejectOpen}
+        title="Reject KYC application"
+        description={`Reject KYC for ${fullName}? The client will be notified and may resubmit.`}
+        confirmLabel="Reject"
+        variant="danger"
+        onConfirm={handleReject}
+        loading={rejectKyc.isPending}
+      />
+    </>
+  )
+}
+
+interface Props {
+  tenantId: string
+}
+
+export function TenantContact({ tenantId }: Props) {
+  const { data: contact, isLoading, refetch } = useTenantContact(tenantId)
+
+  return (
+    <ContentCard>
+      <div className="mb-4">
+        <h3 className="text-sm font-semibold text-foreground">Contact person</h3>
+        <p className="text-xs text-muted-fg mt-0.5">Client admin and their KYC verification documents</p>
+      </div>
+
+      {isLoading ? (
+        <LoadingState message="Loading contact…" />
+      ) : contact ? (
+        <ContactPersonCard
+          contact={contact}
+          tenantId={tenantId}
+          onKycAction={() => refetch()}
+        />
+      ) : (
+        <EmptyState
+          title="No contact person yet"
+          description="The client admin will appear here once they accept their invite."
+        />
+      )}
+    </ContentCard>
+  )
+}

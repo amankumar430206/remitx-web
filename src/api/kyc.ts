@@ -3,6 +3,7 @@ import { apiClient } from './client'
 export type KycStatus = 'not_started' | 'pending' | 'submitted' | 'under_review' | 'approved' | 'rejected'
 
 export interface KycDocument {
+  type?: string | null
   filename: string
   storedAs?: string
   mimetype?: string

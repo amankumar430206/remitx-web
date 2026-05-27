@@ -59,10 +59,37 @@ export interface TenantUser {
   email: string
   first_name: string | null
   last_name: string | null
+  phone: string | null
   role: string
   status: string
   kyc_status: string | null
   created_at: string
+}
+
+export interface TenantContactDocument {
+  type?: string | null
+  filename: string
+  storedAs?: string
+  mimetype?: string
+  size?: number
+  uploadedAt: string
+}
+
+export interface TenantContact {
+  id: string
+  email: string
+  first_name: string | null
+  last_name: string | null
+  phone: string | null
+  role: string
+  status: string
+  kyc_status: string | null
+  created_at: string
+  kyc_id: string | null
+  kyc_app_status: string | null
+  kyc_documents: TenantContactDocument[] | null
+  reviewed_at: string | null
+  rejection_reason: string | null
 }
 
 const admin = {
@@ -89,6 +116,11 @@ const admin = {
   users: {
     list: (tenantId: string) =>
       apiClient.get<{ success: boolean; data: TenantUser[] }>(`/admin/tenants/${tenantId}/users`),
+  },
+
+  contact: {
+    get: (tenantId: string) =>
+      apiClient.get<{ success: boolean; data: TenantContact | null }>(`/admin/tenants/${tenantId}/contact`),
   },
 
   fees: {
