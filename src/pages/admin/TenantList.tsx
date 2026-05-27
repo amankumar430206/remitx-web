@@ -44,8 +44,7 @@ const STATUS_DOT: Record<string, string> = {
 }
 
 function relativeTime(iso: string): string {
-  const diffMs   = Date.now() - new Date(iso).getTime()
-  const diffDays = Math.floor(diffMs / 86_400_000)
+  const diffDays = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000)
   if (diffDays < 1)   return 'Today'
   if (diffDays < 30)  return `${diffDays}d ago`
   if (diffDays < 365) return `${Math.floor(diffDays / 30)}mo ago`
@@ -53,69 +52,170 @@ function relativeTime(iso: string): string {
 }
 
 function tenantInitials(name: string): string {
-  return name
-    .split(' ')
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? '')
-    .join('')
+  return name.split(' ').slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('')
 }
 
-// ─── Table columns ────────────────────────────────────────────────────────────
+// ─── Action icons ─────────────────────────────────────────────────────────────
 
-const columns: Column<AdminTenant>[] = [
-  {
-    key: 'name',
-    header: 'Workspace',
-    render: (row) => (
-      <div className="flex items-center gap-3">
-        <Avatar fallback={tenantInitials(row.name)} size="sm" />
-        <div className="min-w-0">
-          <p className="font-semibold text-foreground truncate">{row.name}</p>
-          <p className="text-xs font-mono text-muted-fg/70 truncate">{row.slug}</p>
+const IconUsers = () => (
+  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+  </svg>
+)
+
+const IconFee = () => (
+  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+  </svg>
+)
+
+const IconProviders = () => (
+  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+  </svg>
+)
+
+const IconKycAlert = () => (
+  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+  </svg>
+)
+
+// ─── Column factory (needs navigate) ─────────────────────────────────────────
+
+function makeColumns(navigate: ReturnType<typeof useNavigate>): Column<AdminTenant>[] {
+  return [
+    {
+      key: 'name',
+      header: 'Workspace',
+      render: (row) => (
+        <div className="flex items-center gap-3">
+          <Avatar fallback={tenantInitials(row.name)} size="sm" />
+          <div className="min-w-0">
+            <p className="font-semibold text-foreground truncate">{row.name}</p>
+            <p className="text-xs text-muted-fg/70 truncate">
+              <span className="font-mono">{row.slug}</span>
+              {row.user_count > 0 && (
+                <span className="ml-1.5">· {row.user_count} user{row.user_count !== 1 ? 's' : ''}</span>
+              )}
+            </p>
+          </div>
         </div>
-      </div>
-    ),
-  },
-  {
-    key: 'status',
-    header: 'Status',
-    render: (row) => (
-      <div className="flex items-center gap-2">
-        <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${STATUS_DOT[row.status] ?? 'bg-muted-fg'}`} />
-        <Badge variant={STATUS_VARIANT[row.status] ?? 'default'} className="capitalize">
-          {row.status}
-        </Badge>
-      </div>
-    ),
-  },
-  {
-    key: 'created_at',
-    header: 'Created',
-    render: (row) => (
-      <span
-        className="text-sm text-muted-fg"
-        title={new Date(row.created_at).toLocaleDateString('en-GB', {
-          day: 'numeric', month: 'short', year: 'numeric',
-        })}
-      >
-        {relativeTime(row.created_at)}
-      </span>
-    ),
-  },
-  {
-    key: '_chevron',
-    header: '',
-    className: 'w-8 text-right',
-    render: () => (
-      <svg
-        className="h-4 w-4 text-muted-fg/40 ml-auto"
-        fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
-      >
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-      </svg>
-    ),
-  },
-]
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      render: (row) => (
+        <div className="flex items-center gap-2">
+          <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${STATUS_DOT[row.status] ?? 'bg-muted-fg'}`} />
+          <Badge variant={STATUS_VARIANT[row.status] ?? 'default'} className="capitalize">
+            {row.status}
+          </Badge>
+        </div>
+      ),
+    },
+    {
+      key: 'pending_kyc_count',
+      header: 'KYC',
+      render: (row) =>
+        row.pending_kyc_count > 0 ? (
+          <button
+            type="button"
+            title="Review KYC applications"
+            onClick={(e) => { e.stopPropagation(); navigate(`/admin/tenants/${row.id}?tab=overview`) }}
+            className="inline-flex items-center gap-1.5 rounded-full bg-warning px-2.5 py-0.5 text-xs font-medium text-warning-fg transition-opacity hover:opacity-80"
+          >
+            <span className="h-1.5 w-1.5 rounded-full bg-warning-fg/70" />
+            {row.pending_kyc_count} pending
+          </button>
+        ) : (
+          <span className="text-xs text-muted-fg/50">—</span>
+        ),
+    },
+    {
+      key: 'created_at',
+      header: 'Created',
+      render: (row) => (
+        <span
+          className="text-sm text-muted-fg"
+          title={new Date(row.created_at).toLocaleDateString('en-GB', {
+            day: 'numeric', month: 'short', year: 'numeric',
+          })}
+        >
+          {relativeTime(row.created_at)}
+        </span>
+      ),
+    },
+    {
+      key: '_actions',
+      header: '',
+      className: 'w-px',
+      render: (row) => (
+        // stopPropagation so the row-click (→ overview) doesn't fire
+        <div
+          className="flex items-center gap-0.5"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <ActionButton
+            label="View users"
+            onClick={() => navigate(`/admin/tenants/${row.id}?tab=users`)}
+          >
+            <IconUsers />
+          </ActionButton>
+          <ActionButton
+            label="Fee setup"
+            onClick={() => navigate(`/admin/tenants/${row.id}?tab=fee-setup`)}
+          >
+            <IconFee />
+          </ActionButton>
+          <ActionButton
+            label="Payment providers"
+            onClick={() => navigate(`/admin/tenants/${row.id}?tab=providers`)}
+          >
+            <IconProviders />
+          </ActionButton>
+          {row.pending_kyc_count > 0 && (
+            <ActionButton
+              label={`Review ${row.pending_kyc_count} KYC application${row.pending_kyc_count !== 1 ? 's' : ''}`}
+              onClick={() => navigate(`/admin/tenants/${row.id}?tab=overview`)}
+              highlight
+            >
+              <IconKycAlert />
+            </ActionButton>
+          )}
+        </div>
+      ),
+    },
+  ]
+}
+
+// ─── ActionButton ─────────────────────────────────────────────────────────────
+
+function ActionButton({
+  label, onClick, highlight = false, children,
+}: {
+  label: string
+  onClick: () => void
+  highlight?: boolean
+  children: React.ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      title={label}
+      onClick={onClick}
+      className={[
+        'flex h-7 w-7 items-center justify-center rounded-md transition-colors',
+        highlight
+          ? 'text-warning-fg hover:bg-warning'
+          : 'text-muted-fg hover:bg-surface-overlay hover:text-foreground',
+      ].join(' ')}
+    >
+      {children}
+    </button>
+  )
+}
 
 // ─── Stat icons ───────────────────────────────────────────────────────────────
 
@@ -137,15 +237,21 @@ const IconPause = () => (
   </svg>
 )
 
+const IconShield = () => (
+  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+  </svg>
+)
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export function TenantList() {
-  const navigate     = useNavigate()
-  const [search, setSearch]       = useState('')
-  const [status, setStatus]       = useState('')
-  const [showCreate, setShowCreate] = useState(false)
+  const navigate = useNavigate()
+  const [search, setSearch]           = useState('')
+  const [status, setStatus]           = useState('')
+  const [showCreate, setShowCreate]   = useState(false)
   const [inviteToken, setInviteToken] = useState<string | null>(null)
-  const [copied, setCopied]       = useState(false)
+  const [copied, setCopied]           = useState(false)
 
   const { data, isLoading } = useAdminTenants()
   const createMutation = useCreateTenant()
@@ -154,24 +260,27 @@ export function TenantList() {
     resolver: zodResolver(schema),
   })
 
-  // ── Derived counts ──
-  const total     = data?.length ?? 0
-  const active    = data?.filter((t) => t.status === 'active').length ?? 0
-  const suspended = data?.filter((t) => t.status === 'suspended').length ?? 0
+  const columns = makeColumns(navigate)
 
-  // ── Filtered rows ──
+  // ── Derived counts ──────────────────────────────────────────────────────────
+  const total          = data?.length ?? 0
+  const active         = data?.filter((t) => t.status === 'active').length ?? 0
+  const suspended      = data?.filter((t) => t.status === 'suspended').length ?? 0
+  const totalPendingKyc = data?.reduce((sum, t) => sum + (t.pending_kyc_count ?? 0), 0) ?? 0
+
+  // ── Filtered rows ───────────────────────────────────────────────────────────
   const filtered = (data ?? []).filter((t) => {
-    const matchSearch = !search || t.name.toLowerCase().includes(search.toLowerCase()) || t.slug.toLowerCase().includes(search.toLowerCase())
+    const matchSearch = !search
+      || t.name.toLowerCase().includes(search.toLowerCase())
+      || t.slug.toLowerCase().includes(search.toLowerCase())
     const matchStatus = !status || t.status === status
     return matchSearch && matchStatus
   })
 
+  // ── Handlers ────────────────────────────────────────────────────────────────
   const onSubmit = (values: FormValues) => {
     createMutation.mutate(values, {
-      onSuccess: (result) => {
-        setInviteToken(result.inviteToken)
-        reset()
-      },
+      onSuccess: (result) => { setInviteToken(result.inviteToken); reset() },
     })
   }
 
@@ -209,13 +318,13 @@ export function TenantList() {
       />
 
       {/* ── Stats ──────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
           title="Total workspaces"
           value={String(total)}
           icon={<IconBuildings />}
           loading={isLoading}
-          onClick={status !== '' ? () => setStatus('') : undefined}
+          onClick={status ? () => setStatus('') : undefined}
         />
         <StatCard
           title="Active"
@@ -232,6 +341,14 @@ export function TenantList() {
           loading={isLoading}
           onClick={() => setStatus(status === 'suspended' ? '' : 'suspended')}
         />
+        <StatCard
+          title="KYC pending"
+          value={String(totalPendingKyc)}
+          description={totalPendingKyc > 0 ? 'Awaiting review' : 'All clear'}
+          icon={<IconShield />}
+          loading={isLoading}
+          onClick={totalPendingKyc > 0 ? () => navigate('/admin/kyc-queue') : undefined}
+        />
       </div>
 
       {/* ── Filters ────────────────────────────────────────────────────── */}
@@ -246,10 +363,10 @@ export function TenantList() {
             value={status}
             onValueChange={setStatus}
             options={[
-              { value: '',           label: 'All statuses' },
-              { value: 'active',     label: 'Active' },
-              { value: 'suspended',  label: 'Suspended' },
-              { value: 'inactive',   label: 'Inactive' },
+              { value: '',          label: 'All statuses' },
+              { value: 'active',    label: 'Active' },
+              { value: 'suspended', label: 'Suspended' },
+              { value: 'inactive',  label: 'Inactive' },
             ]}
           />
         }
@@ -280,7 +397,6 @@ export function TenantList() {
 
           <div className="relative w-full max-w-md rounded-2xl border border-border bg-surface shadow-2xl">
 
-            {/* Modal header */}
             <div className="flex items-center justify-between border-b border-border px-6 py-4">
               <div className="flex items-center gap-2.5">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-subtle text-primary">
@@ -303,7 +419,6 @@ export function TenantList() {
             </div>
 
             {inviteToken ? (
-              /* ── Success state ── */
               <div className="flex flex-col gap-5 p-6">
                 <div className="flex items-start gap-3 rounded-xl border border-success/30 bg-success/10 p-4">
                   <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-success/20">
@@ -313,7 +428,7 @@ export function TenantList() {
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-foreground">Tenant created successfully</p>
-                    <p className="mt-0.5 text-xs text-muted-fg">Share the invite link below with the client admin. It expires in 72 hours.</p>
+                    <p className="mt-0.5 text-xs text-muted-fg">Share the invite token with the client admin. It expires in 72 hours.</p>
                   </div>
                 </div>
 
@@ -345,17 +460,14 @@ export function TenantList() {
                 <Button className="w-full" onClick={closeCreate}>Done</Button>
               </div>
             ) : (
-              /* ── Create form ── */
               <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4 p-6">
                 <FormField label="Tenant name" error={errors.name?.message} required htmlFor="ct-name">
                   <Input id="ct-name" placeholder="Acme Corp" {...register('name')} error={!!errors.name} />
                 </FormField>
-
                 <FormField label="Slug" error={errors.slug?.message} required htmlFor="ct-slug">
                   <Input id="ct-slug" placeholder="acme-corp" {...register('slug')} error={!!errors.slug} />
                   <p className="mt-1 text-xs text-muted-fg">Lowercase letters, numbers, hyphens. Used in URLs and API identifiers.</p>
                 </FormField>
-
                 <FormField label="Admin email" error={errors.adminEmail?.message} required htmlFor="ct-email">
                   <Input id="ct-email" type="email" placeholder="admin@acmecorp.com" {...register('adminEmail')} error={!!errors.adminEmail} />
                   <p className="mt-1 text-xs text-muted-fg">An invite token will be generated for this address.</p>

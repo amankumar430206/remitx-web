@@ -6,6 +6,8 @@ export interface AdminTenant {
   slug: string
   status: 'active' | 'suspended' | 'inactive'
   created_at: string
+  user_count: number
+  pending_kyc_count: number
 }
 
 export interface KycQueueItem {
