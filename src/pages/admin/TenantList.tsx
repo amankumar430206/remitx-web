@@ -6,47 +6,146 @@ import { z } from 'zod'
 import { PageHeader } from '@/components/ui/organisms/PageHeader'
 import { DataTable } from '@/components/ui/organisms/DataTable'
 import { FilterBar } from '@/components/ui/organisms/FilterBar'
+import { StatCard } from '@/components/ui/organisms/StatCard'
 import { Badge } from '@/components/ui/atoms/Badge'
+import { Avatar } from '@/components/ui/atoms/Avatar'
 import { Button } from '@/components/ui/atoms/Button'
 import { Select } from '@/components/ui/atoms/Select'
 import { Input } from '@/components/ui/atoms/Input'
 import { FormField } from '@/components/ui/molecules/FormField'
-import { ContentCard } from '@/layouts/ContentCard'
 import { useAdminTenants, useCreateTenant } from '@/hooks/useAdmin'
 import { getApiError } from '@/lib/apiError'
 import type { AdminTenant } from '@/api/admin'
 import type { Column } from '@/components/ui/organisms/DataTable'
 
+// ─── Schema ───────────────────────────────────────────────────────────────────
+
 const schema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
-  slug: z.string().min(2, 'Slug must be at least 2 characters').regex(/^[a-z0-9-]+$/, 'Lowercase letters, numbers, hyphens only'),
+  name:       z.string().min(2, 'Name must be at least 2 characters'),
+  slug:       z.string().min(2).regex(/^[a-z0-9-]+$/, 'Lowercase letters, numbers, hyphens only'),
   adminEmail: z.string().email('Valid email required'),
 })
 type FormValues = z.infer<typeof schema>
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
 const STATUS_VARIANT: Record<string, 'success' | 'warning' | 'danger' | 'default'> = {
-  active: 'success',
+  active:    'success',
   suspended: 'danger',
-  pending: 'warning',
+  pending:   'warning',
+  inactive:  'default',
 }
 
+const STATUS_DOT: Record<string, string> = {
+  active:    'bg-success-fg',
+  suspended: 'bg-danger-fg',
+  pending:   'bg-warning-fg',
+  inactive:  'bg-muted-fg',
+}
+
+function relativeTime(iso: string): string {
+  const diffMs   = Date.now() - new Date(iso).getTime()
+  const diffDays = Math.floor(diffMs / 86_400_000)
+  if (diffDays < 1)   return 'Today'
+  if (diffDays < 30)  return `${diffDays}d ago`
+  if (diffDays < 365) return `${Math.floor(diffDays / 30)}mo ago`
+  return `${Math.floor(diffDays / 365)}y ago`
+}
+
+function tenantInitials(name: string): string {
+  return name
+    .split(' ')
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? '')
+    .join('')
+}
+
+// ─── Table columns ────────────────────────────────────────────────────────────
+
 const columns: Column<AdminTenant>[] = [
-  { key: 'name', header: 'Name' },
-  { key: 'slug', header: 'Slug', render: row => <span className="font-mono text-xs">{row.slug}</span> },
+  {
+    key: 'name',
+    header: 'Workspace',
+    render: (row) => (
+      <div className="flex items-center gap-3">
+        <Avatar fallback={tenantInitials(row.name)} size="sm" />
+        <div className="min-w-0">
+          <p className="font-semibold text-foreground truncate">{row.name}</p>
+          <p className="text-xs font-mono text-muted-fg/70 truncate">{row.slug}</p>
+        </div>
+      </div>
+    ),
+  },
   {
     key: 'status',
     header: 'Status',
-    render: row => <Badge variant={STATUS_VARIANT[row.status] ?? 'default'} className="capitalize">{row.status}</Badge>,
+    render: (row) => (
+      <div className="flex items-center gap-2">
+        <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${STATUS_DOT[row.status] ?? 'bg-muted-fg'}`} />
+        <Badge variant={STATUS_VARIANT[row.status] ?? 'default'} className="capitalize">
+          {row.status}
+        </Badge>
+      </div>
+    ),
   },
-  { key: 'created_at', header: 'Created', render: row => new Date(row.created_at).toLocaleDateString() },
+  {
+    key: 'created_at',
+    header: 'Created',
+    render: (row) => (
+      <span
+        className="text-sm text-muted-fg"
+        title={new Date(row.created_at).toLocaleDateString('en-GB', {
+          day: 'numeric', month: 'short', year: 'numeric',
+        })}
+      >
+        {relativeTime(row.created_at)}
+      </span>
+    ),
+  },
+  {
+    key: '_chevron',
+    header: '',
+    className: 'w-8 text-right',
+    render: () => (
+      <svg
+        className="h-4 w-4 text-muted-fg/40 ml-auto"
+        fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+      >
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+      </svg>
+    ),
+  },
 ]
 
+// ─── Stat icons ───────────────────────────────────────────────────────────────
+
+const IconBuildings = () => (
+  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+  </svg>
+)
+
+const IconCheckCircle = () => (
+  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+  </svg>
+)
+
+const IconPause = () => (
+  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+  </svg>
+)
+
+// ─── Main page ────────────────────────────────────────────────────────────────
+
 export function TenantList() {
-  const navigate = useNavigate()
-  const [search, setSearch] = useState('')
-  const [status, setStatus] = useState('')
+  const navigate     = useNavigate()
+  const [search, setSearch]       = useState('')
+  const [status, setStatus]       = useState('')
   const [showCreate, setShowCreate] = useState(false)
   const [inviteToken, setInviteToken] = useState<string | null>(null)
+  const [copied, setCopied]       = useState(false)
 
   const { data, isLoading } = useAdminTenants()
   const createMutation = useCreateTenant()
@@ -55,10 +154,16 @@ export function TenantList() {
     resolver: zodResolver(schema),
   })
 
-  const filtered = (data ?? []).filter(t => {
-    const matchesSearch = !search || t.name.toLowerCase().includes(search.toLowerCase()) || t.slug.toLowerCase().includes(search.toLowerCase())
-    const matchesStatus = !status || t.status === status
-    return matchesSearch && matchesStatus
+  // ── Derived counts ──
+  const total     = data?.length ?? 0
+  const active    = data?.filter((t) => t.status === 'active').length ?? 0
+  const suspended = data?.filter((t) => t.status === 'suspended').length ?? 0
+
+  // ── Filtered rows ──
+  const filtered = (data ?? []).filter((t) => {
+    const matchSearch = !search || t.name.toLowerCase().includes(search.toLowerCase()) || t.slug.toLowerCase().includes(search.toLowerCase())
+    const matchStatus = !status || t.status === status
+    return matchSearch && matchStatus
   })
 
   const onSubmit = (values: FormValues) => {
@@ -73,14 +178,25 @@ export function TenantList() {
   const closeCreate = () => {
     setShowCreate(false)
     setInviteToken(null)
+    setCopied(false)
     createMutation.reset()
     reset()
   }
 
+  const copyToken = () => {
+    if (!inviteToken) return
+    navigator.clipboard.writeText(inviteToken)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
   return (
     <div className="flex flex-col gap-6">
+
+      {/* ── Header ─────────────────────────────────────────────────────── */}
       <PageHeader
         title="Tenants"
+        description="Manage client workspaces, configurations, and onboarding."
         breadcrumbs={[{ label: 'Admin' }, { label: 'Tenants' }]}
         actions={
           <Button size="sm" onClick={() => setShowCreate(true)}>
@@ -92,47 +208,93 @@ export function TenantList() {
         }
       />
 
+      {/* ── Stats ──────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-3 gap-4">
+        <StatCard
+          title="Total workspaces"
+          value={String(total)}
+          icon={<IconBuildings />}
+          loading={isLoading}
+          onClick={status !== '' ? () => setStatus('') : undefined}
+        />
+        <StatCard
+          title="Active"
+          value={String(active)}
+          description={total > 0 ? `${Math.round((active / total) * 100)}% of total` : undefined}
+          icon={<IconCheckCircle />}
+          loading={isLoading}
+          onClick={() => setStatus(status === 'active' ? '' : 'active')}
+        />
+        <StatCard
+          title="Suspended"
+          value={String(suspended)}
+          icon={<IconPause />}
+          loading={isLoading}
+          onClick={() => setStatus(status === 'suspended' ? '' : 'suspended')}
+        />
+      </div>
+
+      {/* ── Filters ────────────────────────────────────────────────────── */}
       <FilterBar
         search={search}
         onSearchChange={setSearch}
-        searchPlaceholder="Search tenants…"
+        searchPlaceholder="Search by name or slug…"
+        hasActiveFilters={!!status}
+        onReset={() => setStatus('')}
         filters={
           <Select
             value={status}
             onValueChange={setStatus}
             options={[
-              { value: '', label: 'All statuses' },
-              { value: 'active', label: 'Active' },
-              { value: 'suspended', label: 'Suspended' },
-              { value: 'pending', label: 'Pending' },
+              { value: '',           label: 'All statuses' },
+              { value: 'active',     label: 'Active' },
+              { value: 'suspended',  label: 'Suspended' },
+              { value: 'inactive',   label: 'Inactive' },
             ]}
           />
         }
       />
 
-      <ContentCard padding="none">
-        <DataTable
-          columns={columns}
-          data={filtered}
-          loading={isLoading}
-          getRowId={row => row.id}
-          onRowClick={row => navigate(`/admin/tenants/${row.id}`)}
-          emptyTitle="No tenants"
-        />
-      </ContentCard>
+      {/* ── Table ──────────────────────────────────────────────────────── */}
+      <DataTable
+        columns={columns}
+        data={filtered}
+        loading={isLoading}
+        getRowId={(row) => row.id}
+        onRowClick={(row) => navigate(`/admin/tenants/${row.id}`)}
+        emptyTitle={search || status ? 'No matching tenants' : 'No tenants yet'}
+        emptyDescription={
+          search || status
+            ? 'Try adjusting your search or filter.'
+            : 'Create your first tenant workspace to get started.'
+        }
+      />
 
-      {/* ── Create Tenant Dialog ── */}
+      {/* ── Create tenant modal ─────────────────────────────────────────── */}
       {showCreate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={inviteToken ? undefined : closeCreate} />
-          <div className="relative w-full max-w-md rounded-2xl border border-border bg-background shadow-2xl">
+          <div
+            className="absolute inset-0 bg-black/75 backdrop-blur-md"
+            onClick={inviteToken ? undefined : closeCreate}
+          />
+
+          <div className="relative w-full max-w-md rounded-2xl border border-border bg-surface shadow-2xl">
+
+            {/* Modal header */}
             <div className="flex items-center justify-between border-b border-border px-6 py-4">
-              <h2 className="text-sm font-semibold text-foreground">
-                {inviteToken ? 'Tenant created' : 'Create new tenant'}
-              </h2>
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-subtle text-primary">
+                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                  </svg>
+                </div>
+                <h2 className="text-sm font-semibold text-foreground">
+                  {inviteToken ? 'Tenant created' : 'Create new tenant'}
+                </h2>
+              </div>
               <button
                 onClick={closeCreate}
-                className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-fg transition-colors hover:bg-surface hover:text-foreground"
+                className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-fg transition-colors hover:bg-surface-raised hover:text-foreground"
               >
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -141,53 +303,66 @@ export function TenantList() {
             </div>
 
             {inviteToken ? (
+              /* ── Success state ── */
               <div className="flex flex-col gap-5 p-6">
                 <div className="flex items-start gap-3 rounded-xl border border-success/30 bg-success/10 p-4">
                   <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-success/20">
-                    <svg className="h-4 w-4 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <svg className="h-4 w-4 text-success-fg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                     </svg>
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-foreground">Tenant created successfully</p>
-                    <p className="mt-0.5 text-xs text-muted-fg">Share the invite token below with the client admin. It expires in 72 hours.</p>
+                    <p className="mt-0.5 text-xs text-muted-fg">Share the invite link below with the client admin. It expires in 72 hours.</p>
                   </div>
                 </div>
 
                 <div>
-                  <p className="mb-1.5 text-xs font-medium text-muted-fg">Invite token</p>
-                  <div className="flex items-center gap-2 rounded-lg border border-border bg-surface p-3">
-                    <code className="flex-1 break-all font-mono text-xs text-foreground">{inviteToken}</code>
+                  <p className="mb-1.5 text-xs font-semibold text-muted-fg uppercase tracking-wider">Invite token</p>
+                  <div className="flex items-center gap-2 rounded-xl border border-border bg-surface-raised px-3 py-3">
+                    <code className="flex-1 break-all font-mono text-xs text-foreground leading-relaxed">{inviteToken}</code>
                     <button
-                      onClick={() => navigator.clipboard.writeText(inviteToken)}
-                      className="shrink-0 rounded-md p-1.5 text-muted-fg transition-colors hover:bg-background hover:text-foreground"
+                      onClick={copyToken}
+                      className="shrink-0 rounded-lg p-2 text-muted-fg transition-all hover:bg-surface hover:text-foreground"
                       title="Copy to clipboard"
                     >
-                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                      </svg>
+                      {copied ? (
+                        <svg className="h-4 w-4 text-success-fg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      ) : (
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                      )}
                     </button>
                   </div>
+                  <p className="mt-2 text-xs text-muted-fg">
+                    The admin will use this token at <span className="font-mono">/invite/accept</span> to activate their account.
+                  </p>
                 </div>
 
-                <Button onClick={closeCreate}>Done</Button>
+                <Button className="w-full" onClick={closeCreate}>Done</Button>
               </div>
             ) : (
+              /* ── Create form ── */
               <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4 p-6">
                 <FormField label="Tenant name" error={errors.name?.message} required htmlFor="ct-name">
                   <Input id="ct-name" placeholder="Acme Corp" {...register('name')} error={!!errors.name} />
                 </FormField>
+
                 <FormField label="Slug" error={errors.slug?.message} required htmlFor="ct-slug">
                   <Input id="ct-slug" placeholder="acme-corp" {...register('slug')} error={!!errors.slug} />
-                  <p className="mt-1 text-xs text-muted-fg">Lowercase letters, numbers, hyphens. Used in URLs and identifiers.</p>
+                  <p className="mt-1 text-xs text-muted-fg">Lowercase letters, numbers, hyphens. Used in URLs and API identifiers.</p>
                 </FormField>
+
                 <FormField label="Admin email" error={errors.adminEmail?.message} required htmlFor="ct-email">
                   <Input id="ct-email" type="email" placeholder="admin@acmecorp.com" {...register('adminEmail')} error={!!errors.adminEmail} />
-                  <p className="mt-1 text-xs text-muted-fg">A client admin account will be created and an invite token generated.</p>
+                  <p className="mt-1 text-xs text-muted-fg">An invite token will be generated for this address.</p>
                 </FormField>
 
                 {createMutation.isError && (
-                  <div className="flex items-start gap-2 rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger-fg">
+                  <div className="flex items-start gap-2 rounded-lg border border-danger/30 bg-danger/10 px-3.5 py-3 text-sm text-danger-fg">
                     <svg className="mt-0.5 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
