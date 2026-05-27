@@ -68,6 +68,31 @@ export interface TenantUser {
   created_at: string
 }
 
+export interface TenantBeneficiary {
+  id: string
+  name: string
+  country_code: string
+  currency: string
+  bank_name: string | null
+  account_number: string | null
+  iban: string | null
+  swift_bic: string | null
+  screening_status: string
+  is_active: boolean
+  created_at: string
+}
+
+export interface TenantAccount {
+  id: string
+  user_id: string
+  currency: string
+  balance: string
+  account_number: string | null
+  provider_name: string | null
+  status: string
+  created_at: string
+}
+
 export interface TenantContactDocument {
   type?: string | null
   filename: string
@@ -118,6 +143,16 @@ const admin = {
   users: {
     list: (tenantId: string) =>
       apiClient.get<{ success: boolean; data: TenantUser[] }>(`/admin/tenants/${tenantId}/users`),
+  },
+
+  tenantBeneficiaries: {
+    list: (tenantId: string) =>
+      apiClient.get<{ success: boolean; data: TenantBeneficiary[] }>(`/admin/tenants/${tenantId}/beneficiaries`),
+  },
+
+  tenantAccounts: {
+    list: (tenantId: string) =>
+      apiClient.get<{ success: boolean; data: TenantAccount[] }>(`/admin/tenants/${tenantId}/accounts`),
   },
 
   contact: {
@@ -190,7 +225,9 @@ const admin = {
       targetUserId: string
       beneficiaryId: string
       accountId: string
-      quoteId: string
+      from: string
+      to: string
+      amount: number
       purposeCode: string
       note?: string | null
     }) =>

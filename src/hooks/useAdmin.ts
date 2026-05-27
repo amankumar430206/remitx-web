@@ -18,6 +18,29 @@ export function useTenantUsers(tenantId: string) {
   })
 }
 
+export function useAdminTenantBeneficiaries(tenantId: string) {
+  return useQuery({
+    queryKey: ['admin-tenant-beneficiaries', tenantId],
+    queryFn: () => adminApi.tenantBeneficiaries.list(tenantId).then(r => r.data.data),
+    enabled: !!tenantId,
+  })
+}
+
+export function useAdminTenantAccounts(tenantId: string) {
+  return useQuery({
+    queryKey: ['admin-tenant-accounts', tenantId],
+    queryFn: () => adminApi.tenantAccounts.list(tenantId).then(r => r.data.data),
+    enabled: !!tenantId,
+  })
+}
+
+export function useCreateOnBehalfPayment() {
+  return useMutation({
+    mutationFn: (payload: Parameters<typeof adminApi.onBehalfPayment.create>[0]) =>
+      adminApi.onBehalfPayment.create(payload).then(r => r.data.data),
+  })
+}
+
 export function useTenantContact(tenantId: string) {
   return useQuery({
     queryKey: ['admin-tenant-contact', tenantId],

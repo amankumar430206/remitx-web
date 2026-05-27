@@ -45,6 +45,7 @@ const TenantDetail        = lazy(() => import('@/pages/admin/TenantDetail').then
 const KycQueue            = lazy(() => import('@/pages/admin/KycQueue').then(m => ({ default: m.KycQueue })))
 const ManualPaymentQueue  = lazy(() => import('@/pages/admin/ManualPaymentQueue').then(m => ({ default: m.ManualPaymentQueue })))
 const ProviderConfig      = lazy(() => import('@/pages/admin/ProviderConfig').then(m => ({ default: m.ProviderConfig })))
+const OnBehalfPayment     = lazy(() => import('@/pages/admin/OnBehalfPayment').then(m => ({ default: m.OnBehalfPayment })))
 const DesignSystem        = lazy(() => import('@/pages/DesignSystem').then(m => ({ default: m.DesignSystem })))
 const CorridorMap         = lazy(() => import('@/pages/CorridorMap').then(m => ({ default: m.CorridorMap })))
 const AIAssistant         = lazy(() => import('@/pages/AIAssistant').then(m => ({ default: m.AIAssistant })))
@@ -138,6 +139,7 @@ function App() {
               <Route path="/admin/kyc-queue" element={page(<KycQueue />)} />
               <Route path="/admin/manual-payments" element={page(<ManualPaymentQueue />)} />
               <Route path="/admin/providers" element={page(<ProviderConfig />)} />
+              <Route path="/admin/payments/on-behalf" element={page(<OnBehalfPayment />)} />
             </Route>
           </Route>
 

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { PageHeader } from '@/components/ui/organisms/PageHeader'
 import { DataTable } from '@/components/ui/organisms/DataTable'
 import { ConfirmDialog } from '@/components/ui/molecules/ConfirmDialog'
@@ -12,6 +13,7 @@ import type { ManualPaymentQueueItem } from '@/api/admin'
 import type { Column } from '@/components/ui/organisms/DataTable'
 
 export function ManualPaymentQueue() {
+  const navigate = useNavigate()
   const [processTarget, setProcessTarget] = useState<ManualPaymentQueueItem | null>(null)
   const [failTarget, setFailTarget] = useState<ManualPaymentQueueItem | null>(null)
   const [processNote, setProcessNote] = useState('')
@@ -66,6 +68,11 @@ export function ManualPaymentQueue() {
       <PageHeader
         title="Manual payment queue"
         breadcrumbs={[{ label: 'Admin' }, { label: 'Manual payments' }]}
+        actions={
+          <Button size="sm" onClick={() => navigate('/admin/payments/on-behalf')}>
+            + Pay on behalf
+          </Button>
+        }
       />
 
       <ContentCard padding="none">

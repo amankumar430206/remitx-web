@@ -1,4 +1,6 @@
+import { useNavigate } from 'react-router-dom'
 import { Badge } from '@/components/ui/atoms/Badge'
+import { Button } from '@/components/ui/atoms/Button'
 import { DataTable } from '@/components/ui/organisms/DataTable'
 import { LoadingState } from '@/components/ui/molecules/LoadingState'
 import { ContentCard } from '@/layouts/ContentCard'
@@ -93,7 +95,31 @@ interface Props {
 }
 
 export function TenantUsers({ tenantId }: Props) {
+  const navigate = useNavigate()
   const { data: users, isLoading } = useTenantUsers(tenantId)
+
+  // Action column injected with navigate (can't use hook inside static const)
+  const columnsWithActions: Column<TenantUser>[] = [
+    ...columns,
+    {
+      key: 'actions',
+      header: '',
+      render: row => (
+        <div className="flex justify-end">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={e => {
+              e.stopPropagation()
+              navigate(`/admin/payments/on-behalf?tenantId=${tenantId}&userId=${row.id}`)
+            }}
+          >
+            Pay on behalf
+          </Button>
+        </div>
+      ),
+    },
+  ]
 
   return (
     <ContentCard padding="none">
@@ -106,12 +132,19 @@ export function TenantUsers({ tenantId }: Props) {
             </p>
           )}
         </div>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => navigate(`/admin/payments/on-behalf?tenantId=${tenantId}`)}
+        >
+          + Pay on behalf
+        </Button>
       </div>
       {isLoading ? (
         <LoadingState message="Loading users…" />
       ) : (
         <DataTable
-          columns={columns}
+          columns={columnsWithActions}
           data={users ?? []}
           getRowId={row => row.id}
           emptyTitle="No users yet"
