@@ -15,7 +15,7 @@ import { TenantFeeRules } from './tenant/TenantFeeRules'
 
 // ─── Tab definition ───────────────────────────────────────────────────────────
 
-type TabKey = 'overview' | 'contact' | 'users' | 'configuration'
+type TabKey = 'overview' | 'users' | 'fee-setup' | 'providers'
 
 interface TabDef {
   key: TabKey
@@ -29,30 +29,29 @@ const OverviewIcon = () => (
   </svg>
 )
 
-const ContactIcon = () => (
-  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-  </svg>
-)
-
 const UsersIcon = () => (
   <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
   </svg>
 )
 
-const ConfigIcon = () => (
+const FeeIcon = () => (
   <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+  </svg>
+)
+
+const ProviderIcon = () => (
+  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
   </svg>
 )
 
 const TABS: TabDef[] = [
-  { key: 'overview',      label: 'Overview',      icon: <OverviewIcon /> },
-  { key: 'contact',       label: 'Contact',        icon: <ContactIcon /> },
-  { key: 'users',         label: 'Users',          icon: <UsersIcon /> },
-  { key: 'configuration', label: 'Configuration',  icon: <ConfigIcon /> },
+  { key: 'overview',   label: 'Overview',   icon: <OverviewIcon /> },
+  { key: 'users',      label: 'Users',      icon: <UsersIcon /> },
+  { key: 'fee-setup',  label: 'Fee Setup',  icon: <FeeIcon /> },
+  { key: 'providers',  label: 'Providers',  icon: <ProviderIcon /> },
 ]
 
 const STATUS_VARIANT: Record<string, 'success' | 'danger' | 'warning' | 'default'> = {
@@ -122,7 +121,7 @@ export function TenantDetail() {
 
   const setTab = (tab: TabKey) => {
     setSearchParams((p) => { p.set('tab', tab); return p }, { replace: true })
-    if (tab !== 'overview') setEditing(false)
+    if (tab !== 'overview') setEditing(false)   // cancel any in-progress edit
   }
 
   const { data: tenant, isLoading, isError, refetch } = useAdminTenant(id ?? '')
@@ -175,27 +174,27 @@ export function TenantDetail() {
       <div className="pt-6 flex flex-col gap-6">
 
         {activeTab === 'overview' && (
-          <TenantOverview
-            tenant={tenant}
-            editing={editing}
-            onEdit={() => setEditing(true)}
-            onCancelEdit={() => setEditing(false)}
-          />
-        )}
-
-        {activeTab === 'contact' && (
-          <TenantContact tenantId={tenant.id} />
+          <>
+            <TenantOverview
+              tenant={tenant}
+              editing={editing}
+              onEdit={() => setEditing(true)}
+              onCancelEdit={() => setEditing(false)}
+            />
+            <TenantContact tenantId={tenant.id} />
+          </>
         )}
 
         {activeTab === 'users' && (
           <TenantUsers tenantId={tenant.id} />
         )}
 
-        {activeTab === 'configuration' && (
-          <>
-            <TenantCorridors tenantId={tenant.id} />
-            <TenantFeeRules tenantId={tenant.id} />
-          </>
+        {activeTab === 'fee-setup' && (
+          <TenantFeeRules tenantId={tenant.id} />
+        )}
+
+        {activeTab === 'providers' && (
+          <TenantCorridors tenantId={tenant.id} />
         )}
 
       </div>
