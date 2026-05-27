@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, lazy, Suspense, Component } from 'react'
+import type { ReactNode, ErrorInfo } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/atoms/Button'
 import { Badge } from '@/components/ui/atoms/Badge'
@@ -7,11 +8,54 @@ import { LoadingState } from '@/components/ui/molecules/LoadingState'
 import { ErrorState } from '@/components/ui/molecules/ErrorState'
 import { ConfirmDialog } from '@/components/ui/molecules/ConfirmDialog'
 import { useAdminTenant, useSetTenantStatus } from '@/hooks/useAdmin'
-import { TenantOverview } from './tenant/TenantOverview'
-import { TenantContact } from './tenant/TenantContact'
-import { TenantUsers } from './tenant/TenantUsers'
-import { TenantCorridors } from './tenant/TenantCorridors'
-import { TenantFeeRules } from './tenant/TenantFeeRules'
+
+// ─── Lazy tab panels ──────────────────────────────────────────────────────────
+// Each panel is a separate chunk — only downloaded when that tab is first visited.
+
+const TenantOverview = lazy(() =>
+  import('./tenant/TenantOverview').then((m) => ({ default: m.TenantOverview }))
+)
+const TenantContact = lazy(() =>
+  import('./tenant/TenantContact').then((m) => ({ default: m.TenantContact }))
+)
+const TenantUsers = lazy(() =>
+  import('./tenant/TenantUsers').then((m) => ({ default: m.TenantUsers }))
+)
+const TenantFeeRules = lazy(() =>
+  import('./tenant/TenantFeeRules').then((m) => ({ default: m.TenantFeeRules }))
+)
+const TenantCorridors = lazy(() =>
+  import('./tenant/TenantCorridors').then((m) => ({ default: m.TenantCorridors }))
+)
+
+// ─── Tab-level error boundary ─────────────────────────────────────────────────
+// Catches render errors inside a tab so one broken panel can't crash the page.
+
+interface EBState { hasError: boolean }
+class TabErrorBoundary extends Component<{ children: ReactNode }, EBState> {
+  state: EBState = { hasError: false }
+
+  static getDerivedStateFromError(): EBState {
+    return { hasError: true }
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error('[TenantDetail] tab panel error:', error, info.componentStack)
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <ErrorState
+          title="Failed to load this tab"
+          description="Something went wrong rendering this section. Try refreshing the page."
+          onRetry={() => this.setState({ hasError: false })}
+        />
+      )
+    }
+    return this.props.children
+  }
+}
 
 // ─── Tab definition ───────────────────────────────────────────────────────────
 
@@ -171,33 +215,40 @@ export function TenantDetail() {
       <TabBar active={activeTab} onChange={setTab} />
 
       {/* ── Tab panels ─────────────────────────────────────────────────── */}
-      <div className="pt-6 flex flex-col gap-6">
+      {/* TabErrorBoundary catches render errors; Suspense shows a spinner  */}
+      {/* while a lazy chunk downloads on first visit. Subsequent visits to */}
+      {/* the same tab are instant — no fallback flash once cached.         */}
+      <TabErrorBoundary>
+        <Suspense fallback={<LoadingState className="py-20" />}>
+          <div className="pt-6 flex flex-col gap-6">
 
-        {activeTab === 'overview' && (
-          <>
-            <TenantOverview
-              tenant={tenant}
-              editing={editing}
-              onEdit={() => setEditing(true)}
-              onCancelEdit={() => setEditing(false)}
-            />
-            <TenantContact tenantId={tenant.id} />
-          </>
-        )}
+            {activeTab === 'overview' && (
+              <>
+                <TenantOverview
+                  tenant={tenant}
+                  editing={editing}
+                  onEdit={() => setEditing(true)}
+                  onCancelEdit={() => setEditing(false)}
+                />
+                <TenantContact tenantId={tenant.id} />
+              </>
+            )}
 
-        {activeTab === 'users' && (
-          <TenantUsers tenantId={tenant.id} />
-        )}
+            {activeTab === 'users' && (
+              <TenantUsers tenantId={tenant.id} />
+            )}
 
-        {activeTab === 'fee-setup' && (
-          <TenantFeeRules tenantId={tenant.id} />
-        )}
+            {activeTab === 'fee-setup' && (
+              <TenantFeeRules tenantId={tenant.id} />
+            )}
 
-        {activeTab === 'providers' && (
-          <TenantCorridors tenantId={tenant.id} />
-        )}
+            {activeTab === 'providers' && (
+              <TenantCorridors tenantId={tenant.id} />
+            )}
 
-      </div>
+          </div>
+        </Suspense>
+      </TabErrorBoundary>
 
       {/* ── Status dialog ──────────────────────────────────────────────── */}
       <ConfirmDialog
