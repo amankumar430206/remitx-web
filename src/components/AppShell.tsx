@@ -61,6 +61,11 @@ const NAV_ICONS = {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
     </svg>
   ),
+  assistant: (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z" />
+    </svg>
+  ),
 }
 
 export function AppShell() {
@@ -111,6 +116,7 @@ export function AppShell() {
     { label: 'Network', href: '/network', icon: NAV_ICONS.network },
     ...(flagKyc ? [{ label: 'KYC', href: '/kyc', icon: NAV_ICONS.kyc }] : []),
     ...(flagReports ? [{ label: 'Reports', href: '/reports/transactions', icon: NAV_ICONS.reports }] : []),
+    { label: 'Assistant', href: '/assistant', icon: NAV_ICONS.assistant },
     { label: 'Settings', href: '/settings', icon: NAV_ICONS.settings },
     ...(isAdmin ? [{ label: 'Admin', href: '/admin/tenants', icon: NAV_ICONS.admin }] : []),
   ]
