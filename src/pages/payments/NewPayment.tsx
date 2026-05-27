@@ -697,11 +697,15 @@ function Step4({ onBack }: { onBack: () => void }) {
 
 export function NewPayment() {
   const navigate = useNavigate()
-  const { step, setStep } = usePaymentStore()
+  const { step, setStep, reset } = usePaymentStore()
   const isSuperAdmin = useAuthStore(s => s.user?.role === 'super_admin')
+
+  // Always start fresh when entering this page
+  useEffect(() => { reset() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const next = () => setStep(step + 1)
   const back = () => { if (step > 1) setStep(step - 1) }
+  const cancel = () => { reset(); navigate('/payments') }
 
   return (
     <div className="flex flex-col gap-6 max-w-lg mx-auto">
@@ -711,13 +715,13 @@ export function NewPayment() {
         actions={
           <div className="flex items-center gap-2">
             {isSuperAdmin && (
-              <Link to="/admin/payments/on-behalf">
+              <Link to="/admin/payments/on-behalf" onClick={reset}>
                 <Button variant="outline" size="sm">
                   Pay on behalf
                 </Button>
               </Link>
             )}
-            <Button variant="ghost" size="sm" onClick={() => navigate('/payments')}>Cancel</Button>
+            <Button variant="ghost" size="sm" onClick={cancel}>Cancel</Button>
           </div>
         }
       />
