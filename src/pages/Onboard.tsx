@@ -291,7 +291,13 @@ const companySchema = z.object({
     .regex(/^[a-z0-9-]+$/, "Only lowercase letters, numbers and hyphens"),
 });
 
-function StepCompany({ onNext }: { onNext: (data: Pick<WizardData, "companyName" | "slug">) => void }) {
+function StepCompany({
+  onNext,
+  defaults,
+}: {
+  onNext: (data: Pick<WizardData, "companyName" | "slug">) => void;
+  defaults?: Pick<WizardData, "companyName" | "slug">;
+}) {
   const {
     register,
     handleSubmit,
@@ -300,15 +306,16 @@ function StepCompany({ onNext }: { onNext: (data: Pick<WizardData, "companyName"
     formState: { errors },
   } = useForm<z.infer<typeof companySchema>>({
     resolver: zodResolver(companySchema),
+    defaultValues: { companyName: defaults?.companyName ?? "", slug: defaults?.slug ?? "" },
   });
 
   const companyName = watch("companyName", "");
   const slug = watch("slug", "");
 
-  // Auto-generate slug from company name
+  // Auto-generate slug from company name only when slug hasn't been saved yet
   useEffect(() => {
-    if (companyName) setValue("slug", toSlug(companyName), { shouldValidate: false });
-  }, [companyName, setValue]);
+    if (companyName && !defaults?.slug) setValue("slug", toSlug(companyName), { shouldValidate: false });
+  }, [companyName, defaults?.slug, setValue]);
 
   return (
     <form onSubmit={handleSubmit(onNext)} className="flex flex-col gap-5">
@@ -360,11 +367,13 @@ const personalSchema = z.object({
 function StepPersonal({
   mode,
   defaultEmail,
+  defaults,
   onNext,
   onBack,
 }: {
   mode: Mode;
   defaultEmail?: string;
+  defaults?: Pick<WizardData, "firstName" | "lastName" | "email" | "phone">;
   onNext: (data: Pick<WizardData, "firstName" | "lastName" | "email" | "phone">) => void;
   onBack: () => void;
 }) {
@@ -374,7 +383,12 @@ function StepPersonal({
     formState: { errors },
   } = useForm<z.infer<typeof personalSchema>>({
     resolver: zodResolver(personalSchema),
-    defaultValues: { email: defaultEmail ?? "" },
+    defaultValues: {
+      firstName: defaults?.firstName ?? "",
+      lastName:  defaults?.lastName  ?? "",
+      email:     defaults?.email     ?? defaultEmail ?? "",
+      phone:     defaults?.phone     ?? "",
+    },
   });
 
   return (
@@ -1142,11 +1156,17 @@ export function Onboard() {
           )}
 
           {/* Step content */}
-          {currentKey === "company" && <StepCompany onNext={handleCompany} />}
+          {currentKey === "company" && (
+            <StepCompany
+              onNext={handleCompany}
+              defaults={wizardData as Pick<WizardData, "companyName" | "slug">}
+            />
+          )}
           {currentKey === "personal" && (
             <StepPersonal
               mode={mode}
               defaultEmail={inviteeEmail || undefined}
+              defaults={wizardData as Pick<WizardData, "firstName" | "lastName" | "email" | "phone">}
               onNext={handlePersonal}
               onBack={() => setStep((s) => s - 1)}
             />
