@@ -12,6 +12,8 @@ export interface PaymentStepState {
   sourceCurrency: string
   destinationCurrency: string
   quote: FxQuote | null
+  feeAmount: string | null        // resolved fee (may be '0.00000000' if no fee configured)
+  feeConfigured: boolean | null   // whether a fee rule exists for this corridor
   // Step 3 / meta
   purposeCode: string
   note: string

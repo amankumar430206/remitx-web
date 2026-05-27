@@ -184,6 +184,21 @@ const admin = {
     update: (tenantId: string, corridors: Array<{ sourceCurrency: string; destCurrency?: string; providerName: string; priority?: number }>) =>
       apiClient.put<{ success: boolean; data: CorridorConfig[] }>(`/admin/tenants/${tenantId}/provider-config`, { corridors }),
   },
+
+  onBehalfPayment: {
+    create: (payload: {
+      targetUserId: string
+      beneficiaryId: string
+      accountId: string
+      quoteId: string
+      purposeCode: string
+      note?: string | null
+    }) =>
+      apiClient.post<{ success: boolean; data: { payment: import('./payments').Payment; createdFor: { id: string; email: string } } }>(
+        '/admin/payments/on-behalf',
+        payload,
+      ),
+  },
 }
 
 export default admin

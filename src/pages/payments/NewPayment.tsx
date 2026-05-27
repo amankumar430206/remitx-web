@@ -218,6 +218,10 @@ function Step2({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
   const [quote, setQuote] = useState<FxQuote | null>(stored.quote ?? null)
   const [quoteLoading, setQuoteLoading] = useState(false)
   const [quoteError, setQuoteError] = useState('')
+  const [feeLoading, setFeeLoading] = useState(false)
+  const [feePreview, setFeePreview] = useState<{ feeAmount: string; configured: boolean } | null>(
+    stored.feeAmount != null ? { feeAmount: stored.feeAmount, configured: stored.feeConfigured ?? false } : null
+  )
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const { data: accountsData } = useQuery({
@@ -250,10 +254,24 @@ function Step2({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
       const minExpiry = Date.now() + MIN_LOCK_MS
       const adjustedQuote: FxQuote = { ...q, expiresAt: new Date(Math.max(apiExpiry, minExpiry)).toISOString() }
       setQuote(adjustedQuote)
-      setData({ quote: adjustedQuote })
+
+      // Fetch fee preview in parallel
+      setFeeLoading(true)
+      try {
+        const feeRes = await paymentsApi.feePreview(from, to, q.fromAmount)
+        const fp = feeRes.data.data
+        setFeePreview(fp)
+        setData({ quote: adjustedQuote, feeAmount: fp.feeAmount, feeConfigured: fp.configured })
+      } catch {
+        setFeePreview(null)
+        setData({ quote: adjustedQuote, feeAmount: null, feeConfigured: null })
+      } finally {
+        setFeeLoading(false)
+      }
     } catch (err) {
       setQuoteError(getApiError(err, 'Failed to get rate. Please try again.'))
       setQuote(null)
+      setFeePreview(null)
     } finally {
       setQuoteLoading(false)
     }
@@ -377,16 +395,52 @@ function Step2({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
 
       {/* Fee breakdown */}
       {quote && !quoteLoading && (
-        <div className="rounded-xl border border-border bg-surface-raised px-4 py-3 flex items-center justify-between text-xs">
-          <div className="flex items-center gap-1.5 text-muted-fg">
-            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            Total you send
+        <div className="rounded-xl border border-border bg-surface-raised divide-y divide-border overflow-hidden text-xs">
+          {/* Transfer fee row */}
+          <div className="flex items-center justify-between px-4 py-3">
+            <div className="flex items-center gap-1.5 text-muted-fg">
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Transfer fee
+            </div>
+            {feeLoading ? (
+              <Spinner size="sm" />
+            ) : feePreview == null ? (
+              <span className="text-muted-fg italic">—</span>
+            ) : !feePreview.configured ? (
+              <span className="inline-flex items-center gap-1 rounded-full border border-success/30 bg-success/10 px-2 py-0.5 text-[11px] font-semibold text-success-fg">
+                No fee configured
+              </span>
+            ) : parseFloat(feePreview.feeAmount) === 0 ? (
+              <span className="inline-flex items-center gap-1 rounded-full border border-success/30 bg-success/10 px-2 py-0.5 text-[11px] font-semibold text-success-fg">
+                Free
+              </span>
+            ) : (
+              <span className="font-semibold text-foreground tabular-nums">
+                <AmountDisplay amount={feePreview.feeAmount} currency={quote.from} size="sm" />
+              </span>
+            )}
           </div>
-          <span className="font-semibold text-foreground tabular-nums">
-            <AmountDisplay amount={quote.fromAmount} currency={quote.from} size="sm" />
-          </span>
+          {/* Total debit row */}
+          <div className="flex items-center justify-between px-4 py-3 bg-surface">
+            <div className="flex items-center gap-1.5 text-muted-fg">
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Total debit
+            </div>
+            <span className="font-semibold text-foreground tabular-nums">
+              {feePreview && parseFloat(feePreview.feeAmount) > 0
+                ? <AmountDisplay
+                    amount={String(parseFloat(quote.fromAmount) + parseFloat(feePreview.feeAmount))}
+                    currency={quote.from}
+                    size="sm"
+                  />
+                : <AmountDisplay amount={quote.fromAmount} currency={quote.from} size="sm" />
+              }
+            </span>
+          </div>
         </div>
       )}
 
@@ -522,6 +576,9 @@ function Step4({ onBack }: { onBack: () => void }) {
   const { data: stored, reset } = usePaymentStore()
   const idempotencyKey = useRef(stored.idempotencyKey || crypto.randomUUID())
   const q = stored.quote
+  const feeAmount = stored.feeAmount ? parseFloat(stored.feeAmount) : 0
+  const feeConfigured = stored.feeConfigured ?? false
+  const totalDebit = q ? parseFloat(q.fromAmount) + feeAmount : 0
 
   const { mutate, isPending, isError, error } = useMutation({
     mutationFn: () => {
@@ -556,9 +613,9 @@ function Step4({ onBack }: { onBack: () => void }) {
       {/* Amount hero */}
       <div className="relative overflow-hidden rounded-2xl bg-[#0f172a] border border-white/[0.07] p-6 text-center">
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent" />
-        <p className="relative text-[11px] font-semibold uppercase tracking-widest text-primary/80 mb-3">Sending</p>
+        <p className="relative text-[11px] font-semibold uppercase tracking-widest text-primary/80 mb-3">Total debit</p>
         <p className="relative text-5xl font-bold text-white tabular-nums">
-          {q ? parseFloat(q.fromAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
+          {q ? totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
           <span className="ml-2 text-2xl font-semibold text-white/50">{q?.from}</span>
         </p>
         {q && (
@@ -576,7 +633,27 @@ function Step4({ onBack }: { onBack: () => void }) {
         {q && (
           <>
             <ConfirmRow label="Recipient" value={stored.beneficiaryName ?? '—'} />
-            <ConfirmRow label="Exchange rate" value={`1 ${q.from} = ${parseFloat(q.rate).toFixed(4)} ${q.to}`} mono />
+            <ConfirmRow
+              label="Transfer amount"
+              value={`${parseFloat(q.fromAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${q.from}`}
+            />
+            <ConfirmRow
+              label="Transfer fee"
+              value={
+                stored.feeConfigured == null
+                  ? '—'
+                  : !feeConfigured
+                  ? <span className="text-xs text-success-fg font-semibold">No fee configured</span>
+                  : feeAmount === 0
+                  ? <span className="text-xs text-success-fg font-semibold">Free</span>
+                  : `${feeAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 8 })} ${q.from}`
+              }
+            />
+            <ConfirmRow
+              label="Exchange rate"
+              value={`1 ${q.from} = ${parseFloat(q.rate).toFixed(4)} ${q.to}`}
+              mono
+            />
             <ConfirmRow label="Purpose" value={stored.purposeCode ?? '—'} />
             {stored.note && <ConfirmRow label="Note" value={stored.note} />}
           </>
