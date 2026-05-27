@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
+import { useAuthStore } from '@/stores/authStore'
 import { PageHeader } from '@/components/ui/organisms/PageHeader'
 import { DataTable } from '@/components/ui/organisms/DataTable'
 import { FilterBar } from '@/components/ui/organisms/FilterBar'
@@ -103,6 +104,7 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
 export function PaymentList() {
   const navigate = useNavigate()
   const qc = useQueryClient()
+  const isSuperAdmin = useAuthStore(s => s.user?.role === 'super_admin')
 
   const [page, setPage] = useState(1)
   const [status, setStatus] = useState('')
@@ -243,12 +245,24 @@ export function PaymentList() {
       <PageHeader
         title="Payments"
         actions={
-          <Button onClick={() => navigate('/payments/new')}>
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Send payment
-          </Button>
+          <div className="flex items-center gap-2">
+            {isSuperAdmin && (
+              <Link to="/admin/payments/on-behalf">
+                <Button variant="outline">
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  Pay on behalf
+                </Button>
+              </Link>
+            )}
+            <Button onClick={() => navigate('/payments/new')}>
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Send payment
+            </Button>
+          </div>
         }
       />
 

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
+import { useAuthStore } from '@/stores/authStore'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -697,6 +698,7 @@ function Step4({ onBack }: { onBack: () => void }) {
 export function NewPayment() {
   const navigate = useNavigate()
   const { step, setStep } = usePaymentStore()
+  const isSuperAdmin = useAuthStore(s => s.user?.role === 'super_admin')
 
   const next = () => setStep(step + 1)
   const back = () => { if (step > 1) setStep(step - 1) }
@@ -706,7 +708,18 @@ export function NewPayment() {
       <PageHeader
         title="Send payment"
         breadcrumbs={[{ label: 'Payments', href: '/payments' }, { label: 'New payment' }]}
-        actions={<Button variant="ghost" size="sm" onClick={() => navigate('/payments')}>Cancel</Button>}
+        actions={
+          <div className="flex items-center gap-2">
+            {isSuperAdmin && (
+              <Link to="/admin/payments/on-behalf">
+                <Button variant="outline" size="sm">
+                  Pay on behalf
+                </Button>
+              </Link>
+            )}
+            <Button variant="ghost" size="sm" onClick={() => navigate('/payments')}>Cancel</Button>
+          </div>
+        }
       />
 
       <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
