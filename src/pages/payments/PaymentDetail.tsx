@@ -16,11 +16,24 @@ import { useAuthStore } from '@/stores/authStore'
 import paymentsApi from '@/api/payments'
 import { getApiError } from '@/lib/apiError'
 
-function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
+function InfoRow({ label, value, mono }: { label: string; value: React.ReactNode; mono?: boolean }) {
   return (
-    <div className="flex items-start justify-between gap-4 py-2.5 border-b border-border last:border-0">
-      <span className="text-sm text-muted-fg shrink-0 w-40">{label}</span>
-      <span className="text-sm font-medium text-foreground text-right flex-1">{value}</span>
+    <div className="flex items-start justify-between gap-4 py-3 border-b border-border last:border-0">
+      <span className="text-xs text-muted-fg shrink-0">{label}</span>
+      <span className={`text-sm font-medium text-foreground text-right flex-1 ${mono ? 'font-mono text-xs' : ''}`}>
+        {value}
+      </span>
+    </div>
+  )
+}
+
+function SectionHeader({ icon, title }: { icon: React.ReactNode; title: string }) {
+  return (
+    <div className="flex items-center gap-2 mb-4">
+      <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/10 text-primary">
+        {icon}
+      </div>
+      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
     </div>
   )
 }
@@ -59,9 +72,7 @@ export function PaymentDetail() {
   })
 
   if (isLoading) return <LoadingState message="Loading payment details…" />
-  if (isError || !payment) return (
-    <ErrorState title="Payment not found" onRetry={refetch} />
-  )
+  if (isError || !payment) return <ErrorState title="Payment not found" onRetry={refetch} />
 
   const canApprove = payment.status === 'pending_approval' && (user?.role === 'admin' || user?.role === 'checker')
   const isOwnPayment = payment.user_id === user?.id
@@ -84,20 +95,10 @@ export function PaymentDetail() {
           <div className="flex items-center gap-2">
             {canApprove && !isOwnPayment && (
               <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowRejectDialog(true)}
-                  disabled={approveMutation.isPending || rejectMutation.isPending}
-                >
+                <Button variant="outline" size="sm" onClick={() => setShowRejectDialog(true)} disabled={approveMutation.isPending || rejectMutation.isPending}>
                   Reject
                 </Button>
-                <Button
-                  size="sm"
-                  loading={approveMutation.isPending}
-                  disabled={rejectMutation.isPending}
-                  onClick={() => approveMutation.mutate()}
-                >
+                <Button size="sm" loading={approveMutation.isPending} disabled={rejectMutation.isPending} onClick={() => approveMutation.mutate()}>
                   Approve
                 </Button>
               </>
@@ -106,12 +107,7 @@ export function PaymentDetail() {
               <span className="text-xs text-muted-fg italic">Awaiting approval from another user</span>
             )}
             {canCancel && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowCancelDialog(true)}
-                disabled={cancelMutation.isPending}
-              >
+              <Button variant="ghost" size="sm" onClick={() => setShowCancelDialog(true)} disabled={cancelMutation.isPending}>
                 Cancel payment
               </Button>
             )}
@@ -119,58 +115,136 @@ export function PaymentDetail() {
         }
       />
 
-      {/* Summary banner */}
-      <ContentCard>
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-3xl font-bold text-foreground">
-              <AmountDisplay amount={payment.source_amount} currency={payment.source_currency} size="lg" />
-            </p>
-            <p className="text-sm text-muted-fg mt-1">
-              → <AmountDisplay amount={payment.dest_amount} currency={payment.dest_currency} /> to {payment.beneficiary_name ?? '—'}
-            </p>
-          </div>
-          <StatusBadge status={payment.status} />
-        </div>
-      </ContentCard>
+      {/* ── Hero card ── */}
+      <div className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-surface to-background p-6">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent pointer-events-none" />
 
+        {/* Amount corridor */}
+        <div className="relative flex items-center justify-between gap-4">
+          {/* Source */}
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-muted-fg uppercase tracking-wider">You send</span>
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl font-bold text-foreground tabular-nums">
+                {parseFloat(payment.source_amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+              <span className="text-lg font-semibold text-muted-fg">{payment.source_currency}</span>
+            </div>
+          </div>
+
+          {/* Arrow + rate */}
+          <div className="flex flex-col items-center gap-1.5 shrink-0">
+            <div className="flex items-center gap-2">
+              <div className="h-px w-8 bg-border" />
+              <div className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-surface shadow-sm">
+                <svg className="h-4 w-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                </svg>
+              </div>
+              <div className="h-px w-8 bg-border" />
+            </div>
+            <span className="text-xs text-muted-fg tabular-nums whitespace-nowrap">
+              1 {payment.source_currency} = {parseFloat(payment.exchange_rate).toFixed(4)} {payment.dest_currency}
+            </span>
+          </div>
+
+          {/* Dest */}
+          <div className="flex flex-col gap-1 items-end">
+            <span className="text-xs font-medium text-muted-fg uppercase tracking-wider">They receive</span>
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl font-bold text-foreground tabular-nums">
+                {parseFloat(payment.dest_amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+              <span className="text-lg font-semibold text-muted-fg">{payment.dest_currency}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Status + meta row */}
+        <div className="relative mt-5 pt-4 border-t border-border flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3">
+            <StatusBadge status={payment.status} />
+            {payment.beneficiary_name && (
+              <span className="text-sm text-muted-fg">
+                → <span className="font-medium text-foreground">{payment.beneficiary_name}</span>
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-4 text-xs text-muted-fg">
+            <span>
+              Fee: <span className="font-medium text-foreground">
+                {parseFloat(payment.fee_amount ?? '0').toFixed(2)} {payment.source_currency}
+              </span>
+            </span>
+            <span>{new Date(payment.created_at).toLocaleString()}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Details grid ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Payment info */}
+        {/* Transfer info */}
         <ContentCard>
-          <h3 className="text-sm font-semibold text-foreground mb-3">Transfer details</h3>
-          <DetailRow label="Exchange rate" value={`1 ${payment.source_currency} = ${parseFloat(payment.exchange_rate).toFixed(4)} ${payment.dest_currency}`} />
-          <DetailRow label="Fee" value={<AmountDisplay amount={payment.fee_amount} currency={payment.source_currency} />} />
-          <DetailRow label="Purpose" value={payment.purpose_code} />
-          {payment.reference && <DetailRow label="Reference" value={payment.reference} />}
-          <DetailRow label="Payment ID" value={<span className="font-mono text-xs">{payment.id}</span>} />
+          <SectionHeader
+            title="Transfer details"
+            icon={
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+              </svg>
+            }
+          />
+          <InfoRow label="Exchange rate" value={`1 ${payment.source_currency} = ${parseFloat(payment.exchange_rate).toFixed(4)} ${payment.dest_currency}`} />
+          <InfoRow label="Fee" value={<AmountDisplay amount={payment.fee_amount} currency={payment.source_currency} />} />
+          <InfoRow label="Purpose" value={payment.purpose_code} />
+          {payment.reference && <InfoRow label="Reference" value={payment.reference} mono />}
+          <InfoRow label="Payment ID" value={payment.id} mono />
         </ContentCard>
 
         {/* Recipient info */}
         <ContentCard>
-          <h3 className="text-sm font-semibold text-foreground mb-3">Recipient</h3>
-          <DetailRow label="Name" value={payment.beneficiary_name ?? '—'} />
-          <DetailRow label="Country" value={payment.beneficiary_country_code ?? '—'} />
-          <DetailRow label="Submitted" value={new Date(payment.created_at).toLocaleString()} />
-          {payment.completed_at && <DetailRow label="Completed" value={new Date(payment.completed_at).toLocaleString()} />}
+          <SectionHeader
+            title="Recipient"
+            icon={
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            }
+          />
+          <InfoRow label="Name" value={payment.beneficiary_name ?? '—'} />
+          <InfoRow label="Country" value={payment.beneficiary_country_code ?? '—'} />
+          <InfoRow label="Submitted" value={new Date(payment.created_at).toLocaleString()} />
+          {payment.completed_at && (
+            <InfoRow label="Completed" value={new Date(payment.completed_at).toLocaleString()} />
+          )}
+          {payment.note && <InfoRow label="Note" value={payment.note} />}
         </ContentCard>
       </div>
 
-      {/* Status history timeline */}
+      {/* ── Status timeline ── */}
       {timelineEvents.length > 0 && (
         <ContentCard>
-          <h3 className="text-sm font-semibold text-foreground mb-4">Status history</h3>
+          <SectionHeader
+            title="Status history"
+            icon={
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            }
+          />
           <Timeline events={timelineEvents} />
         </ContentCard>
       )}
 
-      {/* Approve/reject errors */}
+      {/* ── Errors ── */}
       {(approveMutation.isError || rejectMutation.isError) && (
-        <div className="rounded-md bg-danger border border-danger-border px-4 py-2 text-sm text-danger-fg">
+        <div className="flex items-start gap-2 rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger-fg">
+          <svg className="mt-0.5 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
           {getApiError(approveMutation.error ?? rejectMutation.error, 'Action failed. Please try again.')}
         </div>
       )}
 
-      {/* Reject dialog */}
       <ConfirmDialog
         open={showRejectDialog}
         onOpenChange={setShowRejectDialog}
@@ -190,7 +264,6 @@ export function PaymentDetail() {
         />
       </ConfirmDialog>
 
-      {/* Cancel dialog */}
       <ConfirmDialog
         open={showCancelDialog}
         onOpenChange={setShowCancelDialog}
