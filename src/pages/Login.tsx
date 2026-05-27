@@ -7,6 +7,22 @@ import { Button, Input, FormField } from '@/components/ui/index'
 import { useAuth } from '@/hooks/useAuth'
 import { useAuthStore } from '@/stores/authStore'
 
+// ─── Dev quick-login (only rendered in development) ──────────────────────────
+const DEV_USERS = [
+  { label: 'Super Admin', role: 'super_admin', email: 'admin@remitx.com',   password: 'Admin@RemitX2024!', tenant: 'remitx', color: 'primary' },
+  { label: 'Maker',       role: 'maker',       email: 'maker1@remitx.com',  password: 'Test@1234!',        tenant: 'remitx', color: 'success' },
+  { label: 'Checker',     role: 'checker',     email: 'checker1@remitx.com',password: 'Test@1234!',        tenant: 'remitx', color: 'warning' },
+  { label: 'Client Admin',role: 'client_admin',email: 'cadmin@remitx.com',  password: 'Test@1234!',        tenant: 'remitx', color: 'info'    },
+] as const
+
+const CHIP_COLORS: Record<string, { border: string; text: string; activeBg: string; activeText: string }> = {
+  primary: { border: 'border-primary',  text: 'text-primary',  activeBg: 'bg-primary/15',  activeText: 'text-primary' },
+  success: { border: 'border-success',  text: 'text-success',  activeBg: 'bg-success/15',  activeText: 'text-success' },
+  warning: { border: 'border-warning',  text: 'text-warning',  activeBg: 'bg-warning/15',  activeText: 'text-warning' },
+  info:    { border: 'border-info',     text: 'text-info',     activeBg: 'bg-info/15',      activeText: 'text-info'    },
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 const schema = z.object({
   tenantSlug: z.string().min(1, 'Workspace is required'),
   email: z.string().email('Invalid email'),
@@ -45,9 +61,11 @@ export function Login() {
   const tenantSlug = useAuthStore(s => s.tenantSlug)
   const [serverError, setServerError] = useState('')
 
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({
+  const [activeDevRole, setActiveDevRole] = useState<string | null>(null)
+
+  const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { tenantSlug: tenantSlug ?? '' },
+    defaultValues: { tenantSlug: tenantSlug ?? 'remitx' },
   })
 
   const onSubmit = async (data: FormData) => {
@@ -63,6 +81,12 @@ export function Login() {
       const msg = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message
       setServerError(msg ?? 'Invalid credentials')
     }
+  }
+
+  // Dev quick-login: fill form + immediately submit — single click to authenticate
+  const loginAs = (u: typeof DEV_USERS[number]) => {
+    setActiveDevRole(u.role)
+    onSubmit({ tenantSlug: u.tenant, email: u.email, password: u.password })
   }
 
   return (
@@ -209,6 +233,39 @@ export function Login() {
           <p className="mt-10 text-center text-xs text-muted-fg/60">
             Protected by bank-grade encryption · SOC 2 compliant
           </p>
+
+          {/* ── Dev quick-login panel ── */}
+          {import.meta.env.DEV && (
+            <div className="mt-6 rounded-xl border border-dashed border-warning/50 bg-warning/5 p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="rounded px-1.5 py-0.5 text-[10px] font-bold tracking-widest bg-warning text-black uppercase">
+                  DEV
+                </span>
+                <span className="text-xs font-semibold text-warning">Quick login</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {DEV_USERS.map(u => {
+                  const c = CHIP_COLORS[u.color]
+                  const active = activeDevRole === u.role
+                  return (
+                    <button
+                      key={u.role}
+                      type="button"
+                      onClick={() => loginAs(u)}
+                      className={`flex flex-col items-start rounded-lg border px-3 py-2 text-left transition-colors ${c.border} ${active ? `${c.activeBg}` : 'bg-transparent hover:bg-surface'}`}
+                    >
+                      <span className={`text-xs font-semibold ${active ? c.activeText : 'text-foreground'}`}>
+                        {u.label}
+                      </span>
+                      <span className={`text-[10px] mt-0.5 ${active ? `${c.text} opacity-80` : 'text-muted-fg'}`}>
+                        {u.email}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
