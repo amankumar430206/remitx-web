@@ -12,6 +12,7 @@ import { Pagination } from '@/components/ui/atoms/Pagination'
 import { ContentCard } from '@/layouts/ContentCard'
 import { Drawer } from '@/components/ui/molecules/Drawer'
 import { useBeneficiaries } from '@/hooks/useBeneficiaries'
+import { useDebounce } from '@/hooks/useDebounce'
 import type { Beneficiary } from '@/api/beneficiaries'
 
 const SCREENING_VARIANT: Record<string, 'success' | 'warning' | 'danger' | 'default'> = {
@@ -87,10 +88,11 @@ export function BeneficiaryList() {
   const navigate = useNavigate()
   const [page, setPage]             = useState(1)
   const [search, setSearch]         = useState('')
+  const debouncedSearch             = useDebounce(search)
   const [screening, setScreening]   = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
-  const { data, isLoading, isError, refetch } = useBeneficiaries({ page, search: search || undefined })
+  const { data, isLoading, isError, refetch } = useBeneficiaries({ page, search: debouncedSearch || undefined })
   const beneficiaries = data?.data ?? []
   const total      = data?.meta?.total ?? 0
   const totalPages = Math.ceil(total / 20)

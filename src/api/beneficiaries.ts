@@ -34,10 +34,10 @@ export interface CreateBeneficiaryPayload {
 }
 
 const beneficiaries = {
-  list: (params?: { page?: number; limit?: number; search?: string }) =>
+  list: (params?: { page?: number; limit?: number; search?: string }, signal?: AbortSignal) =>
     apiClient.get<{ success: boolean; data: Beneficiary[]; meta: { page: number; limit: number; total: number } }>(
       '/beneficiaries',
-      { params }
+      { params, signal }
     ),
 
   get: (id: string) =>

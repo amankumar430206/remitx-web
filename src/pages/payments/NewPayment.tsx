@@ -15,6 +15,7 @@ import { AmountDisplay } from '@/components/ui/molecules/AmountDisplay'
 import { SearchInput } from '@/components/ui/molecules/SearchInput'
 import { ContentCard } from '@/layouts/ContentCard'
 import { useBeneficiaries } from '@/hooks/useBeneficiaries'
+import { useDebounce } from '@/hooks/useDebounce'
 import { usePaymentStore } from '@/stores/paymentStore'
 import fxApi, { type FxQuote } from '@/api/fx'
 import paymentsApi from '@/api/payments'
@@ -113,7 +114,8 @@ function RateLockPill({ expiresAt, onExpire }: { expiresAt: string; onExpire: ()
 
 function Step1({ onNext }: { onNext: () => void }) {
   const [search, setSearch] = useState('')
-  const { data, isLoading } = useBeneficiaries({ search, limit: 20 })
+  const debouncedSearch = useDebounce(search)
+  const { data, isLoading } = useBeneficiaries({ search: debouncedSearch, limit: 20 })
   const { setData, data: stored } = usePaymentStore()
   const [selected, setSelected] = useState(stored.beneficiaryId ?? '')
 

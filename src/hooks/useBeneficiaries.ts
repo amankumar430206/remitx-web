@@ -4,7 +4,7 @@ import beneficiariesApi, { type CreateBeneficiaryPayload } from '@/api/beneficia
 export function useBeneficiaries(params?: { page?: number; limit?: number; search?: string }) {
   return useQuery({
     queryKey: ['beneficiaries', params],
-    queryFn: () => beneficiariesApi.list(params).then(r => r.data),
+    queryFn: ({ signal }) => beneficiariesApi.list(params, signal).then(r => r.data),
   })
 }
 

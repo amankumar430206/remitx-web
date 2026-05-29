@@ -16,6 +16,7 @@ import { Pagination } from '@/components/ui/atoms/Pagination'
 import { ContentCard } from '@/layouts/ContentCard'
 import { Drawer } from '@/components/ui/molecules/Drawer'
 import { usePayments, usePayment } from '@/hooks/usePayments'
+import { useDebounce } from '@/hooks/useDebounce'
 import type { Payment } from '@/api/payments'
 import type { DateRange } from '@/components/ui/molecules/DateRangePicker'
 
@@ -112,6 +113,7 @@ export function PaymentList() {
   const [page, setPage] = useState(1)
   const [status, setStatus] = useState('')
   const [search, setSearch] = useState('')
+  const debouncedSearch = useDebounce(search)
   const [preset, setPreset] = useState<Preset>('30d')
   const [dateRange, setDateRange] = useState<DateRange>(() => presetToRange('30d'))
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -125,7 +127,7 @@ export function PaymentList() {
     page,
     limit: 20,
     status: status || undefined,
-    search: search || undefined,
+    search: debouncedSearch || undefined,
     from: dateRange.startDate ? dateRange.startDate.toISOString().slice(0, 10) : undefined,
     to: dateRange.endDate ? dateRange.endDate.toISOString().slice(0, 10) : undefined,
   })
