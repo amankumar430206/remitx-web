@@ -586,13 +586,13 @@ function StepPassword({
 
       {/* Save-it banner — shown only when a password was generated */}
       {generatedPwd && (
-        <div className="rounded-xl border border-warning/40 bg-warning/5 p-4">
+        <div className="rounded-xl border border-warning-fg/40 bg-warning/20 p-4">
           <div className="flex items-start gap-2.5 mb-3">
-            <svg className="w-4 h-4 text-warning mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-4 h-4 text-warning-fg mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
             <div>
-              <p className="text-xs font-semibold text-warning">Save this password now</p>
+              <p className="text-xs font-semibold text-warning-fg">Save this password now</p>
               <p className="text-xs text-muted-fg mt-0.5">Store it in a password manager. You won't be able to see it again.</p>
             </div>
           </div>

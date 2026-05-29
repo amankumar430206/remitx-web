@@ -241,7 +241,7 @@ export function Login() {
                 <span className="rounded px-1.5 py-0.5 text-[10px] font-bold tracking-widest bg-warning text-black uppercase">
                   DEV
                 </span>
-                <span className="text-xs font-semibold text-warning">Quick login</span>
+                <span className="text-xs font-semibold text-warning-fg">Quick login</span>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 {DEV_USERS.map(u => {
