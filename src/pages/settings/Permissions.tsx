@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { PageHeader } from '@/components/ui/organisms/PageHeader'
 import { PermissionMatrix } from '@/components/ui/organisms/PermissionMatrix'
@@ -8,7 +8,9 @@ import { Button } from '@/components/ui/atoms/Button'
 import { ContentCard } from '@/layouts/ContentCard'
 import tenantsApi from '@/api/tenants'
 
-const ROLES = ['client_admin', 'maker', 'checker', 'subclient_admin', 'subclient_user']
+// Preferred display order — any role returned by the API not in this list
+// gets appended at the end automatically.
+const ROLE_ORDER = ['client_admin', 'maker', 'checker', 'subclient_admin', 'subclient_user']
 
 const ROLE_LABELS: Record<string, string> = {
   client_admin:    'Admin',
@@ -37,6 +39,8 @@ const PERMISSIONS = [
   { key: 'compliance:review',     label: 'Review compliance',    group: 'Admin' },
 ]
 
+const ALL_PERMISSION_KEYS = PERMISSIONS.map(p => p.key)
+
 export function Permissions() {
   const qc = useQueryClient()
   const [matrix, setMatrix] = useState<Record<string, string[]>>({})
@@ -48,6 +52,16 @@ export function Permissions() {
     queryFn: () => tenantsApi.listRoles().then(r => r.data.data),
   })
 
+  // Derive the role list from the API — ordered by ROLE_ORDER, extras appended.
+  // super_admin is excluded (hardcoded full-access, not user-editable).
+  const roles = useMemo(() => {
+    if (!data) return ROLE_ORDER
+    const fromApi = data.map((d: { role: string }) => d.role).filter((r: string) => r !== 'super_admin')
+    const ordered = ROLE_ORDER.filter(r => fromApi.includes(r))
+    const extras   = fromApi.filter((r: string) => !ROLE_ORDER.includes(r))
+    return [...ordered, ...extras]
+  }, [data])
+
   // Populate matrix from API data
   useEffect(() => {
     if (!data) return
@@ -55,19 +69,19 @@ export function Permissions() {
     for (const { role, permissions } of data) {
       m[role] = permissions
     }
-    // Ensure all known roles have an entry even if not in DB yet
-    for (const r of ROLES) {
+    // Ensure all derived roles have an entry even if not yet in DB
+    for (const r of roles) {
       if (!m[r]) m[r] = []
     }
     setMatrix(m)
     setDirty(false)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data])
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      // Only save roles we know about (not super_admin — leave that alone)
       await Promise.all(
-        ROLES.map(role => tenantsApi.upsertRole(role, matrix[role] ?? []))
+        roles.map(role => tenantsApi.upsertRole(role, matrix[role] ?? []))
       )
     },
     onSuccess: () => {
@@ -84,6 +98,15 @@ export function Permissions() {
       [role]: granted
         ? [...(prev[role] ?? []), permission]
         : (prev[role] ?? []).filter(p => p !== permission),
+    }))
+    setDirty(true)
+    setSavedMsg(false)
+  }
+
+  const handleToggleAll = (role: string, grant: boolean) => {
+    setMatrix(prev => ({
+      ...prev,
+      [role]: grant ? [...ALL_PERMISSION_KEYS] : [],
     }))
     setDirty(true)
     setSavedMsg(false)
@@ -118,11 +141,12 @@ export function Permissions() {
 
       <ContentCard padding="none">
         <PermissionMatrix
-          roles={ROLES}
+          roles={roles}
           roleLabels={ROLE_LABELS}
           permissions={PERMISSIONS}
           value={matrix}
           onChange={handleChange}
+          onToggleAll={handleToggleAll}
           className="border-0 rounded-xl"
         />
       </ContentCard>
