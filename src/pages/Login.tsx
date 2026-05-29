@@ -8,18 +8,36 @@ import { useAuth } from '@/hooks/useAuth'
 import { useAuthStore } from '@/stores/authStore'
 
 // ─── Dev quick-login (only rendered in development) ──────────────────────────
-const DEV_USERS = [
-  { label: 'Super Admin', role: 'super_admin', email: 'admin@remitx.com',   password: 'Admin@RemitX2024!', tenant: 'remitx', color: 'primary' },
-  { label: 'Maker',       role: 'maker',       email: 'maker1@remitx.com',  password: 'Test@1234!',        tenant: 'remitx', color: 'success' },
-  { label: 'Checker',     role: 'checker',     email: 'checker1@remitx.com',password: 'Test@1234!',        tenant: 'remitx', color: 'warning' },
-  { label: 'Client Admin',role: 'client_admin',email: 'cadmin@remitx.com',  password: 'Test@1234!',        tenant: 'remitx', color: 'info'    },
-] as const
+const DEV_GROUPS = [
+  {
+    label: 'RemitX',
+    note: null as string | null,
+    users: [
+      { label: 'Super Admin',  detail: 'All tenants',    email: 'admin@remitx.com',    password: 'Admin@RemitX2024!', tenant: 'remitx',    color: 'primary' },
+      { label: 'Client Admin', detail: 'remitx',         email: 'cadmin@remitx.com',   password: 'Test@1234!',        tenant: 'remitx',    color: 'info'    },
+      { label: 'Maker',        detail: 'remitx',         email: 'maker1@remitx.com',   password: 'Test@1234!',        tenant: 'remitx',    color: 'success' },
+      { label: 'Checker',      detail: 'remitx',         email: 'checker1@remitx.com', password: 'Test@1234!',        tenant: 'remitx',    color: 'warning' },
+    ],
+  },
+  {
+    label: 'Active Clients',
+    note: 'Each workspace sees only its own data',
+    users: [
+      { label: 'Acme Corp',    detail: 'acme-corp',      email: 'admin@acme.com',        password: 'Test@1234!', tenant: 'acme-corp', color: 'danger'  },
+      { label: 'GlobalPay',    detail: 'globalpay',      email: 'admin@globalpay.com',   password: 'Test@1234!', tenant: 'globalpay', color: 'primary' },
+      { label: 'Acme · Maker', detail: 'acme-corp',      email: 'maker@acme.com',        password: 'Test@1234!', tenant: 'acme-corp', color: 'danger'  },
+    ],
+  },
+]
 
-const CHIP_COLORS: Record<string, { border: string; text: string; activeBg: string; activeText: string }> = {
-  primary: { border: 'border-primary',  text: 'text-primary',  activeBg: 'bg-primary/15',  activeText: 'text-primary' },
-  success: { border: 'border-success',  text: 'text-success',  activeBg: 'bg-success/15',  activeText: 'text-success' },
-  warning: { border: 'border-warning',  text: 'text-warning',  activeBg: 'bg-warning/15',  activeText: 'text-warning' },
-  info:    { border: 'border-info',     text: 'text-info',     activeBg: 'bg-info/15',      activeText: 'text-info'    },
+type DevUser = typeof DEV_GROUPS[number]['users'][number]
+
+const CHIP_COLORS: Record<string, { border: string; activeBg: string; activeText: string; subText: string }> = {
+  primary: { border: 'border-primary',        activeBg: 'bg-primary/15',  activeText: 'text-primary',    subText: 'text-primary/70'    },
+  success: { border: 'border-success-fg/50',  activeBg: 'bg-success/15',  activeText: 'text-success-fg', subText: 'text-success-fg/70' },
+  warning: { border: 'border-warning-fg/50',  activeBg: 'bg-warning/20',  activeText: 'text-warning-fg', subText: 'text-warning-fg/70' },
+  info:    { border: 'border-info-fg/50',     activeBg: 'bg-info/15',     activeText: 'text-info-fg',    subText: 'text-info-fg/70'    },
+  danger:  { border: 'border-danger-fg/50',   activeBg: 'bg-danger/15',   activeText: 'text-danger-fg',  subText: 'text-danger-fg/70'  },
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -61,7 +79,7 @@ export function Login() {
   const tenantSlug = useAuthStore(s => s.tenantSlug)
   const [serverError, setServerError] = useState('')
 
-  const [activeDevRole, setActiveDevRole] = useState<string | null>(null)
+  const [activeDevEmail, setActiveDevEmail] = useState<string | null>(null)
 
   const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -84,8 +102,8 @@ export function Login() {
   }
 
   // Dev quick-login: fill form + immediately submit — single click to authenticate
-  const loginAs = (u: typeof DEV_USERS[number]) => {
-    setActiveDevRole(u.role)
+  const loginAs = (u: DevUser) => {
+    setActiveDevEmail(u.email)
     onSubmit({ tenantSlug: u.tenant, email: u.email, password: u.password })
   }
 
@@ -236,34 +254,59 @@ export function Login() {
 
           {/* ── Dev quick-login panel ── */}
           {import.meta.env.DEV && (
-            <div className="mt-6 rounded-xl border border-dashed border-warning/50 bg-warning/5 p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="rounded px-1.5 py-0.5 text-[10px] font-bold tracking-widest bg-warning text-black uppercase">
+            <div className="mt-6 rounded-xl border border-dashed border-warning-fg/40 bg-warning/10 p-4 space-y-4">
+              {/* Header */}
+              <div className="flex items-center gap-2">
+                <span className="rounded px-1.5 py-0.5 text-[10px] font-bold tracking-widest bg-warning-fg text-white uppercase">
                   DEV
                 </span>
                 <span className="text-xs font-semibold text-warning-fg">Quick login</span>
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                {DEV_USERS.map(u => {
-                  const c = CHIP_COLORS[u.color]
-                  const active = activeDevRole === u.role
-                  return (
-                    <button
-                      key={u.role}
-                      type="button"
-                      onClick={() => loginAs(u)}
-                      className={`flex flex-col items-start rounded-lg border px-3 py-2 text-left transition-colors ${c.border} ${active ? `${c.activeBg}` : 'bg-transparent hover:bg-surface'}`}
-                    >
-                      <span className={`text-xs font-semibold ${active ? c.activeText : 'text-foreground'}`}>
-                        {u.label}
-                      </span>
-                      <span className={`text-[10px] mt-0.5 ${active ? `${c.text} opacity-80` : 'text-muted-fg'}`}>
-                        {u.email}
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
+
+              {DEV_GROUPS.map(group => (
+                <div key={group.label}>
+                  {/* Group header */}
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-fg">
+                      {group.label}
+                    </span>
+                    {group.note && (
+                      <>
+                        <span className="text-muted-fg/40 text-[10px]">·</span>
+                        <span className="flex items-center gap-1 text-[10px] text-success-fg font-medium">
+                          <svg className="h-3 w-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                          </svg>
+                          {group.note}
+                        </span>
+                      </>
+                    )}
+                  </div>
+
+                  {/* User buttons grid */}
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {group.users.map(u => {
+                      const c = CHIP_COLORS[u.color]
+                      const active = activeDevEmail === u.email
+                      return (
+                        <button
+                          key={u.email}
+                          type="button"
+                          onClick={() => loginAs(u)}
+                          className={`flex flex-col items-start rounded-lg border px-3 py-2 text-left transition-all ${c.border} ${active ? c.activeBg : 'bg-transparent hover:bg-surface-overlay'}`}
+                        >
+                          <span className={`text-xs font-semibold ${active ? c.activeText : 'text-foreground'}`}>
+                            {u.label}
+                          </span>
+                          <span className={`text-[10px] mt-0.5 tabular-nums ${active ? c.subText : 'text-muted-fg'}`}>
+                            {u.detail}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
