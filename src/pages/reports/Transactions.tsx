@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { PageHeader } from '@/components/ui/organisms/PageHeader'
 import { DataTable } from '@/components/ui/organisms/DataTable'
-import { FilterBar } from '@/components/ui/organisms/FilterBar'
-import { DateRangePickerButton } from '@/components/ui/molecules/DateRangePicker'
-import { Button } from '@/components/ui/atoms/Button'
+import { SmartFilterBar } from '@/components/ui/organisms/SmartFilterBar'
+import type { ActiveFilterChip } from '@/components/ui/organisms/SmartFilterBar'
 import { Badge } from '@/components/ui/atoms/Badge'
+import { Button } from '@/components/ui/atoms/Button'
 import { Pagination } from '@/components/ui/atoms/Pagination'
 import { ContentCard } from '@/layouts/ContentCard'
 import { useTransactions } from '@/hooks/useReports'
@@ -35,6 +35,10 @@ function presetToRange(preset: Preset): DateRange {
   else if (preset === 'ytd') startDate.setMonth(0, 1)
 
   return { startDate, endDate: today }
+}
+
+function fmtDate(d: Date) {
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
 const STATUS_VARIANT: Record<string, 'success' | 'warning' | 'danger' | 'default'> = {
@@ -100,6 +104,23 @@ export function Transactions() {
     if (range.startDate) { setPreset('custom'); setDateRange(range); setPage(1) }
   }
 
+  const clearAll = () => { setSearch(''); handlePreset('30d') }
+
+  const activeChips = useMemo<ActiveFilterChip[]>(() => [
+    ...(preset !== '30d' ? [{
+      key: 'date',
+      label: preset === 'custom' && dateRange.startDate && dateRange.endDate
+        ? `${fmtDate(dateRange.startDate)} → ${fmtDate(dateRange.endDate)}`
+        : PRESETS.find(p => p.value === preset)?.label ?? preset,
+      onRemove: () => handlePreset('30d'),
+    }] : []),
+    ...(search ? [{
+      key: 'search',
+      label: `"${search}"`,
+      onRemove: () => setSearch(''),
+    }] : []),
+  ], [preset, dateRange, search])
+
   const params = {
     page,
     limit: 20,
@@ -143,33 +164,18 @@ export function Transactions() {
         }
       />
 
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center gap-2 flex-wrap">
-          {PRESETS.map(p => (
-            <Button
-              key={p.value}
-              size="sm"
-              variant={preset === p.value ? 'primary' : 'outline'}
-              onClick={() => handlePreset(p.value)}
-            >
-              {p.label}
-            </Button>
-          ))}
-          <DateRangePickerButton
-            selectMode="range"
-            showShortcuts
-            initialStartDate={preset === 'custom' ? dateRange.startDate : null}
-            initialEndDate={preset === 'custom' ? dateRange.endDate : null}
-            onChange={handleCustomRange}
-            placeholder="Custom range…"
-          />
-        </div>
-        <FilterBar
-          search={search}
-          onSearchChange={setSearch}
-          searchPlaceholder="Search transactions…"
-        />
-      </div>
+      <SmartFilterBar
+        search={search}
+        onSearchChange={v => { setSearch(v); setPage(1) }}
+        searchPlaceholder="Search transactions…"
+        presets={PRESETS}
+        activePreset={preset}
+        onPresetChange={p => handlePreset(p as Preset)}
+        dateRange={dateRange}
+        onCustomRange={handleCustomRange}
+        activeChips={activeChips}
+        onClearAll={activeChips.length > 0 ? clearAll : undefined}
+      />
 
       <ContentCard padding="none">
         <DataTable

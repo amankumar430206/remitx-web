@@ -1,18 +1,17 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '@/stores/authStore'
 import { PageHeader } from '@/components/ui/organisms/PageHeader'
 import { DataTable } from '@/components/ui/organisms/DataTable'
-import { FilterBar } from '@/components/ui/organisms/FilterBar'
+import { SmartFilterBar } from '@/components/ui/organisms/SmartFilterBar'
+import type { StatusChipOption, ActiveFilterChip } from '@/components/ui/organisms/SmartFilterBar'
 import { StatusBadge } from '@/components/ui/molecules/StatusBadge'
 import { AmountDisplay } from '@/components/ui/molecules/AmountDisplay'
 import { LoadingState } from '@/components/ui/molecules/LoadingState'
 import { ErrorState } from '@/components/ui/molecules/ErrorState'
-import { DateRangePickerButton } from '@/components/ui/molecules/DateRangePicker'
 import { Button } from '@/components/ui/atoms/Button'
 import { Badge } from '@/components/ui/atoms/Badge'
-import { Select } from '@/components/ui/atoms/Select'
 import { Pagination } from '@/components/ui/atoms/Pagination'
 import { ContentCard } from '@/layouts/ContentCard'
 import { Drawer } from '@/components/ui/molecules/Drawer'
@@ -41,16 +40,20 @@ function presetToRange(preset: Preset): DateRange {
   return { startDate, endDate: today }
 }
 
-const STATUS_OPTIONS = [
-  { label: 'All statuses', value: '' },
-  { label: 'Pending approval', value: 'pending_approval' },
-  { label: 'Approved', value: 'approved' },
-  { label: 'Processing', value: 'processing' },
-  { label: 'Completed', value: 'completed' },
-  { label: 'Rejected', value: 'rejected' },
-  { label: 'Cancelled', value: 'cancelled' },
-  { label: 'Failed', value: 'failed' },
+const STATUS_CHIPS: StatusChipOption[] = [
+  { label: 'All',        value: '',                variant: 'none'    },
+  { label: 'Pending',    value: 'pending_approval', variant: 'warning' },
+  { label: 'Processing', value: 'processing',       variant: 'primary' },
+  { label: 'Approved',   value: 'approved',         variant: 'success' },
+  { label: 'Completed',  value: 'completed',        variant: 'success' },
+  { label: 'Rejected',   value: 'rejected',         variant: 'danger'  },
+  { label: 'Failed',     value: 'failed',           variant: 'danger'  },
+  { label: 'Cancelled',  value: 'cancelled',        variant: 'default' },
 ]
+
+function fmtDate(d: Date) {
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
 
 // ─── Detail panel (right side of SplitPane) ──────────────────────────────────
 
@@ -166,55 +169,45 @@ export function PaymentList() {
     },
   ]
 
-  const activeFilters = [status, dateRange.startDate].filter(Boolean).length
-  const clearAll = () => { setStatus(''); setSearch(''); handlePreset('30d') }
+  const clearAll = () => { setStatus(''); setSearch(''); handlePreset('30d'); setPage(1) }
+
+  const activeChips = useMemo<ActiveFilterChip[]>(() => [
+    ...(status ? [{
+      key: 'status',
+      label: STATUS_CHIPS.find(c => c.value === status)?.label ?? status,
+      onRemove: () => { setStatus(''); setPage(1) },
+    }] : []),
+    ...(preset !== '30d' ? [{
+      key: 'date',
+      label: preset === 'custom' && dateRange.startDate && dateRange.endDate
+        ? `${fmtDate(dateRange.startDate)} → ${fmtDate(dateRange.endDate)}`
+        : PRESETS.find(p => p.value === preset)?.label ?? preset,
+      onRemove: () => { handlePreset('30d') },
+    }] : []),
+    ...(search ? [{
+      key: 'search',
+      label: `"${search}"`,
+      onRemove: () => { setSearch(''); setPage(1) },
+    }] : []),
+  ], [status, preset, dateRange, search])
 
   const list = (
     <div className="flex flex-col gap-3">
-      {/* Date presets + range picker row */}
-      <div className="flex items-center gap-2 flex-wrap">
-        {PRESETS.map(p => (
-          <Button
-            key={p.value}
-            size="sm"
-            variant={preset === p.value ? 'primary' : 'outline'}
-            onClick={() => handlePreset(p.value)}
-          >
-            {p.label}
-          </Button>
-        ))}
-        <DateRangePickerButton
-          selectMode="range"
-          showShortcuts
-          initialStartDate={preset === 'custom' ? dateRange.startDate : null}
-          initialEndDate={preset === 'custom' ? dateRange.endDate : null}
-          onChange={handleCustomRange}
-          placeholder="Custom range…"
-        />
-      </div>
-
-      {/* Search + status + clear row */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <FilterBar
-          search={search}
-          onSearchChange={v => { setSearch(v); setPage(1) }}
-          searchPlaceholder="Search recipient, reference…"
-        />
-        <Select
-          value={status}
-          onValueChange={v => { setStatus(v); setPage(1) }}
-          options={STATUS_OPTIONS}
-          className="w-44"
-        />
-        {activeFilters > 0 && (
-          <button
-            onClick={clearAll}
-            className="text-xs text-muted-fg hover:text-foreground transition-colors px-2 py-1.5 rounded-md hover:bg-surface-overlay"
-          >
-            Clear filters
-          </button>
-        )}
-      </div>
+      <SmartFilterBar
+        search={search}
+        onSearchChange={v => { setSearch(v); setPage(1) }}
+        searchPlaceholder="Search recipient, reference…"
+        presets={PRESETS}
+        activePreset={preset}
+        onPresetChange={p => handlePreset(p as Preset)}
+        dateRange={dateRange}
+        onCustomRange={handleCustomRange}
+        statusChips={STATUS_CHIPS}
+        activeStatus={status}
+        onStatusChange={v => { setStatus(v); setPage(1) }}
+        activeChips={activeChips}
+        onClearAll={activeChips.length > 0 ? clearAll : undefined}
+      />
 
       <ContentCard padding="none">
         {isLoading ? (
