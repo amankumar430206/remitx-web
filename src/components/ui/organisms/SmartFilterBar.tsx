@@ -117,10 +117,11 @@ export function SmartFilterBar({
         {showCustomPicker && (
           <div className="shrink-0">
             <DateRangePickerButton
+              key={activePreset ?? 'default'}
               selectMode="range"
               showShortcuts
-              initialStartDate={activePreset === 'custom' ? (dateRange?.startDate ?? null) : null}
-              initialEndDate={activePreset === 'custom' ? (dateRange?.endDate ?? null) : null}
+              initialStartDate={dateRange?.startDate ?? null}
+              initialEndDate={dateRange?.endDate ?? null}
               onChange={r => { if (r.startDate) onCustomRange!(r) }}
               placeholder="Custom range…"
             />
