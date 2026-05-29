@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PageHeader } from '@/components/ui/organisms/PageHeader'
 import { DataTable } from '@/components/ui/organisms/DataTable'
+import { SmartFilterBar } from '@/components/ui/organisms/SmartFilterBar'
 import { ConfirmDialog } from '@/components/ui/molecules/ConfirmDialog'
 import { StatusBadge } from '@/components/ui/molecules/StatusBadge'
 import { Button } from '@/components/ui/atoms/Button'
@@ -14,12 +15,17 @@ import type { Column } from '@/components/ui/organisms/DataTable'
 
 export function ManualPaymentQueue() {
   const navigate = useNavigate()
+  const [search, setSearch]               = useState('')
   const [processTarget, setProcessTarget] = useState<ManualPaymentQueueItem | null>(null)
-  const [failTarget, setFailTarget] = useState<ManualPaymentQueueItem | null>(null)
-  const [processNote, setProcessNote] = useState('')
-  const [failReason, setFailReason] = useState('')
+  const [failTarget, setFailTarget]       = useState<ManualPaymentQueueItem | null>(null)
+  const [processNote, setProcessNote]     = useState('')
+  const [failReason, setFailReason]       = useState('')
 
   const { data, isLoading } = useManualPaymentQueue()
+
+  const filtered = (data ?? []).filter(row =>
+    !search || row.reference?.toLowerCase().includes(search.toLowerCase())
+  )
   const processMutation = useProcessManualPayment()
   const failMutation = useFailManualPayment()
 
@@ -75,10 +81,16 @@ export function ManualPaymentQueue() {
         }
       />
 
+      <SmartFilterBar
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search by reference…"
+      />
+
       <ContentCard padding="none">
         <DataTable
           columns={columns}
-          data={data ?? []}
+          data={filtered}
           loading={isLoading}
           getRowId={row => row.id}
           emptyTitle="Queue is empty"

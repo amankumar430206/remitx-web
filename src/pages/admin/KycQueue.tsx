@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { PageHeader } from '@/components/ui/organisms/PageHeader'
 import { DataTable } from '@/components/ui/organisms/DataTable'
+import { SmartFilterBar } from '@/components/ui/organisms/SmartFilterBar'
 import { ConfirmDialog } from '@/components/ui/molecules/ConfirmDialog'
 import { Badge } from '@/components/ui/atoms/Badge'
 import { Button } from '@/components/ui/atoms/Button'
@@ -14,12 +15,22 @@ import type { Column } from '@/components/ui/organisms/DataTable'
 
 export function KycQueue() {
   const tenantId = useAuthStore(s => s.user?.tenant_id ?? '')
+  const [search, setSearch]           = useState('')
   const [approveTarget, setApproveTarget] = useState<KycQueueItem | null>(null)
-  const [rejectTarget, setRejectTarget] = useState<KycQueueItem | null>(null)
-  const [rejectReason, setRejectReason] = useState('')
-  const [approveNote, setApproveNote] = useState('')
+  const [rejectTarget, setRejectTarget]   = useState<KycQueueItem | null>(null)
+  const [rejectReason, setRejectReason]   = useState('')
+  const [approveNote, setApproveNote]     = useState('')
 
   const { data, isLoading } = useKycQueue()
+
+  const filtered = (data ?? []).filter(row => {
+    if (!search) return true
+    const q = search.toLowerCase()
+    return (
+      row.email.toLowerCase().includes(q) ||
+      [row.first_name, row.last_name].join(' ').toLowerCase().includes(q)
+    )
+  })
   const approveMutation = useApproveKyc()
   const rejectMutation = useRejectKyc()
 
@@ -78,10 +89,16 @@ export function KycQueue() {
         breadcrumbs={[{ label: 'Admin' }, { label: 'KYC queue' }]}
       />
 
+      <SmartFilterBar
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search by name or email…"
+      />
+
       <ContentCard padding="none">
         <DataTable
           columns={columns}
-          data={data ?? []}
+          data={filtered}
           loading={isLoading}
           getRowId={row => row.id}
           emptyTitle="Queue is empty"

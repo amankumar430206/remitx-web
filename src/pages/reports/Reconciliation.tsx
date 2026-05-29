@@ -1,24 +1,66 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { PageHeader } from '@/components/ui/organisms/PageHeader'
+import { SmartFilterBar } from '@/components/ui/organisms/SmartFilterBar'
+import type { ActiveFilterChip } from '@/components/ui/organisms/SmartFilterBar'
 import { LoadingState } from '@/components/ui/molecules/LoadingState'
 import { EmptyState } from '@/components/ui/molecules/EmptyState'
 import { Badge } from '@/components/ui/atoms/Badge'
-import { Button } from '@/components/ui/atoms/Button'
-import { Input } from '@/components/ui/atoms/Input'
 import { ContentCard } from '@/layouts/ContentCard'
 import { useReconciliation } from '@/hooks/useReports'
+import type { DateRange } from '@/components/ui/molecules/DateRangePicker'
+
+type Preset = '7d' | '30d' | '3m' | '6m' | 'ytd' | 'custom'
+
+const PRESETS: { label: string; value: Preset }[] = [
+  { label: '7 days',      value: '7d'  },
+  { label: '30 days',     value: '30d' },
+  { label: '3 months',    value: '3m'  },
+  { label: '6 months',    value: '6m'  },
+  { label: 'Year to date',value: 'ytd' },
+]
+
+function presetToRange(preset: Preset): DateRange {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const startDate = new Date(today)
+  if (preset === '7d')  startDate.setDate(today.getDate() - 6)
+  else if (preset === '30d') startDate.setDate(today.getDate() - 29)
+  else if (preset === '3m')  startDate.setMonth(today.getMonth() - 3)
+  else if (preset === '6m')  startDate.setMonth(today.getMonth() - 6)
+  else if (preset === 'ytd') startDate.setMonth(0, 1)
+  return { startDate, endDate: today }
+}
+
+function fmtDate(d: Date) {
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
 
 export function Reconciliation() {
-  const today = new Date()
-  const thirtyDaysAgo = new Date(today)
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+  const [preset, setPreset]       = useState<Preset>('30d')
+  const [dateRange, setDateRange] = useState<DateRange>(() => presetToRange('30d'))
 
-  const fmt = (d: Date) => d.toISOString().slice(0, 10)
-  const [from, setFrom] = useState(fmt(thirtyDaysAgo))
-  const [to, setTo] = useState(fmt(today))
-  const [applied, setApplied] = useState({ from: fmt(thirtyDaysAgo), to: fmt(today) })
+  const handlePreset = (p: Preset) => { setPreset(p); setDateRange(presetToRange(p)) }
+  const handleCustomRange = (range: DateRange) => {
+    if (range.startDate) { setPreset('custom'); setDateRange(range) }
+  }
+  const clearAll = () => handlePreset('30d')
 
-  const { data: rows, isLoading } = useReconciliation(applied)
+  const activeChips = useMemo<ActiveFilterChip[]>(() => [
+    ...(preset !== '30d' ? [{
+      key: 'date',
+      label: preset === 'custom' && dateRange.startDate && dateRange.endDate
+        ? `${fmtDate(dateRange.startDate)} → ${fmtDate(dateRange.endDate)}`
+        : PRESETS.find(p => p.value === preset)?.label ?? preset,
+      onRemove: () => handlePreset('30d'),
+    }] : []),
+  ], [preset, dateRange])
+
+  const params = {
+    from: dateRange.startDate?.toISOString().slice(0, 10),
+    to:   dateRange.endDate?.toISOString().slice(0, 10),
+  }
+
+  const { data: rows, isLoading } = useReconciliation(params)
 
   return (
     <div className="flex flex-col gap-6">
@@ -27,39 +69,22 @@ export function Reconciliation() {
         breadcrumbs={[{ label: 'Reports' }, { label: 'Reconciliation' }]}
       />
 
-      <ContentCard>
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="flex flex-col gap-1">
-            <label className="text-xs text-muted-fg">From</label>
-            <Input
-              type="date"
-              value={from}
-              onChange={e => setFrom(e.target.value)}
-              className="w-40"
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs text-muted-fg">To</label>
-            <Input
-              type="date"
-              value={to}
-              onChange={e => setTo(e.target.value)}
-              min={from}
-              className="w-40"
-            />
-          </div>
-          <Button onClick={() => setApplied({ from, to })} disabled={!from || !to}>
-            Apply
-          </Button>
-        </div>
-      </ContentCard>
+      <SmartFilterBar
+        presets={PRESETS}
+        activePreset={preset}
+        onPresetChange={p => handlePreset(p as Preset)}
+        dateRange={dateRange}
+        onCustomRange={handleCustomRange}
+        activeChips={activeChips}
+        onClearAll={activeChips.length > 0 ? clearAll : undefined}
+      />
 
       {isLoading ? (
         <LoadingState message="Loading reconciliation data…" />
       ) : !rows || rows.length === 0 ? (
         <EmptyState
           title="No reconciliation data"
-          description="Select a date range and click Apply to view reconciliation."
+          description="Select a date range to view reconciliation."
         />
       ) : (
         <ContentCard padding="none">

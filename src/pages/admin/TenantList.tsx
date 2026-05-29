@@ -1,22 +1,32 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { PageHeader } from '@/components/ui/organisms/PageHeader'
 import { DataTable } from '@/components/ui/organisms/DataTable'
-import { FilterBar } from '@/components/ui/organisms/FilterBar'
+import { SmartFilterBar } from '@/components/ui/organisms/SmartFilterBar'
+import type { StatusChipOption, ActiveFilterChip } from '@/components/ui/organisms/SmartFilterBar'
 import { StatCard } from '@/components/ui/organisms/StatCard'
 import { Badge } from '@/components/ui/atoms/Badge'
 import { Avatar } from '@/components/ui/atoms/Avatar'
 import { Button } from '@/components/ui/atoms/Button'
-import { Select } from '@/components/ui/atoms/Select'
 import { Input } from '@/components/ui/atoms/Input'
 import { FormField } from '@/components/ui/molecules/FormField'
 import { useAdminTenants, useCreateTenant } from '@/hooks/useAdmin'
 import { getApiError } from '@/lib/apiError'
 import type { AdminTenant } from '@/api/admin'
 import type { Column } from '@/components/ui/organisms/DataTable'
+
+// ─── Status chips ────────────────────────────────────────────────────────────
+
+const STATUS_CHIPS: StatusChipOption[] = [
+  { label: 'All',       value: '',          variant: 'none'    },
+  { label: 'Active',    value: 'active',    variant: 'success' },
+  { label: 'Pending',   value: 'pending',   variant: 'warning' },
+  { label: 'Suspended', value: 'suspended', variant: 'danger'  },
+  { label: 'Inactive',  value: 'inactive',  variant: 'default' },
+]
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 
@@ -268,6 +278,20 @@ export function TenantList() {
   const suspended      = data?.filter((t) => t.status === 'suspended').length ?? 0
   const totalPendingKyc = data?.reduce((sum, t) => sum + (t.pending_kyc_count ?? 0), 0) ?? 0
 
+  // ── Active chips ────────────────────────────────────────────────────────────
+  const activeChips = useMemo<ActiveFilterChip[]>(() => [
+    ...(status ? [{
+      key: 'status',
+      label: STATUS_CHIPS.find(c => c.value === status)?.label ?? status,
+      onRemove: () => setStatus(''),
+    }] : []),
+    ...(search ? [{
+      key: 'search',
+      label: `"${search}"`,
+      onRemove: () => setSearch(''),
+    }] : []),
+  ], [status, search])
+
   // ── Filtered rows ───────────────────────────────────────────────────────────
   const filtered = (data ?? []).filter((t) => {
     const matchSearch = !search
@@ -352,24 +376,15 @@ export function TenantList() {
       </div>
 
       {/* ── Filters ────────────────────────────────────────────────────── */}
-      <FilterBar
+      <SmartFilterBar
         search={search}
         onSearchChange={setSearch}
         searchPlaceholder="Search by name or slug…"
-        hasActiveFilters={!!status}
-        onReset={() => setStatus('')}
-        filters={
-          <Select
-            value={status}
-            onValueChange={setStatus}
-            options={[
-              { value: '',          label: 'All statuses' },
-              { value: 'active',    label: 'Active' },
-              { value: 'suspended', label: 'Suspended' },
-              { value: 'inactive',  label: 'Inactive' },
-            ]}
-          />
-        }
+        statusChips={STATUS_CHIPS}
+        activeStatus={status}
+        onStatusChange={setStatus}
+        activeChips={activeChips}
+        onClearAll={activeChips.length > 0 ? () => { setSearch(''); setStatus('') } : undefined}
       />
 
       {/* ── Table ──────────────────────────────────────────────────────── */}
