@@ -8,24 +8,36 @@ import { useAuth } from '@/hooks/useAuth'
 import { useAuthStore } from '@/stores/authStore'
 
 // ─── Dev quick-login (only rendered in development) ──────────────────────────
+// isolated: true = render with shield badge to demonstrate per-tenant data isolation
 const DEV_GROUPS = [
   {
     label: 'RemitX',
-    note: null as string | null,
+    slug: 'remitx',
+    isolated: false,
     users: [
-      { label: 'Super Admin',  detail: 'All tenants',    email: 'admin@remitx.com',    password: 'Admin@RemitX2024!', tenant: 'remitx',    color: 'primary' },
-      { label: 'Client Admin', detail: 'remitx',         email: 'cadmin@remitx.com',   password: 'Test@1234!',        tenant: 'remitx',    color: 'info'    },
-      { label: 'Maker',        detail: 'remitx',         email: 'maker1@remitx.com',   password: 'Test@1234!',        tenant: 'remitx',    color: 'success' },
-      { label: 'Checker',      detail: 'remitx',         email: 'checker1@remitx.com', password: 'Test@1234!',        tenant: 'remitx',    color: 'warning' },
+      { label: 'Super Admin',  detail: 'super_admin',  email: 'admin@remitx.com',    password: 'Admin@RemitX2024!', tenant: 'remitx', color: 'primary' },
+      { label: 'Client Admin', detail: 'client_admin', email: 'cadmin@remitx.com',   password: 'Test@1234!',        tenant: 'remitx', color: 'info'    },
+      { label: 'Maker',        detail: 'maker',        email: 'maker1@remitx.com',   password: 'Test@1234!',        tenant: 'remitx', color: 'success' },
+      { label: 'Checker',      detail: 'checker',      email: 'checker1@remitx.com', password: 'Test@1234!',        tenant: 'remitx', color: 'warning' },
     ],
   },
   {
-    label: 'Active Clients',
-    note: 'Each workspace sees only its own data',
+    label: 'Acme Corp',
+    slug: 'acme-corp',
+    isolated: true,
     users: [
-      { label: 'Acme Corp',    detail: 'acme-corp',      email: 'admin@acme.com',        password: 'Test@1234!', tenant: 'acme-corp', color: 'danger'  },
-      { label: 'GlobalPay',    detail: 'globalpay',      email: 'admin@globalpay.com',   password: 'Test@1234!', tenant: 'globalpay', color: 'primary' },
-      { label: 'Acme · Maker', detail: 'acme-corp',      email: 'maker@acme.com',        password: 'Test@1234!', tenant: 'acme-corp', color: 'danger'  },
+      { label: 'Admin',   detail: 'client_admin', email: 'admin@acme.com',   password: 'Test@1234!', tenant: 'acme-corp', color: 'danger' },
+      { label: 'Maker',   detail: 'maker',        email: 'maker@acme.com',   password: 'Test@1234!', tenant: 'acme-corp', color: 'danger' },
+      { label: 'Checker', detail: 'checker',      email: 'checker@acme.com', password: 'Test@1234!', tenant: 'acme-corp', color: 'danger' },
+    ],
+  },
+  {
+    label: 'GlobalPay',
+    slug: 'globalpay',
+    isolated: true,
+    users: [
+      { label: 'Admin', detail: 'client_admin', email: 'admin@globalpay.com', password: 'Test@1234!', tenant: 'globalpay', color: 'info' },
+      { label: 'Maker', detail: 'maker',        email: 'maker@globalpay.com', password: 'Test@1234!', tenant: 'globalpay', color: 'info' },
     ],
   },
 ]
@@ -270,14 +282,17 @@ export function Login() {
                     <span className="text-[10px] font-bold uppercase tracking-widest text-muted-fg">
                       {group.label}
                     </span>
-                    {group.note && (
+                    <span className="rounded px-1.5 py-px text-[9px] font-bold tracking-wide bg-surface-raised border border-border text-muted-fg font-mono">
+                      {group.slug}
+                    </span>
+                    {group.isolated && (
                       <>
                         <span className="text-muted-fg/40 text-[10px]">·</span>
                         <span className="flex items-center gap-1 text-[10px] text-success-fg font-medium">
                           <svg className="h-3 w-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                           </svg>
-                          {group.note}
+                          Isolated workspace
                         </span>
                       </>
                     )}
