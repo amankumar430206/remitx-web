@@ -26,9 +26,9 @@ const DEV_GROUPS = [
     slug: 'acme-corp',
     isolated: true,
     users: [
-      { label: 'Admin',   detail: 'client_admin', email: 'admin@acme.com',   password: 'Test@1234!', tenant: 'acme-corp', color: 'danger' },
-      { label: 'Maker',   detail: 'maker',        email: 'maker@acme.com',   password: 'Test@1234!', tenant: 'acme-corp', color: 'danger' },
-      { label: 'Checker', detail: 'checker',      email: 'checker@acme.com', password: 'Test@1234!', tenant: 'acme-corp', color: 'danger' },
+      { label: 'Client Admin', detail: 'manages org',    email: 'admin@acme.com',   password: 'Test@1234!', tenant: 'acme-corp', color: 'danger' },
+      { label: 'Maker',        detail: 'creates payments', email: 'maker@acme.com', password: 'Test@1234!', tenant: 'acme-corp', color: 'danger' },
+      { label: 'Checker',      detail: 'approves payments', email: 'checker@acme.com', password: 'Test@1234!', tenant: 'acme-corp', color: 'danger' },
     ],
   },
   {
@@ -36,8 +36,8 @@ const DEV_GROUPS = [
     slug: 'globalpay',
     isolated: true,
     users: [
-      { label: 'Admin', detail: 'client_admin', email: 'admin@globalpay.com', password: 'Test@1234!', tenant: 'globalpay', color: 'info' },
-      { label: 'Maker', detail: 'maker',        email: 'maker@globalpay.com', password: 'Test@1234!', tenant: 'globalpay', color: 'info' },
+      { label: 'Client Admin', detail: 'manages org',      email: 'admin@globalpay.com', password: 'Test@1234!', tenant: 'globalpay', color: 'info' },
+      { label: 'Maker',        detail: 'creates payments', email: 'maker@globalpay.com', password: 'Test@1234!', tenant: 'globalpay', color: 'info' },
     ],
   },
 ]
