@@ -79,22 +79,12 @@ export function SmartFilterBar({
 }: SmartFilterBarProps) {
   const [expanded, setExpanded] = useState(false)
 
-  const customRangeNode = onCustomRange ? (
-    <DateRangePickerButton
-      selectMode="range"
-      showShortcuts
-      initialStartDate={activePreset === 'custom' ? (dateRange?.startDate ?? null) : null}
-      initialEndDate={activePreset === 'custom' ? (dateRange?.endDate ?? null) : null}
-      onChange={r => { if (r.startDate) onCustomRange(r) }}
-      placeholder="Custom range…"
-    />
-  ) : null
+  // Custom date range is a COMMON filter — always visible in the main strip
+  const showCustomPicker = !!onCustomRange
 
-  const customDateActive = activePreset === 'custom'
-  // Total count shown on the Filters button
-  const totalAdvancedActive = activeAdvancedCount + (customDateActive ? 1 : 0)
-  const hasAdvancedPanel = !!(advancedFilters || onCustomRange)
-  const hasActiveChips = activeChips && activeChips.length > 0
+  // Advanced panel only exists if caller provided extra filter fields
+  const hasAdvancedPanel = !!advancedFilters
+  const hasActiveChips   = activeChips && activeChips.length > 0
 
   return (
     <div className={cn('rounded-lg border border-border bg-surface overflow-hidden', className)}>
@@ -123,8 +113,20 @@ export function SmartFilterBar({
           </div>
         )}
 
+        {/* Custom date range picker — always in main strip, not hidden */}
+        {showCustomPicker && (
+          <DateRangePickerButton
+            selectMode="range"
+            showShortcuts
+            initialStartDate={activePreset === 'custom' ? (dateRange?.startDate ?? null) : null}
+            initialEndDate={activePreset === 'custom' ? (dateRange?.endDate ?? null) : null}
+            onChange={r => { if (r.startDate) onCustomRange!(r) }}
+            placeholder="Custom range…"
+          />
+        )}
+
         {/* Vertical rule */}
-        {(presets || onCustomRange) && (onSearchChange || statusChips) && (
+        {(presets || showCustomPicker) && (onSearchChange || statusChips) && (
           <div className="self-stretch w-px bg-border mx-0.5" />
         )}
 
@@ -170,7 +172,7 @@ export function SmartFilterBar({
 
         <div className="flex-1" />
 
-        {/* Advanced / Filters toggle */}
+        {/* Advanced / Filters toggle — only shown when advancedFilters slot is used */}
         {hasAdvancedPanel && (
           <button
             type="button"
@@ -178,16 +180,15 @@ export function SmartFilterBar({
             className={cn(
               'flex items-center gap-1.5 h-7 pl-2.5 pr-2 rounded-full border text-xs font-semibold',
               'transition-all duration-150 select-none',
-              expanded || totalAdvancedActive > 0
+              expanded || activeAdvancedCount > 0
                 ? 'bg-primary-subtle border-primary-subtle-border text-primary'
                 : 'border-border text-muted-fg hover:bg-surface-overlay hover:text-foreground hover:border-border-strong'
             )}
           >
-            {/* funnel icon */}
             <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h18M7 9h10M11 14h2" />
             </svg>
-            {totalAdvancedActive > 0 ? `Filters · ${totalAdvancedActive}` : 'Filters'}
+            {activeAdvancedCount > 0 ? `More filters · ${activeAdvancedCount}` : 'More filters'}
             <svg
               className={cn('h-3.5 w-3.5 transition-transform duration-200', expanded && 'rotate-180')}
               fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}
@@ -198,30 +199,18 @@ export function SmartFilterBar({
         )}
       </div>
 
-      {/* ── Advanced panel (CSS grid-rows collapse animation) ─────────────────── */}
+      {/* ── Advanced panel (max-h transition — reliable cross-browser) ─────────── */}
       {hasAdvancedPanel && (
-        <div
-          className={cn(
-            'grid transition-[grid-template-rows] duration-300 ease-in-out',
-            expanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
-          )}
-        >
-          <div className="overflow-hidden min-h-0">
-            <div className="border-t border-border bg-surface-raised px-4 py-4">
-              <p className="text-[10px] font-bold text-muted-fg uppercase tracking-widest mb-3">
-                Advanced filters
-              </p>
-              <div className="flex flex-wrap items-end gap-4">
-                {/* Custom date range always first in advanced */}
-                {customRangeNode && (
-                  <div className="flex flex-col gap-1.5">
-                    <span className="text-xs font-medium text-muted-fg">Custom date range</span>
-                    {customRangeNode}
-                  </div>
-                )}
-                {/* Caller-supplied extra filters */}
-                {advancedFilters}
-              </div>
+        <div className={cn(
+          'overflow-hidden transition-all duration-300 ease-in-out',
+          expanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+        )}>
+          <div className="border-t border-border bg-surface-raised px-4 py-4">
+            <p className="text-[10px] font-bold text-muted-fg uppercase tracking-widest mb-3">
+              More filters
+            </p>
+            <div className="flex flex-wrap items-end gap-4">
+              {advancedFilters}
             </div>
           </div>
         </div>
