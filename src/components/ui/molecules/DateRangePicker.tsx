@@ -595,6 +595,7 @@ export function DateRangePickerButton({
     endDate: props.initialEndDate ?? null,
   })
   const containerRef = useRef<HTMLDivElement>(null)
+  const popoverRef   = useRef<HTMLDivElement>(null)
 
   // Approximate picker width: shortcuts (~160px) + calendar (~270px) + padding (~20px)
   const PICKER_WIDTH_ESTIMATE = props.showShortcuts !== false ? 460 : 290
@@ -634,7 +635,9 @@ export function DateRangePickerButton({
       const target = e.target as Node
       // containerRef covers the trigger button
       if (containerRef.current?.contains(target)) return
-      // Any click outside both trigger and picker closes it
+      // popoverRef covers the portalled picker panel — clicks inside must not close
+      if (popoverRef.current?.contains(target)) return
+      // Click is outside both trigger and picker — close
       setOpen(false)
     }
     document.addEventListener('mousedown', handler)
@@ -679,7 +682,7 @@ export function DateRangePickerButton({
 
       {/* Portal to document.body — escapes any overflow:hidden ancestor */}
       {open && createPortal(
-        <div className="fixed z-[9999]" style={popoverStyle}>
+        <div ref={popoverRef} className="fixed z-[9999]" style={popoverStyle}>
           <DateRangePicker
             {...props}
             initialStartDate={range.startDate}
