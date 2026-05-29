@@ -86,8 +86,9 @@ export function SmartFilterBar({
   const hasAdvancedPanel = !!advancedFilters
   const hasActiveChips   = activeChips && activeChips.length > 0
 
-  // Search goes RIGHT when other filters exist, LEFT when it's the only control
-  const hasOtherFilters = !!(presets?.length || showCustomPicker || statusChips?.length)
+  // Search goes RIGHT only when there's content to its left in Row 1 (presets or date picker).
+  // Status chips live in Row 2 — they don't count as "left content" for this positioning.
+  const hasLeftContent = !!(presets?.length || showCustomPicker)
 
   const searchNode = onSearchChange !== undefined ? (
     <SearchInput
@@ -106,7 +107,7 @@ export function SmartFilterBar({
       <div className="flex items-center gap-2 px-3 py-2.5">
 
         {/* Search LEFT — only when no other filters exist */}
-        {!hasOtherFilters && searchNode}
+        {!hasLeftContent && searchNode}
 
         {/* Segmented date preset control */}
         {presets && presets.length > 0 && (
@@ -147,10 +148,10 @@ export function SmartFilterBar({
         <div className="flex-1" />
 
         {/* Search RIGHT — when other filters exist */}
-        {hasOtherFilters && searchNode}
+        {hasLeftContent && searchNode}
 
         {/* Divider between search and more-filters when both are present */}
-        {hasOtherFilters && onSearchChange !== undefined && hasAdvancedPanel && (
+        {hasLeftContent && onSearchChange !== undefined && hasAdvancedPanel && (
           <div className="self-stretch w-px bg-border mx-0.5 shrink-0" />
         )}
 
