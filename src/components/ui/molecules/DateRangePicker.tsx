@@ -589,7 +589,7 @@ export function DateRangePickerButton({
   ...props
 }: DateRangePickerButtonProps) {
   const [open, setOpen] = useState(false)
-  const [align, setAlign] = useState<'left' | 'right'>('left')
+  const [popoverStyle, setPopoverStyle] = useState<React.CSSProperties>({ top: 0, left: 0 })
   const [range, setRange] = useState<DateRange>({
     startDate: props.initialStartDate ?? props.initialDate ?? null,
     endDate: props.initialEndDate ?? null,
@@ -616,30 +616,42 @@ export function DateRangePickerButton({
   const handleToggle = () => {
     if (!open && containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect()
+      const top = rect.bottom + 8
       // Flip to right-aligned when not enough space on the right
-      setAlign(rect.left + PICKER_WIDTH_ESTIMATE > window.innerWidth - 16 ? 'right' : 'left')
+      if (rect.left + PICKER_WIDTH_ESTIMATE > window.innerWidth - 16) {
+        setPopoverStyle({ top, right: window.innerWidth - rect.right })
+      } else {
+        setPopoverStyle({ top, left: rect.left })
+      }
     }
     setOpen(o => !o)
   }
 
-  // Close on outside click
+  // Close on outside click — check both the trigger and the portalled popover
   useEffect(() => {
     if (!open) return
     const handler = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false)
-      }
+      const target = e.target as Node
+      // containerRef covers the trigger button
+      if (containerRef.current?.contains(target)) return
+      // Any click outside both trigger and picker closes it
+      setOpen(false)
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [open])
 
-  // Close on Escape
+  // Close on Escape or scroll
   useEffect(() => {
     if (!open) return
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
-    document.addEventListener('keydown', handler)
-    return () => document.removeEventListener('keydown', handler)
+    const onKey    = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
+    const onScroll = () => setOpen(false)
+    document.addEventListener('keydown', onKey)
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      window.removeEventListener('scroll', onScroll)
+    }
   }, [open])
 
   return (
@@ -665,8 +677,9 @@ export function DateRangePickerButton({
         </svg>
       </button>
 
-      {open && (
-        <div className={cn('absolute top-full z-50 mt-2', align === 'right' ? 'right-0' : 'left-0')}>
+      {/* Portal to document.body — escapes any overflow:hidden ancestor */}
+      {open && createPortal(
+        <div className="fixed z-[9999]" style={popoverStyle}>
           <DateRangePicker
             {...props}
             initialStartDate={range.startDate}
@@ -676,7 +689,8 @@ export function DateRangePickerButton({
             numberOfMonths={props.numberOfMonths}
             showShortcuts={props.showShortcuts}
           />
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   )
