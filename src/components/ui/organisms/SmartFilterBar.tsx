@@ -139,6 +139,7 @@ export function SmartFilterBar({
               showShortcuts
               initialStartDate={dateRange?.startDate ?? null}
               initialEndDate={dateRange?.endDate ?? null}
+              maxDate={new Date()}
               onChange={r => { if (r.startDate) onCustomRange!(r) }}
               placeholder="Custom range…"
             />
