@@ -89,12 +89,12 @@ export function SmartFilterBar({
   return (
     <div className={cn('rounded-lg border border-border bg-surface overflow-hidden', className)}>
 
-      {/* ── Main strip ───────────────────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center gap-2 px-3 py-2.5">
+      {/* ── Row 1: date controls + search + (optional) more-filters btn ───────── */}
+      <div className="flex items-center gap-2 px-3 py-2.5">
 
         {/* Segmented date preset control */}
         {presets && presets.length > 0 && (
-          <div className="flex items-center gap-px p-0.5 rounded-full bg-surface-raised border border-border">
+          <div className="flex items-center gap-px p-0.5 rounded-full bg-surface-raised border border-border shrink-0">
             {presets.map(p => (
               <button
                 key={p.value}
@@ -113,21 +113,23 @@ export function SmartFilterBar({
           </div>
         )}
 
-        {/* Custom date range picker — always in main strip, not hidden */}
+        {/* Custom date range picker — always visible, not hidden behind a button */}
         {showCustomPicker && (
-          <DateRangePickerButton
-            selectMode="range"
-            showShortcuts
-            initialStartDate={activePreset === 'custom' ? (dateRange?.startDate ?? null) : null}
-            initialEndDate={activePreset === 'custom' ? (dateRange?.endDate ?? null) : null}
-            onChange={r => { if (r.startDate) onCustomRange!(r) }}
-            placeholder="Custom range…"
-          />
+          <div className="shrink-0">
+            <DateRangePickerButton
+              selectMode="range"
+              showShortcuts
+              initialStartDate={activePreset === 'custom' ? (dateRange?.startDate ?? null) : null}
+              initialEndDate={activePreset === 'custom' ? (dateRange?.endDate ?? null) : null}
+              onChange={r => { if (r.startDate) onCustomRange!(r) }}
+              placeholder="Custom range…"
+            />
+          </div>
         )}
 
         {/* Vertical rule */}
-        {(presets || showCustomPicker) && (onSearchChange || statusChips) && (
-          <div className="self-stretch w-px bg-border mx-0.5" />
+        {(presets || showCustomPicker) && onSearchChange && (
+          <div className="self-stretch w-px bg-border mx-0.5 shrink-0" />
         )}
 
         {/* Search */}
@@ -141,45 +143,16 @@ export function SmartFilterBar({
           />
         )}
 
-        {/* Status chips */}
-        {statusChips && statusChips.length > 0 && (
-          <div className="flex items-center gap-1 flex-wrap">
-            {statusChips.map(chip => {
-              const isActive = activeStatus === chip.value
-              const vc = CHIP_VARIANTS[chip.variant ?? 'default']
-              return (
-                <button
-                  key={chip.value}
-                  type="button"
-                  onClick={() => onStatusChange?.(chip.value)}
-                  className={cn(
-                    'flex-shrink-0 h-7 flex items-center gap-1.5 px-2.5 rounded-full border text-xs',
-                    'font-medium transition-all duration-150 select-none',
-                    isActive
-                      ? vc.active
-                      : 'bg-transparent border-border text-muted-fg hover:bg-surface-overlay hover:border-border-strong hover:text-foreground'
-                  )}
-                >
-                  {chip.variant !== 'none' && (
-                    <span className={cn('h-1.5 w-1.5 rounded-full shrink-0', vc.dot)} />
-                  )}
-                  {chip.label}
-                </button>
-              )
-            })}
-          </div>
-        )}
-
         <div className="flex-1" />
 
-        {/* Advanced / Filters toggle — only shown when advancedFilters slot is used */}
+        {/* More filters toggle — only shown when advancedFilters slot has content */}
         {hasAdvancedPanel && (
           <button
             type="button"
             onClick={() => setExpanded(v => !v)}
             className={cn(
               'flex items-center gap-1.5 h-7 pl-2.5 pr-2 rounded-full border text-xs font-semibold',
-              'transition-all duration-150 select-none',
+              'transition-all duration-150 select-none shrink-0',
               expanded || activeAdvancedCount > 0
                 ? 'bg-primary-subtle border-primary-subtle-border text-primary'
                 : 'border-border text-muted-fg hover:bg-surface-overlay hover:text-foreground hover:border-border-strong'
@@ -198,6 +171,35 @@ export function SmartFilterBar({
           </button>
         )}
       </div>
+
+      {/* ── Row 2: status chips — own row so they never wrap into the date row ── */}
+      {statusChips && statusChips.length > 0 && (
+        <div className="flex items-center gap-1.5 px-3 pb-2.5 overflow-x-auto scrollbar-none">
+          {statusChips.map(chip => {
+            const isActive = activeStatus === chip.value
+            const vc = CHIP_VARIANTS[chip.variant ?? 'default']
+            return (
+              <button
+                key={chip.value}
+                type="button"
+                onClick={() => onStatusChange?.(chip.value)}
+                className={cn(
+                  'flex-shrink-0 h-7 flex items-center gap-1.5 px-3 rounded-full border text-xs',
+                  'font-medium transition-all duration-150 select-none',
+                  isActive
+                    ? vc.active
+                    : 'bg-transparent border-border text-muted-fg hover:bg-surface-overlay hover:border-border-strong hover:text-foreground'
+                )}
+              >
+                {chip.variant !== 'none' && (
+                  <span className={cn('h-1.5 w-1.5 rounded-full shrink-0', vc.dot)} />
+                )}
+                {chip.label}
+              </button>
+            )
+          })}
+        </div>
+      )}
 
       {/* ── Advanced panel (max-h transition — reliable cross-browser) ─────────── */}
       {hasAdvancedPanel && (
