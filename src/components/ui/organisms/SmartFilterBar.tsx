@@ -86,11 +86,27 @@ export function SmartFilterBar({
   const hasAdvancedPanel = !!advancedFilters
   const hasActiveChips   = activeChips && activeChips.length > 0
 
+  // Search goes RIGHT when other filters exist, LEFT when it's the only control
+  const hasOtherFilters = !!(presets?.length || showCustomPicker || statusChips?.length)
+
+  const searchNode = onSearchChange !== undefined ? (
+    <SearchInput
+      value={search}
+      onChange={e => onSearchChange(e.target.value)}
+      onClear={() => onSearchChange('')}
+      placeholder={searchPlaceholder}
+      className="w-52"
+    />
+  ) : null
+
   return (
     <div className={cn('rounded-lg border border-border bg-surface overflow-hidden', className)}>
 
-      {/* ── Row 1: date controls + search + (optional) more-filters btn ───────── */}
+      {/* ── Row 1: filters + search + (optional) more-filters btn ──────────────── */}
       <div className="flex items-center gap-2 px-3 py-2.5">
+
+        {/* Search LEFT — only when no other filters exist */}
+        {!hasOtherFilters && searchNode}
 
         {/* Segmented date preset control */}
         {presets && presets.length > 0 && (
@@ -128,23 +144,15 @@ export function SmartFilterBar({
           </div>
         )}
 
-        {/* Vertical rule */}
-        {(presets || showCustomPicker) && onSearchChange && (
+        <div className="flex-1" />
+
+        {/* Search RIGHT — when other filters exist */}
+        {hasOtherFilters && searchNode}
+
+        {/* Divider between search and more-filters when both are present */}
+        {hasOtherFilters && onSearchChange !== undefined && hasAdvancedPanel && (
           <div className="self-stretch w-px bg-border mx-0.5 shrink-0" />
         )}
-
-        {/* Search */}
-        {onSearchChange !== undefined && (
-          <SearchInput
-            value={search}
-            onChange={e => onSearchChange(e.target.value)}
-            onClear={() => onSearchChange('')}
-            placeholder={searchPlaceholder}
-            className="w-52"
-          />
-        )}
-
-        <div className="flex-1" />
 
         {/* More filters toggle — only shown when advancedFilters slot has content */}
         {hasAdvancedPanel && (
