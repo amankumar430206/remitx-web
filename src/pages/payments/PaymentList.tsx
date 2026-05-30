@@ -109,6 +109,7 @@ export function PaymentList() {
   const navigate = useNavigate()
   const qc = useQueryClient()
   const isSuperAdmin = useAuthStore(s => s.user?.role === 'super_admin')
+  const isAdmin = useAuthStore(s => s.user?.role === 'admin' || s.user?.role === 'super_admin')
 
   const [page, setPage] = useState(1)
   const [status, setStatus] = useState('')
@@ -241,6 +242,16 @@ export function PaymentList() {
         title="Payments"
         actions={
           <div className="flex items-center gap-2">
+            {isAdmin && (
+              <Link to="/admin/manual-payments">
+                <Button variant="outline">
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                  </svg>
+                  Manual requests
+                </Button>
+              </Link>
+            )}
             {isSuperAdmin && (
               <Link to="/admin/payments/on-behalf">
                 <Button variant="outline">
