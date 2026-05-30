@@ -193,3 +193,57 @@ export function useUpdateProviderConfig() {
     onSuccess: (_, { tenantId }) => qc.invalidateQueries({ queryKey: ['admin-providers', tenantId] }),
   })
 }
+
+export function useAddTenantCorridor() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      tenantId,
+      corridor,
+    }: {
+      tenantId: string
+      corridor: { sourceCurrency: string; destCurrency?: string | null; providerName: string; priority?: number }
+    }) => adminApi.providers.addCorridor(tenantId, corridor).then(r => r.data.data),
+    onSuccess: (_, { tenantId }) => qc.invalidateQueries({ queryKey: ['admin-providers', tenantId] }),
+  })
+}
+
+export function useDeleteTenantCorridor() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ tenantId, corridorId }: { tenantId: string; corridorId: string }) =>
+      adminApi.providers.deleteCorridor(tenantId, corridorId),
+    onSuccess: (_, { tenantId }) => qc.invalidateQueries({ queryKey: ['admin-providers', tenantId] }),
+  })
+}
+
+export function useGlobalProviderConfig() {
+  return useQuery({
+    queryKey: ['admin-provider-defaults'],
+    queryFn: () => adminApi.providerDefaults.list().then(r => r.data.data),
+  })
+}
+
+export function useAddGlobalCorridor() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (corridor: { sourceCurrency: string; destCurrency?: string | null; providerName: string; priority?: number }) =>
+      adminApi.providerDefaults.add(corridor).then(r => r.data.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-provider-defaults'] }),
+  })
+}
+
+export function useDeleteGlobalCorridor() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (corridorId: string) => adminApi.providerDefaults.delete(corridorId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-provider-defaults'] }),
+  })
+}
+
+export function useAllAdminPayments(params: { page?: number; limit?: number; tenantId?: string; status?: string; providerName?: string }) {
+  return useQuery({
+    queryKey: ['admin-all-payments', params],
+    queryFn: () => adminApi.payments.list(params).then(r => r.data),
+  })
+}

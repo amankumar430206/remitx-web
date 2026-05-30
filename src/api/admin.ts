@@ -29,8 +29,33 @@ export interface ManualPaymentQueueItem {
   source_amount: string
   dest_currency: string
   dest_amount: string
+  provider_name: string | null
   status: string
   created_at: string
+}
+
+export interface AllPayment {
+  id: string
+  tenant_id: string
+  tenant_name: string | null
+  tenant_slug: string | null
+  user_id: string
+  reference: string
+  source_currency: string
+  source_amount: string
+  dest_currency: string
+  dest_amount: string
+  exchange_rate: string
+  fee_amount: string
+  provider_name: string | null
+  provider_payment_id: string | null
+  purpose_code: string
+  status: string
+  note: string | null
+  ops_notes: string | null
+  completed_at: string | null
+  created_at: string
+  updated_at: string
 }
 
 export interface CorridorConfig {
@@ -221,8 +246,8 @@ const admin = {
   },
 
   payments: {
-    list: (params?: { page?: number; limit?: number; tenantId?: string; status?: string }) =>
-      apiClient.get<{ success: boolean; data: ManualPaymentQueueItem[]; meta: { page: number; limit: number; total: number } }>(
+    list: (params?: { page?: number; limit?: number; tenantId?: string; status?: string; providerName?: string }) =>
+      apiClient.get<{ success: boolean; data: AllPayment[]; meta: { page: number; limit: number; total: number; totalPages: number } }>(
         '/admin/payments',
         { params },
       ),
@@ -240,6 +265,23 @@ const admin = {
 
     update: (tenantId: string, corridors: Array<{ sourceCurrency: string; destCurrency?: string; providerName: string; priority?: number }>) =>
       apiClient.put<{ success: boolean; data: CorridorConfig[] }>(`/admin/tenants/${tenantId}/provider-config`, { corridors }),
+
+    addCorridor: (tenantId: string, corridor: { sourceCurrency: string; destCurrency?: string | null; providerName: string; priority?: number }) =>
+      apiClient.post<{ success: boolean; data: CorridorConfig }>(`/admin/tenants/${tenantId}/provider-config`, corridor),
+
+    deleteCorridor: (tenantId: string, corridorId: string) =>
+      apiClient.delete(`/admin/tenants/${tenantId}/provider-config/${corridorId}`),
+  },
+
+  providerDefaults: {
+    list: () =>
+      apiClient.get<{ success: boolean; data: CorridorConfig[] }>('/admin/provider-defaults'),
+
+    add: (corridor: { sourceCurrency: string; destCurrency?: string | null; providerName: string; priority?: number }) =>
+      apiClient.post<{ success: boolean; data: CorridorConfig }>('/admin/provider-defaults', corridor),
+
+    delete: (corridorId: string) =>
+      apiClient.delete(`/admin/provider-defaults/${corridorId}`),
   },
 
   onBehalfPayment: {
