@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { useNotifications, useMarkNotificationRead, useMarkAllNotificationsRead } from '@/hooks/useNotifications'
@@ -75,7 +76,9 @@ function NotificationItem({ n, onRead }: { n: Notification; onRead: (id: string)
 export function NotificationBell({ className }: { className?: string }) {
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, right: 0 })
 
   const { data } = useNotifications({ limit: 10, page: 1 })
   const notifications = data?.data ?? []
@@ -84,27 +87,52 @@ export function NotificationBell({ className }: { className?: string }) {
   const { mutate: markRead } = useMarkNotificationRead()
   const { mutate: markAll } = useMarkAllNotificationsRead()
 
-  // Close on outside click
+  // Close on outside click — check both the trigger button and the portal panel
   useEffect(() => {
     if (!open) return
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+      const target = e.target as Node
+      const insideButton = buttonRef.current?.contains(target) ?? false
+      const insidePanel  = panelRef.current?.contains(target) ?? false
+      if (!insideButton && !insidePanel) setOpen(false)
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [open])
 
+  // Recalculate position on window resize while open
+  useEffect(() => {
+    if (!open) return
+    const onResize = () => {
+      if (!buttonRef.current) return
+      const rect = buttonRef.current.getBoundingClientRect()
+      setDropdownPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right })
+    }
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [open])
+
+  const handleToggle = () => {
+    if (!open && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect()
+      setDropdownPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right })
+    }
+    setOpen(o => !o)
+  }
+
   return (
-    <div ref={ref} className={cn('relative', className)}>
+    <div className={cn('relative', className)}>
       {/* Bell button */}
       <button
-        onClick={() => setOpen(o => !o)}
+        ref={buttonRef}
+        onClick={handleToggle}
         className={cn(
           'relative flex h-8 w-8 items-center justify-center rounded-lg transition-all duration-150',
           'text-nav-fg hover:text-nav-fg-active hover:bg-nav-item-hover',
           open && 'bg-nav-item-hover text-nav-fg-active'
         )}
         aria-label="Notifications"
+        aria-expanded={open}
       >
         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
@@ -116,10 +144,14 @@ export function NotificationBell({ className }: { className?: string }) {
         )}
       </button>
 
-      {/* Dropdown panel */}
-      {open && (
-        <div className="absolute right-0 top-10 z-50 w-80 rounded-2xl border border-border bg-surface card-shadow-md overflow-hidden">
-
+      {/* Dropdown panel — portaled to document.body to escape header's stacking context
+          (nav-glass uses backdrop-filter which creates a stacking context, trapping z-index) */}
+      {open && createPortal(
+        <div
+          ref={panelRef}
+          className="fixed z-[9999] w-80 rounded-2xl border border-border bg-surface card-shadow-md overflow-hidden"
+          style={{ top: dropdownPos.top, right: dropdownPos.right }}
+        >
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-border">
             <div className="flex items-center gap-2">
@@ -169,7 +201,8 @@ export function NotificationBell({ className }: { className?: string }) {
               </button>
             </div>
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )
