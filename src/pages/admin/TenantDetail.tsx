@@ -191,7 +191,7 @@ export function TenantDetail() {
   if (isError || !tenant) return <ErrorState title="Tenant not found" onRetry={refetch} />
 
   return (
-    <div className="flex flex-col gap-0 max-w-5xl mx-auto">
+    <div className="flex flex-col gap-0">
 
       {/* ── Header ─────────────────────────────────────────────────────── */}
       <PageHeader

@@ -123,7 +123,7 @@ export function ProviderConfig() {
   if (isError) return <ErrorState title="Could not load configuration" onRetry={refetch} />
 
   return (
-    <div className="flex flex-col gap-6 max-w-5xl">
+    <div className="flex flex-col gap-6">
       <PageHeader
         title="Provider configuration"
         breadcrumbs={[{ label: 'Admin' }, { label: 'Providers' }]}

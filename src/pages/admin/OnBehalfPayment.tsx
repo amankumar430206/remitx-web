@@ -812,7 +812,7 @@ export function OnBehalfPayment() {
   const [feeConfigured, setFeeConfigured] = useState(false)
 
   return (
-    <div className="flex flex-col gap-6 max-w-lg mx-auto">
+    <div className="flex flex-col gap-6">
       <PageHeader
         title="Payment on behalf"
         breadcrumbs={[
