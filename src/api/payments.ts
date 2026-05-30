@@ -19,6 +19,10 @@ export interface Payment {
   completed_at?: string
   beneficiary_name?: string | null
   beneficiary_country_code?: string | null
+  provider_name?: string | null
+  provider_payment_id?: string | null
+  ops_notes?: string | null
+  note?: string | null
   status_history?: Array<{
     id: string
     status: string

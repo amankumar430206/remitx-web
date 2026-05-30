@@ -74,6 +74,7 @@ export function PaymentDetail() {
   if (isLoading) return <LoadingState message="Loading payment details…" />
   if (isError || !payment) return <ErrorState title="Payment not found" onRetry={refetch} />
 
+  const isSuperAdmin = user?.role === 'super_admin'
   const canApprove = payment.status === 'pending_approval' && (user?.role === 'admin' || user?.role === 'checker')
   const isOwnPayment = payment.user_id === user?.id
   const canCancel = ['pending_approval', 'approved'].includes(payment.status) && isOwnPayment
@@ -219,6 +220,30 @@ export function PaymentDetail() {
           {payment.note && <InfoRow label="Note" value={payment.note} />}
         </ContentCard>
       </div>
+
+      {/* ── Provider details (super_admin only) ── */}
+      {isSuperAdmin && (
+        <ContentCard>
+          <SectionHeader
+            title="Provider details"
+            icon={
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+              </svg>
+            }
+          />
+          <InfoRow
+            label="Provider"
+            value={
+              <span className="inline-flex items-center rounded-full bg-surface border border-border px-2.5 py-0.5 text-xs font-mono text-foreground">
+                {payment.provider_name ?? 'manual'}
+              </span>
+            }
+          />
+          <InfoRow label="Provider payment ID" value={payment.provider_payment_id ?? '—'} mono />
+          {payment.ops_notes && <InfoRow label="Ops notes" value={payment.ops_notes} />}
+        </ContentCard>
+      )}
 
       {/* ── Status timeline ── */}
       {timelineEvents.length > 0 && (
