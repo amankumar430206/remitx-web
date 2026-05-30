@@ -147,6 +147,7 @@ export function PaymentList() {
     page,
     limit: 20,
     status: status || undefined,
+    direction: direction || undefined,
     search: debouncedSearch || undefined,
     from: dateRange.startDate ? dateRange.startDate.toISOString().slice(0, 10) : undefined,
     to: dateRange.endDate ? dateRange.endDate.toISOString().slice(0, 10) : undefined,
