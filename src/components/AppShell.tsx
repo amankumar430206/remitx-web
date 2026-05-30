@@ -80,6 +80,7 @@ export function AppShell() {
   useQuery({
     queryKey: ['tenant-theme'],
     queryFn: () => tenantsApi.theme().then(r => { applyTheme(r.data.data); return r.data.data }),
+    staleTime: 0,   // always re-fetch on mount — theme must reflect current tenant
     retry: false,
   })
 

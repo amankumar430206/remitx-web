@@ -6,6 +6,7 @@ interface ThemeState {
   theme: TenantTheme | null
   setTheme: (theme: TenantTheme) => void
   applyTheme: (theme: TenantTheme) => void
+  clearTheme: () => void
 }
 
 function hexToRgb(hex: string) {
@@ -50,6 +51,20 @@ export const useThemeStore = create<ThemeState>()(
       applyTheme: (theme) => {
         applyCssVars(theme)
         set({ theme })
+      },
+
+      // Called on logout — resets CSS vars to stylesheet defaults so the next
+      // tenant's theme loads clean with no stale colours.
+      clearTheme: () => {
+        const root = document.documentElement
+        root.style.removeProperty('--color-primary')
+        root.style.removeProperty('--color-primary-hover')
+        root.style.removeProperty('--color-primary-subtle')
+        root.style.removeProperty('--color-primary-subtle-border')
+        root.style.removeProperty('--color-secondary')
+        root.style.removeProperty('--color-secondary-hover')
+        root.style.removeProperty('--font-sans')
+        set({ theme: null })
       },
     }),
     {
