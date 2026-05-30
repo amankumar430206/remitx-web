@@ -27,7 +27,7 @@ export function PageLayout({ navItems, user, onLogout, logo, logoUrl, tenantName
         <div className="flex-1 flex flex-col min-w-0">
           <MobileNav navItems={navItems} user={user} onLogout={onLogout} logo={logo} tenantName={tenantName} />
           <TopBar user={user} tenantName={tenantName} onLogout={onLogout} />
-          <main className={cn('flex-1 px-4 md:px-6 lg:px-8 py-6 max-w-screen-xl w-full', className)}>
+          <main className={cn('flex-1 px-4 md:px-6 lg:px-8 py-6 w-full', className)}>
             {children}
           </main>
         </div>
@@ -39,7 +39,7 @@ export function PageLayout({ navItems, user, onLogout, logo, logoUrl, tenantName
     <div className="min-h-screen bg-surface-raised flex flex-col">
       <TopNav navItems={navItems} user={user} onLogout={onLogout} logo={logo} logoUrl={logoUrl} tenantName={tenantName} />
       <MobileNav navItems={navItems} user={user} onLogout={onLogout} logo={logo} tenantName={tenantName} />
-      <main className={cn('flex-1 px-4 md:px-6 lg:px-8 py-6 max-w-screen-xl mx-auto w-full', className)}>
+      <main className={cn('flex-1 px-4 md:px-6 lg:px-8 py-6 w-full', className)}>
         {children}
       </main>
     </div>
