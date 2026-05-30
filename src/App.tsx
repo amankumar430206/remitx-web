@@ -135,17 +135,19 @@ function App() {
                 <Route path="features" element={page(<FeatureFlags />)} />
               </Route>
 
-              {/* Admin list pages — tab bar via AdminLayout */}
+              {/* Tenants — standalone, no admin tab bar */}
+              <Route path="/admin/tenants" element={page(<TenantList />)} />
+              <Route path="/admin/tenants/:id" element={page(<TenantDetail />)} />
+
+              {/* Admin section — tab bar via AdminLayout (KYC, payments, providers) */}
               <Route path="/admin" element={<AdminLayout />}>
-                <Route path="tenants" element={page(<TenantList />)} />
+                <Route index element={<Navigate to="/admin/kyc-queue" replace />} />
                 <Route path="kyc-queue" element={page(<KycQueue />)} />
                 <Route path="manual-payments" element={page(<ManualPaymentQueue />)} />
                 <Route path="payments" element={page(<AllPayments />)} />
                 <Route path="providers" element={page(<ProviderConfig />)} />
               </Route>
 
-              {/* Admin detail pages — no tab bar (have their own navigation) */}
-              <Route path="/admin/tenants/:id" element={page(<TenantDetail />)} />
               <Route path="/admin/payments/on-behalf" element={page(<OnBehalfPayment />)} />
             </Route>
           </Route>

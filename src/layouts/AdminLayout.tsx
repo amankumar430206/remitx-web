@@ -2,7 +2,6 @@ import { NavLink, Outlet } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 
 const TABS = [
-  { label: 'Tenants',          href: '/admin/tenants' },
   { label: 'KYC queue',        href: '/admin/kyc-queue' },
   { label: 'Manual payments',  href: '/admin/manual-payments' },
   { label: 'All payments',     href: '/admin/payments' },
