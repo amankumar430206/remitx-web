@@ -34,6 +34,10 @@ const kyc = {
   initiate: () =>
     apiClient.post<{ success: boolean; data: KycApplication }>('/compliance/kyc/initiate'),
 
+  /** Fetch a KYC document as a Blob for preview or download in the browser. */
+  fetchDocument: (storedAs: string) =>
+    apiClient.get<Blob>(`/compliance/kyc/documents/${encodeURIComponent(storedAs)}`, { responseType: 'blob' }),
+
   uploadDocument: (file: File, type: string, onProgress?: (pct: number) => void) => {
     const form = new FormData()
     form.append('document', file)

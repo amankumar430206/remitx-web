@@ -4,66 +4,18 @@ import { Avatar } from '@/components/ui/atoms/Avatar'
 import { LoadingState } from '@/components/ui/molecules/LoadingState'
 import { EmptyState } from '@/components/ui/molecules/EmptyState'
 import { ConfirmDialog } from '@/components/ui/molecules/ConfirmDialog'
+import { DocumentRow } from '@/components/ui/molecules/DocumentRow'
 import { ContentCard } from '@/layouts/ContentCard'
 import { useTenantContact, useApproveKyc, useRejectKyc } from '@/hooks/useAdmin'
 import { useState } from 'react'
-import type { TenantContact as TenantContactData, TenantContactDocument } from '@/api/admin'
+import admin from '@/api/admin'
+import type { TenantContact as TenantContactData } from '@/api/admin'
 
 const KYC_STATUS_VARIANT: Record<string, 'success' | 'danger' | 'warning' | 'default'> = {
   approved: 'success',
   rejected: 'danger',
   submitted: 'warning',
   pending: 'default',
-}
-
-const DOC_TYPE_LABEL: Record<string, string> = {
-  passport: 'Passport',
-  national_id: 'National ID',
-  drivers_license: "Driver's licence",
-  proof_of_address: 'Proof of address',
-  utility_bill: 'Utility bill',
-  bank_statement: 'Bank statement',
-}
-
-function formatBytes(bytes?: number) {
-  if (!bytes) return ''
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
-
-function DocumentRow({ doc }: { doc: TenantContactDocument }) {
-  const label = doc.type ? (DOC_TYPE_LABEL[doc.type] ?? doc.type) : 'Document'
-  const uploadedAt = new Date(doc.uploadedAt).toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  })
-
-  return (
-    <div className="flex items-center gap-3 rounded-lg border border-border bg-surface-raised px-4 py-3">
-      {/* File icon */}
-      <div className="h-9 w-9 rounded-lg bg-primary-subtle flex items-center justify-center flex-shrink-0">
-        <svg className="h-4 w-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-      </div>
-
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-foreground truncate">{label}</p>
-        <p className="text-xs text-muted-fg truncate">
-          {doc.filename}
-          {doc.size ? ` · ${formatBytes(doc.size)}` : ''}
-          {' · '}
-          {uploadedAt}
-        </p>
-      </div>
-
-      <span className="text-xs text-muted-fg/60 capitalize shrink-0">
-        {doc.mimetype?.split('/').pop() ?? 'file'}
-      </span>
-    </div>
-  )
 }
 
 function ContactPersonCard({
@@ -182,7 +134,11 @@ function ContactPersonCard({
         {contact.kyc_documents && contact.kyc_documents.length > 0 ? (
           <div className="flex flex-col gap-2">
             {contact.kyc_documents.map((doc, i) => (
-              <DocumentRow key={i} doc={doc} />
+              <DocumentRow
+                key={i}
+                doc={doc}
+                fetchFn={() => admin.kyc.fetchDocument(tenantId, contact.id, doc.storedAs!)}
+              />
             ))}
           </div>
         ) : (

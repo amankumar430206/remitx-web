@@ -4,8 +4,10 @@ import { LoadingState } from '@/components/ui/molecules/LoadingState'
 import { ErrorState } from '@/components/ui/molecules/ErrorState'
 import { Button } from '@/components/ui/atoms/Button'
 import { Badge } from '@/components/ui/atoms/Badge'
+import { DocumentRow } from '@/components/ui/molecules/DocumentRow'
 import { ContentCard } from '@/layouts/ContentCard'
 import { useKycStatus, useInitiateKyc } from '@/hooks/useKyc'
+import kyc from '@/api/kyc'
 import type { KycStatus as KycStatusType } from '@/api/kyc'
 
 const STATUS_CONFIG: Record<KycStatusType, { label: string; variant: 'default' | 'secondary' | 'warning' | 'success' | 'danger'; description: string }> = {
@@ -145,18 +147,19 @@ export function KycStatus() {
       {/* Uploaded documents */}
       {documents.length > 0 && (
         <ContentCard>
-          <h3 className="text-sm font-semibold text-foreground mb-4">Uploaded documents</h3>
-          <ul className="flex flex-col gap-2">
+          <h3 className="text-sm font-semibold text-foreground mb-4">
+            Uploaded documents
+            <span className="ml-2 text-xs font-normal text-muted-fg">({documents.length})</span>
+          </h3>
+          <div className="flex flex-col gap-2">
             {documents.map((doc, i) => (
-              <li key={i} className="flex items-center justify-between rounded-lg border border-border bg-surface-raised px-3 py-2.5">
-                <div>
-                  <p className="text-sm font-medium text-foreground">{doc.filename}</p>
-                  <p className="text-xs text-muted-fg">{new Date(doc.uploadedAt).toLocaleDateString()}</p>
-                </div>
-                <Badge variant="warning">Submitted</Badge>
-              </li>
+              <DocumentRow
+                key={i}
+                doc={doc}
+                fetchFn={() => kyc.fetchDocument(doc.storedAs!)}
+              />
             ))}
-          </ul>
+          </div>
         </ContentCard>
       )}
     </div>

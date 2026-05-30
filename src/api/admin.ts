@@ -211,6 +211,13 @@ const admin = {
 
     reject: (tenantId: string, userId: string, reason: string) =>
       apiClient.put(`/admin/tenants/${tenantId}/kyc/${userId}/reject`, { reason }),
+
+    /** Fetch a KYC document as a Blob for preview or download. */
+    fetchDocument: (tenantId: string, userId: string, storedAs: string) =>
+      apiClient.get<Blob>(
+        `/admin/tenants/${tenantId}/kyc/${userId}/documents/${encodeURIComponent(storedAs)}`,
+        { responseType: 'blob' },
+      ),
   },
 
   payments: {
