@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { AppShell } from '@/components/AppShell'
 import { SettingsLayout } from '@/layouts/SettingsLayout'
+import { AdminLayout } from '@/layouts/AdminLayout'
 import { PageSkeleton } from '@/components/PageSkeleton'
 import { PageErrorBoundary } from '@/components/PageErrorBoundary'
 
@@ -134,14 +135,16 @@ function App() {
                 <Route path="features" element={page(<FeatureFlags />)} />
               </Route>
 
-              {/* Admin */}
-              <Route path="/admin/tenants" element={page(<TenantList />)} />
-              <Route path="/admin/tenants/:id" element={page(<TenantDetail />)} />
-              <Route path="/admin/kyc-queue" element={page(<KycQueue />)} />
-              <Route path="/admin/manual-payments" element={page(<ManualPaymentQueue />)} />
-              <Route path="/admin/payments" element={page(<AllPayments />)} />
-              <Route path="/admin/payments/on-behalf" element={page(<OnBehalfPayment />)} />
-              <Route path="/admin/providers" element={page(<ProviderConfig />)} />
+              {/* Admin — tab layout wraps all admin pages */}
+              <Route path="/admin" element={<AdminLayout />}>
+                <Route path="tenants" element={page(<TenantList />)} />
+                <Route path="tenants/:id" element={page(<TenantDetail />)} />
+                <Route path="kyc-queue" element={page(<KycQueue />)} />
+                <Route path="manual-payments" element={page(<ManualPaymentQueue />)} />
+                <Route path="payments" element={page(<AllPayments />)} />
+                <Route path="payments/on-behalf" element={page(<OnBehalfPayment />)} />
+                <Route path="providers" element={page(<ProviderConfig />)} />
+              </Route>
             </Route>
           </Route>
 
