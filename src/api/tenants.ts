@@ -7,6 +7,8 @@ export interface TenantTheme {
   faviconUrl?: string | null
   fontFamily: string
   tenantName: string
+  /** true = tenant has their own saved branding; false = inheriting global platform theme */
+  hasCustomTheme?: boolean
 }
 
 export interface UpdateThemePayload {

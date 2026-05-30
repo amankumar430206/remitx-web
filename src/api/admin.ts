@@ -145,6 +145,14 @@ const admin = {
 
     updateBranding: (id: string, payload: UpdateThemePayload) =>
       apiClient.put<{ success: boolean; data: TenantTheme }>(`/admin/tenants/${id}/branding`, payload),
+
+    resetBranding: (id: string) =>
+      apiClient.delete<{ success: boolean; data: TenantTheme }>(`/admin/tenants/${id}/branding`),
+  },
+
+  globalTheme: {
+    get: () =>
+      apiClient.get<{ success: boolean; data: TenantTheme }>('/admin/global-theme'),
   },
 
   users: {
