@@ -106,6 +106,7 @@ export function AppShell() {
 
   const pendingApprovals = approvalData?.data?.length ?? 0
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin'
+  const isSuperAdmin = user?.role === 'super_admin'
 
   const flagPayments = useFeatureFlag('payments')
   const flagAccounts = useFeatureFlag('accounts')
@@ -116,6 +117,7 @@ export function AppShell() {
 
   const navItems = [
     { label: 'Dashboard', href: '/dashboard', icon: NAV_ICONS.dashboard },
+    ...(isSuperAdmin ? [{ label: 'Tenants', href: '/admin/tenants', icon: NAV_ICONS.tenants }] : []),
     ...(flagPayments ? [{ label: 'Payments', href: '/payments', icon: NAV_ICONS.payments, badge: pendingApprovals }] : []),
     ...(flagAccounts ? [{ label: 'Accounts', href: '/accounts', icon: NAV_ICONS.accounts }] : []),
     ...(flagBeneficiaries ? [{ label: 'Beneficiaries', href: '/beneficiaries', icon: NAV_ICONS.beneficiaries }] : []),
@@ -126,7 +128,6 @@ export function AppShell() {
     { label: 'Assistant', href: '/assistant', icon: NAV_ICONS.assistant },
     { label: 'Settings', href: '/settings', icon: NAV_ICONS.settings },
     ...(isAdmin ? [{ label: 'Admin', href: '/admin/kyc-queue', icon: NAV_ICONS.admin }] : []),
-    ...(isAdmin ? [{ label: 'Tenants', href: '/admin/tenants', icon: NAV_ICONS.tenants }] : []),
   ]
 
   return (
