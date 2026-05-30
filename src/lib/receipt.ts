@@ -264,11 +264,66 @@ export function buildReceiptText(p: Payment): string {
   return lines.join('\n')
 }
 
+// ─── Text-style HTML (monospace, matches copy-as-text output) ────────────────
+
+export function buildTextReceiptHtml(p: Payment): string {
+  const text = buildReceiptText(p)
+  const now = new Date().toLocaleString('en-US', {
+    day: 'numeric', month: 'long', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  })
+  // Escape HTML special chars so the raw text renders safely
+  const escaped = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>RemitX Payment Receipt</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Courier New', Courier, monospace;
+    background: #ffffff;
+    color: #1e293b;
+    padding: 48px 40px;
+    max-width: 600px;
+    margin: 0 auto;
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  pre {
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+  }
+  .generated {
+    margin-top: 32px;
+    font-size: 10px;
+    color: #94a3b8;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 12px;
+  }
+  @media print {
+    body { padding: 24px; }
+  }
+</style>
+</head>
+<body>
+  <pre>${escaped}</pre>
+  <div class="generated">Generated on ${now}</div>
+</body>
+</html>`
+}
+
 // ─── Actions ──────────────────────────────────────────────────────────────────
 
-/** Opens the browser print dialog pre-loaded with the receipt HTML. */
-export function printReceiptAsPdf(p: Payment): void {
-  const html = buildReceiptHtml(p)
+function _printHtml(html: string): void {
   const iframe = document.createElement('iframe')
   iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;border:0;opacity:0'
   document.body.appendChild(iframe)
@@ -284,6 +339,17 @@ export function printReceiptAsPdf(p: Payment): void {
     }, 2000)
   }
 }
+
+/** Opens the browser print dialog with the styled visual receipt. */
+export function printReceiptAsPdf(p: Payment): void {
+  _printHtml(buildReceiptHtml(p))
+}
+
+/** Opens the browser print dialog with the plain text-format receipt. */
+export function printReceiptAsTextPdf(p: Payment): void {
+  _printHtml(buildTextReceiptHtml(p))
+}
+
 
 /** Copies the plain-text receipt to clipboard. Returns true on success. */
 export async function copyReceiptText(p: Payment): Promise<boolean> {
