@@ -18,7 +18,7 @@ export function AdminLayout() {
             <NavLink
               key={tab.href}
               to={tab.href}
-              end={tab.href === '/admin/tenants' ? false : true}
+              end
               className={({ isActive }) =>
                 cn(
                   'shrink-0 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors',
