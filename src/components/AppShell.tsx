@@ -125,7 +125,6 @@ export function AppShell() {
     ...(flagReports ? [{ label: 'Reports', href: '/reports/transactions', icon: NAV_ICONS.reports }] : []),
     { label: 'Assistant', href: '/assistant', icon: NAV_ICONS.assistant },
     { label: 'Settings', href: '/settings', icon: NAV_ICONS.settings },
-    ...(isAdmin ? [{ label: 'Admin', href: '/admin/tenants', icon: NAV_ICONS.admin }] : []),
     ...(isAdmin ? [{ label: 'Tenants', href: '/admin/tenants', icon: NAV_ICONS.tenants }] : []),
   ]
 
