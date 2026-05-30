@@ -5,8 +5,8 @@ import { z } from 'zod'
 import { Badge } from '@/components/ui/atoms/Badge'
 import { Button } from '@/components/ui/atoms/Button'
 import { Input } from '@/components/ui/atoms/Input'
-import { Select } from '@/components/ui/atoms/Select'
 import { DataTable } from '@/components/ui/organisms/DataTable'
+import { cn } from '@/lib/utils'
 import { LoadingState } from '@/components/ui/molecules/LoadingState'
 import { ConfirmDialog } from '@/components/ui/molecules/ConfirmDialog'
 import { FormField } from '@/components/ui/molecules/FormField'
@@ -183,9 +183,17 @@ export function TenantCorridors({ tenantId }: Props) {
             </FormField>
           </div>
           <FormField label="Provider" htmlFor="providerName" error={errors.providerName?.message} required>
-            <Select id="providerName" {...register('providerName')} error={!!errors.providerName}>
+            <select
+              id="providerName"
+              {...register('providerName')}
+              className={cn(
+                'h-9 w-full rounded border bg-surface px-3 py-1 text-sm text-foreground shadow-sm transition-colors',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1',
+                errors.providerName ? 'border-danger-fg' : 'border-border hover:border-border-strong',
+              )}
+            >
               {PROVIDERS.map(p => <option key={p} value={p}>{p}</option>)}
-            </Select>
+            </select>
           </FormField>
           <FormField label="Priority" htmlFor="priority" error={errors.priority?.message}>
             <Input id="priority" type="number" min={1} {...register('priority')} error={!!errors.priority} className="w-24" />
