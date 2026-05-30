@@ -192,7 +192,20 @@ export function Theme() {
 
         <form onSubmit={handleSubmit(onSave)}>
           <div className="flex flex-col gap-5">
-            <h3 className="text-sm font-semibold text-foreground">Brand settings</h3>
+            <div className="flex flex-col gap-1">
+              <h3 className="text-sm font-semibold text-foreground">Brand settings</h3>
+              <div className="flex items-start gap-2 rounded-lg border border-border bg-surface-raised px-3 py-2.5">
+                <svg className="h-3.5 w-3.5 text-muted-fg shrink-0 mt-px" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-[11px] text-muted-fg leading-relaxed">
+                  This is the <span className="font-semibold text-foreground">platform-wide default</span> theme.
+                  Client tenants with no custom branding will automatically inherit these settings.
+                  To customise branding for a specific client, go to{' '}
+                  <span className="font-semibold text-foreground">Tenants → [client] → Branding</span>.
+                </p>
+              </div>
+            </div>
 
             <FormField label="Brand name" error={errors.tenantName?.message} required htmlFor="tenantName">
               <Input id="tenantName" placeholder="Acme Corp" {...register('tenantName')} />
