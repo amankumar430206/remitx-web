@@ -52,6 +52,24 @@ const STATUS_CHIPS: StatusChipOption[] = [
   { label: 'Cancelled',  value: 'cancelled',        variant: 'default' },
 ]
 
+const DIRECTION_CHIPS: StatusChipOption[] = [
+  { label: 'All',    value: '',       variant: 'none'    },
+  { label: 'Debit',  value: 'debit',  variant: 'danger'  },
+  { label: 'Credit', value: 'credit', variant: 'success' },
+]
+
+function DirectionBadge({ direction }: { direction: 'debit' | 'credit' }) {
+  return direction === 'debit' ? (
+    <span className="inline-flex items-center gap-1 rounded-full bg-danger/10 border border-danger/20 px-2 py-0.5 text-[11px] font-semibold text-danger-fg">
+      <span className="text-[9px]">▼</span> Debit
+    </span>
+  ) : (
+    <span className="inline-flex items-center gap-1 rounded-full bg-success/10 border border-success/20 px-2 py-0.5 text-[11px] font-semibold text-success-fg">
+      <span className="text-[9px]">▲</span> Credit
+    </span>
+  )
+}
+
 function fmtDate(d: Date) {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
@@ -113,6 +131,7 @@ export function PaymentList() {
 
   const [page, setPage] = useState(1)
   const [status, setStatus] = useState('')
+  const [direction, setDirection] = useState('')
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounce(search)
   const [preset, setPreset] = useState<Preset>('30d')
@@ -138,6 +157,11 @@ export function PaymentList() {
   const totalPages = Math.ceil(total / 20)
 
   const columns = [
+    {
+      key: 'direction',
+      header: 'Type',
+      render: (_p: Payment) => <DirectionBadge direction="debit" />,
+    },
     {
       key: 'beneficiary',
       header: 'Recipient',
@@ -172,13 +196,18 @@ export function PaymentList() {
     },
   ]
 
-  const clearAll = () => { setStatus(''); setSearch(''); handlePreset('30d'); setPage(1) }
+  const clearAll = () => { setStatus(''); setDirection(''); setSearch(''); handlePreset('30d'); setPage(1) }
 
   const activeChips = useMemo<ActiveFilterChip[]>(() => [
     ...(status ? [{
       key: 'status',
       label: STATUS_CHIPS.find(c => c.value === status)?.label ?? status,
       onRemove: () => { setStatus(''); setPage(1) },
+    }] : []),
+    ...(direction ? [{
+      key: 'direction',
+      label: direction.charAt(0).toUpperCase() + direction.slice(1),
+      onRemove: () => { setDirection(''); setPage(1) },
     }] : []),
     ...(preset !== '30d' ? [{
       key: 'date',
@@ -192,7 +221,7 @@ export function PaymentList() {
       label: `"${search}"`,
       onRemove: () => { setSearch(''); setPage(1) },
     }] : []),
-  ], [status, preset, dateRange, search])
+  ], [status, direction, preset, dateRange, search])
 
   const list = (
     <div className="flex flex-col gap-3">
@@ -208,6 +237,33 @@ export function PaymentList() {
         statusChips={STATUS_CHIPS}
         activeStatus={status}
         onStatusChange={v => { setStatus(v); setPage(1) }}
+        advancedFilters={
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-muted-fg">Type</label>
+            <div className="flex gap-1.5">
+              {DIRECTION_CHIPS.map(chip => (
+                <button
+                  key={chip.value}
+                  type="button"
+                  onClick={() => { setDirection(chip.value); setPage(1) }}
+                  className={[
+                    'px-3 py-1.5 rounded-md text-xs font-medium border transition-colors',
+                    direction === chip.value
+                      ? chip.value === 'debit'
+                        ? 'bg-danger/10 border-danger/30 text-danger-fg'
+                        : chip.value === 'credit'
+                        ? 'bg-success/10 border-success/30 text-success-fg'
+                        : 'bg-primary text-primary-fg border-primary'
+                      : 'bg-surface border-border text-muted-fg hover:text-foreground hover:border-border-strong',
+                  ].join(' ')}
+                >
+                  {chip.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        }
+        activeAdvancedCount={direction ? 1 : 0}
         activeChips={activeChips}
         onClearAll={activeChips.length > 0 ? clearAll : undefined}
       />

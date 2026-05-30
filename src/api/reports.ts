@@ -38,6 +38,7 @@ export interface TransactionFilter {
   to?: string
   status?: string
   currency?: string
+  direction?: 'debit' | 'credit'
   format?: 'json' | 'csv' | 'pdf'
 }
 
