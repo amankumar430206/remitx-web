@@ -11,12 +11,13 @@ export interface PageLayoutProps {
   user?: { name: string; email: string; avatarUrl?: string; role?: string }
   onLogout?: () => void
   logo?: React.ReactNode
+  logoUrl?: string | null
   tenantName?: string
   children: React.ReactNode
   className?: string
 }
 
-export function PageLayout({ navItems, user, onLogout, logo, tenantName, children, className }: PageLayoutProps) {
+export function PageLayout({ navItems, user, onLogout, logo, logoUrl, tenantName, children, className }: PageLayoutProps) {
   const layout = useLayoutStore(s => s.layout)
 
   if (layout === 'sidebar') {
@@ -36,7 +37,7 @@ export function PageLayout({ navItems, user, onLogout, logo, tenantName, childre
 
   return (
     <div className="min-h-screen bg-surface-raised flex flex-col">
-      <TopNav navItems={navItems} user={user} onLogout={onLogout} logo={logo} tenantName={tenantName} />
+      <TopNav navItems={navItems} user={user} onLogout={onLogout} logo={logo} logoUrl={logoUrl} tenantName={tenantName} />
       <MobileNav navItems={navItems} user={user} onLogout={onLogout} logo={logo} tenantName={tenantName} />
       <main className={cn('flex-1 px-4 md:px-6 lg:px-8 py-6 max-w-screen-xl mx-auto w-full', className)}>
         {children}

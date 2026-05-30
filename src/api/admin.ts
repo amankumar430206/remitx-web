@@ -1,4 +1,5 @@
 import { apiClient } from './client'
+import type { TenantTheme, UpdateThemePayload } from './tenants'
 
 export interface AdminTenant {
   id: string
@@ -138,6 +139,12 @@ const admin = {
 
     setStatus: (id: string, status: 'active' | 'suspended' | 'inactive') =>
       apiClient.put<{ success: boolean; data: AdminTenant }>(`/admin/tenants/${id}/status`, { status }),
+
+    getBranding: (id: string) =>
+      apiClient.get<{ success: boolean; data: TenantTheme }>(`/admin/tenants/${id}/branding`),
+
+    updateBranding: (id: string, payload: UpdateThemePayload) =>
+      apiClient.put<{ success: boolean; data: TenantTheme }>(`/admin/tenants/${id}/branding`, payload),
   },
 
   users: {

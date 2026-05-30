@@ -15,6 +15,7 @@ export interface NavItem {
 
 export interface TopNavProps {
   logo?: React.ReactNode
+  logoUrl?: string | null
   navItems: NavItem[]
   user?: { name: string; email: string; avatarUrl?: string }
   onLogout?: () => void
@@ -27,15 +28,22 @@ const ArrowsIcon = () => (
   </svg>
 )
 
-export function TopNav({ logo, navItems, user, onLogout, tenantName }: TopNavProps) {
+export function TopNav({ logo, logoUrl, navItems, user, onLogout, tenantName }: TopNavProps) {
   const navigate = useNavigate()
 
   return (
     <header className="hidden md:flex h-14 items-center px-5 gap-5 sticky top-0 z-40 nav-glass">
 
-      {/* Logo */}
+      {/* Logo — client logo takes priority, then slot prop, then default RemitX icon */}
       <Link to="/" className="flex items-center gap-2 shrink-0 mr-2">
-        {logo ?? (
+        {logoUrl ? (
+          <img
+            src={logoUrl}
+            alt="Logo"
+            className="h-7 w-auto max-w-[120px] object-contain"
+            onError={(e) => { e.currentTarget.style.display = 'none' }}
+          />
+        ) : logo ?? (
           <div className="flex items-center gap-2">
             <div className="h-7 w-7 rounded-lg btn-gradient flex items-center justify-center shadow-md shadow-blue-900/50">
               <ArrowsIcon />
@@ -43,7 +51,7 @@ export function TopNav({ logo, navItems, user, onLogout, tenantName }: TopNavPro
             <span className="font-bold text-white text-base tracking-tight">RemitX</span>
           </div>
         )}
-        {tenantName && (
+        {tenantName && !logoUrl && (
           <span className="ml-1 text-[10px] text-nav-fg font-normal bg-white/[0.07] px-1.5 py-0.5 rounded">
             {tenantName}
           </span>

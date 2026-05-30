@@ -73,6 +73,7 @@ export function AppShell() {
   const tenantSlug = useAuthStore(s => s.tenantSlug)
   const navigate = useNavigate()
   const applyTheme = useThemeStore(s => s.applyTheme)
+  const logoUrl = useThemeStore(s => s.theme?.logoUrl ?? null)
   const setFlags = useFeatureFlagStore(s => s.setFlags)
   const { data: approvalData } = useApprovalQueue()
 
@@ -127,6 +128,7 @@ export function AppShell() {
       user={user ? { name: [user.first_name, user.last_name].filter(Boolean).join(' ') || user.email, email: user.email, role: user.role } : undefined}
       onLogout={handleLogout}
       tenantName={tenantSlug ?? undefined}
+      logoUrl={logoUrl}
     >
       <Outlet />
     </PageLayout>

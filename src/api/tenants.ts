@@ -3,9 +3,18 @@ import { apiClient } from './client'
 export interface TenantTheme {
   primaryColor: string
   secondaryColor: string
-  logoUrl?: string
+  logoUrl?: string | null
+  faviconUrl?: string | null
   fontFamily: string
   tenantName: string
+}
+
+export interface UpdateThemePayload {
+  primaryColor?: string
+  secondaryColor?: string
+  fontFamily?: string
+  companyName?: string
+  logoUrl?: string | null
 }
 
 export interface RolePermissions {
@@ -15,6 +24,8 @@ export interface RolePermissions {
 
 const tenants = {
   theme: () => apiClient.get<{ success: boolean; data: TenantTheme }>('/tenants/theme'),
+  updateTheme: (payload: UpdateThemePayload) =>
+    apiClient.put<{ success: boolean; data: TenantTheme }>('/tenants/theme', payload),
   config: () => apiClient.get<{ success: boolean; data: { name: string; slug: string } }>('/tenants/config'),
   getFeatureFlags: () =>
     apiClient.get<{ success: boolean; data: Record<string, boolean> }>('/tenants/feature-flags'),

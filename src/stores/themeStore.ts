@@ -33,7 +33,11 @@ function applyCssVars(theme: TenantTheme) {
     root.style.setProperty('--color-secondary', theme.secondaryColor)
     root.style.setProperty('--color-secondary-hover', darken(theme.secondaryColor))
   }
-  if (theme.fontFamily) root.style.setProperty('--font-sans', theme.fontFamily)
+  if (theme.fontFamily) {
+    // Ensure a generic fallback is always present
+    const font = theme.fontFamily.includes(',') ? theme.fontFamily : `${theme.fontFamily}, sans-serif`
+    root.style.setProperty('--font-sans', font)
+  }
 }
 
 export const useThemeStore = create<ThemeState>()(

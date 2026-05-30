@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { useQueryClient } from '@tanstack/react-query'
 import { PageHeader } from '@/components/ui/organisms/PageHeader'
 import { FormField } from '@/components/ui/molecules/FormField'
 import { Button } from '@/components/ui/atoms/Button'
@@ -12,21 +13,25 @@ import { useThemeStore } from '@/stores/themeStore'
 import { ThemeToggle } from '@/components/ui/atoms/ThemeToggle'
 import { useLayoutStore, type LayoutMode } from '@/stores/layoutStore'
 import { cn } from '@/lib/utils'
+import tenantsApi from '@/api/tenants'
 
 const schema = z.object({
-  primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Must be a valid hex color'),
+  primaryColor:   z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Must be a valid hex color'),
   secondaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Must be a valid hex color'),
-  fontFamily: z.string().min(1, 'Font family is required'),
-  tenantName: z.string().min(1, 'Name is required'),
+  fontFamily:     z.string().min(1, 'Font family is required'),
+  tenantName:     z.string().min(1, 'Name is required'),
+  logoUrl:        z.string().url('Must be a valid URL').or(z.literal('')).optional(),
 })
 
 type FormValues = z.infer<typeof schema>
 
+// Font names sent to and stored by the backend (bare names, no CSS fallbacks)
 const FONT_OPTIONS = [
-  { value: 'Inter, sans-serif', label: 'Inter' },
-  { value: 'DM Sans, sans-serif', label: 'DM Sans' },
-  { value: 'Geist, sans-serif', label: 'Geist' },
-  { value: 'system-ui, sans-serif', label: 'System UI' },
+  { value: 'Inter',     label: 'Inter' },
+  { value: 'DM Sans',   label: 'DM Sans' },
+  { value: 'Geist',     label: 'Geist' },
+  { value: 'System UI', label: 'System UI' },
+  { value: 'Poppins',   label: 'Poppins' },
 ]
 
 const LAYOUT_OPTIONS: { value: LayoutMode; label: string; description: string; preview: React.ReactNode }[] = [
@@ -57,48 +62,86 @@ const LAYOUT_OPTIONS: { value: LayoutMode; label: string; description: string; p
 ]
 
 export function Theme() {
+  const qc = useQueryClient()
   const theme = useThemeStore(s => s.theme)
   const applyTheme = useThemeStore(s => s.applyTheme)
   const layout = useLayoutStore(s => s.layout)
   const setLayout = useLayoutStore(s => s.setLayout)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [saveError, setSaveError] = useState('')
+  const [logoPreview, setLogoPreview] = useState<string | null>(null)
 
   const { register, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      primaryColor: '#2563eb',
+      primaryColor:   '#2563eb',
       secondaryColor: '#7c3aed',
-      fontFamily: 'Inter, sans-serif',
-      tenantName: '',
+      fontFamily:     'Inter',
+      tenantName:     '',
+      logoUrl:        '',
     },
   })
 
+  // Populate form when theme loads from API
   useEffect(() => {
     if (theme) {
       reset({
-        primaryColor: theme.primaryColor ?? '#2563eb',
+        primaryColor:   theme.primaryColor   ?? '#2563eb',
         secondaryColor: theme.secondaryColor ?? '#7c3aed',
-        fontFamily: theme.fontFamily ?? 'Inter, sans-serif',
-        tenantName: theme.tenantName ?? '',
+        fontFamily:     theme.fontFamily     ?? 'Inter',
+        tenantName:     theme.tenantName     ?? '',
+        logoUrl:        theme.logoUrl        ?? '',
       })
+      setLogoPreview(theme.logoUrl || null)
     }
   }, [theme, reset])
 
-  const primaryColor = watch('primaryColor')
+  const primaryColor   = watch('primaryColor')
   const secondaryColor = watch('secondaryColor')
+  const logoUrl        = watch('logoUrl')
+
+  // Update preview as user types a URL
+  useEffect(() => {
+    if (logoUrl && logoUrl.startsWith('http')) setLogoPreview(logoUrl)
+    else if (!logoUrl) setLogoPreview(null)
+  }, [logoUrl])
 
   const handlePreview = () => {
-    const values = { primaryColor, secondaryColor, fontFamily: watch('fontFamily'), tenantName: watch('tenantName'), logoUrl: theme?.logoUrl }
+    const values = {
+      primaryColor,
+      secondaryColor,
+      fontFamily: watch('fontFamily'),
+      tenantName: watch('tenantName'),
+      logoUrl:    logoUrl || null,
+    }
     applyTheme(values)
   }
 
   const onSave = async (values: FormValues) => {
     setSaving(true)
-    applyTheme({ ...values, logoUrl: theme?.logoUrl })
-    await new Promise(r => setTimeout(r, 500))
-    setSaving(false)
-    setSaved(true)
+    setSaved(false)
+    setSaveError('')
+    try {
+      const payload = {
+        primaryColor:   values.primaryColor,
+        secondaryColor: values.secondaryColor,
+        fontFamily:     values.fontFamily,
+        companyName:    values.tenantName,
+        logoUrl:        values.logoUrl || null,
+      }
+      const res = await tenantsApi.updateTheme(payload)
+      applyTheme(res.data.data)
+      // Invalidate so AppShell re-fetches and TopNav logo updates
+      qc.invalidateQueries({ queryKey: ['tenant-theme'] })
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message
+      setSaveError(msg ?? 'Failed to save theme')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -148,12 +191,38 @@ export function Theme() {
         </div>
 
         <form onSubmit={handleSubmit(onSave)}>
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-5">
             <h3 className="text-sm font-semibold text-foreground">Brand settings</h3>
 
-            <FormField label="Tenant / brand name" error={errors.tenantName?.message} required htmlFor="tenantName">
-              <Input id="tenantName" {...register('tenantName')} />
+            <FormField label="Brand name" error={errors.tenantName?.message} required htmlFor="tenantName">
+              <Input id="tenantName" placeholder="Acme Corp" {...register('tenantName')} />
             </FormField>
+
+            {/* Logo URL */}
+            <div className="flex flex-col gap-2">
+              <FormField label="Logo URL" error={errors.logoUrl?.message} htmlFor="logoUrl"
+                description="Direct image link (HTTPS). Displayed at 28 px height in the navigation bar.">
+                <Input
+                  id="logoUrl"
+                  placeholder="https://cdn.example.com/logo.png"
+                  {...register('logoUrl')}
+                  error={!!errors.logoUrl}
+                />
+              </FormField>
+              {logoPreview && (
+                <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-surface-raised">
+                  <div className="h-10 w-32 flex items-center justify-start overflow-hidden shrink-0">
+                    <img
+                      src={logoPreview}
+                      alt="Logo preview"
+                      className="h-7 w-auto max-w-[120px] object-contain"
+                      onError={() => setLogoPreview(null)}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-fg">Logo preview at navigation size</p>
+                </div>
+              )}
+            </div>
 
             <FormField label="Font family" error={errors.fontFamily?.message} required>
               <Select
@@ -216,6 +285,15 @@ export function Theme() {
                 Secondary
               </div>
             </div>
+
+            {saveError && (
+              <div className="flex items-center gap-2.5 rounded-lg bg-danger border border-danger-border px-3.5 py-3">
+                <svg className="h-4 w-4 text-danger-fg shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-sm text-danger-fg">{saveError}</p>
+              </div>
+            )}
 
             {saved && (
               <div className="rounded-md bg-success px-4 py-2 text-sm text-success-fg">
