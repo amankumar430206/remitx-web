@@ -16,6 +16,7 @@ import { Pagination } from '@/components/ui/atoms/Pagination'
 import { ContentCard } from '@/layouts/ContentCard'
 import { Drawer } from '@/components/ui/molecules/Drawer'
 import { usePayments, usePayment } from '@/hooks/usePayments'
+import { useAdminTenants } from '@/hooks/useAdmin'
 import { useDebounce } from '@/hooks/useDebounce'
 import type { Payment } from '@/api/payments'
 import type { DateRange } from '@/components/ui/molecules/DateRangePicker'
@@ -137,6 +138,10 @@ export function PaymentList() {
   const [preset, setPreset] = useState<Preset>('30d')
   const [dateRange, setDateRange] = useState<DateRange>(() => presetToRange('30d'))
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [selectedTenantId, setSelectedTenantId] = useState<string>('')
+
+  const { data: tenantsList } = useAdminTenants()
+  const tenants = isSuperAdmin ? (tenantsList ?? []) : []
 
   const handlePreset = (p: Preset) => { setPreset(p); setDateRange(presetToRange(p)); setPage(1) }
   const handleCustomRange = (range: DateRange) => {
@@ -147,10 +152,11 @@ export function PaymentList() {
     page,
     limit: 20,
     status: status || undefined,
-    direction: direction || undefined,
+    direction: isSuperAdmin ? undefined : (direction || undefined),
     search: debouncedSearch || undefined,
     from: dateRange.startDate ? dateRange.startDate.toISOString().slice(0, 10) : undefined,
     to: dateRange.endDate ? dateRange.endDate.toISOString().slice(0, 10) : undefined,
+    tenantId: isSuperAdmin ? (selectedTenantId || undefined) : undefined,
   })
 
   const payments = data?.data ?? []
@@ -158,11 +164,19 @@ export function PaymentList() {
   const totalPages = Math.ceil(total / 20)
 
   const columns = [
-    {
+    ...(isSuperAdmin ? [{
+      key: 'tenant',
+      header: 'Client',
+      render: (p: Payment) => (
+        <span className="inline-flex items-center rounded-full border border-border px-2 py-0.5 text-[11px] font-medium text-muted-fg">
+          {p.tenant_name ?? p.tenant_slug ?? '—'}
+        </span>
+      ),
+    }] : [{
       key: 'direction',
       header: 'Type',
       render: (_p: Payment) => <DirectionBadge direction="debit" />,
-    },
+    }]),
     {
       key: 'beneficiary',
       header: 'Recipient',
@@ -197,7 +211,7 @@ export function PaymentList() {
     },
   ]
 
-  const clearAll = () => { setStatus(''); setDirection(''); setSearch(''); handlePreset('30d'); setPage(1) }
+  const clearAll = () => { setStatus(''); setDirection(''); setSearch(''); setSelectedTenantId(''); handlePreset('30d'); setPage(1) }
 
   const activeChips = useMemo<ActiveFilterChip[]>(() => [
     ...(status ? [{
@@ -209,6 +223,11 @@ export function PaymentList() {
       key: 'direction',
       label: direction.charAt(0).toUpperCase() + direction.slice(1),
       onRemove: () => { setDirection(''); setPage(1) },
+    }] : []),
+    ...(selectedTenantId ? [{
+      key: 'tenant',
+      label: tenants.find(t => t.id === selectedTenantId)?.name ?? selectedTenantId,
+      onRemove: () => { setSelectedTenantId(''); setPage(1) },
     }] : []),
     ...(preset !== '30d' ? [{
       key: 'date',
@@ -222,7 +241,7 @@ export function PaymentList() {
       label: `"${search}"`,
       onRemove: () => { setSearch(''); setPage(1) },
     }] : []),
-  ], [status, direction, preset, dateRange, search])
+  ], [status, direction, selectedTenantId, tenants, preset, dateRange, search])
 
   const list = (
     <div className="flex flex-col gap-3">
@@ -239,32 +258,51 @@ export function PaymentList() {
         activeStatus={status}
         onStatusChange={v => { setStatus(v); setPage(1) }}
         advancedFilters={
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-muted-fg">Type</label>
-            <div className="flex gap-1.5">
-              {DIRECTION_CHIPS.map(chip => (
-                <button
-                  key={chip.value}
-                  type="button"
-                  onClick={() => { setDirection(chip.value); setPage(1) }}
-                  className={[
-                    'px-3 py-1.5 rounded-md text-xs font-medium border transition-colors',
-                    direction === chip.value
-                      ? chip.value === 'debit'
-                        ? 'bg-danger/10 border-danger/30 text-danger-fg'
-                        : chip.value === 'credit'
-                        ? 'bg-success/10 border-success/30 text-success-fg'
-                        : 'bg-primary text-primary-fg border-primary'
-                      : 'bg-surface border-border text-muted-fg hover:text-foreground hover:border-border-strong',
-                  ].join(' ')}
+          <div className="flex flex-col gap-3">
+            {isSuperAdmin && (
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-muted-fg">Client</label>
+                <select
+                  value={selectedTenantId}
+                  onChange={e => { setSelectedTenantId(e.target.value); setPage(1) }}
+                  className="rounded-md border border-border bg-surface px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                 >
-                  {chip.label}
-                </button>
-              ))}
-            </div>
+                  <option value="">All clients</option>
+                  {tenants.map(t => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {!isSuperAdmin && (
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-muted-fg">Type</label>
+                <div className="flex gap-1.5">
+                  {DIRECTION_CHIPS.map(chip => (
+                    <button
+                      key={chip.value}
+                      type="button"
+                      onClick={() => { setDirection(chip.value); setPage(1) }}
+                      className={[
+                        'px-3 py-1.5 rounded-md text-xs font-medium border transition-colors',
+                        direction === chip.value
+                          ? chip.value === 'debit'
+                            ? 'bg-danger/10 border-danger/30 text-danger-fg'
+                            : chip.value === 'credit'
+                            ? 'bg-success/10 border-success/30 text-success-fg'
+                            : 'bg-primary text-primary-fg border-primary'
+                          : 'bg-surface border-border text-muted-fg hover:text-foreground hover:border-border-strong',
+                      ].join(' ')}
+                    >
+                      {chip.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         }
-        activeAdvancedCount={direction ? 1 : 0}
+        activeAdvancedCount={(direction ? 1 : 0) + (selectedTenantId ? 1 : 0)}
         activeChips={activeChips}
         onClearAll={activeChips.length > 0 ? clearAll : undefined}
       />

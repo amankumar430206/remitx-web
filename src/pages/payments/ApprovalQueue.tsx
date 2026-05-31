@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/atoms/Badge'
 import { Textarea } from '@/components/ui/atoms/Textarea'
 import { ContentCard } from '@/layouts/ContentCard'
 import { useApprovalQueue } from '@/hooks/usePayments'
+import { useAdminTenants } from '@/hooks/useAdmin'
 import { useAuthStore } from '@/stores/authStore'
 import paymentsApi from '@/api/payments'
 import { getApiError } from '@/lib/apiError'
@@ -22,18 +23,23 @@ export function ApprovalQueue() {
   const navigate = useNavigate()
   const qc = useQueryClient()
   const user = useAuthStore(s => s.user)
+  const isSuperAdmin = user?.role === 'super_admin'
 
   const [page, setPage] = useState(1)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [showRejectDialog, setShowRejectDialog] = useState(false)
   const [rejectNote, setRejectNote] = useState('')
+  const [selectedTenantId, setSelectedTenantId] = useState<string>('')
 
-  const { data, isLoading, isError, refetch } = useApprovalQueue()
+  const { data: tenantsList } = useAdminTenants()
+  const tenants = isSuperAdmin ? (tenantsList ?? []) : []
+
+  const { data, isLoading, isError, refetch } = useApprovalQueue(isSuperAdmin ? (selectedTenantId || undefined) : undefined)
   const payments = data?.data ?? []
   const total = payments.length
   const totalPages = Math.ceil(total / 20)
 
-  const isChecker = user?.role === 'admin' || user?.role === 'checker'
+  const isChecker = user?.role === 'super_admin' || user?.role === 'admin' || user?.role === 'checker' || user?.role === 'client_admin'
 
   // Approve multiple
   const approveMutation = useMutation({
@@ -62,6 +68,15 @@ export function ApprovalQueue() {
   })
 
   const columns = [
+    ...(isSuperAdmin ? [{
+      key: 'tenant',
+      header: 'Client',
+      render: (p: Payment) => (
+        <span className="inline-flex items-center rounded-full border border-border px-2 py-0.5 text-[11px] font-medium text-muted-fg">
+          {p.tenant_name ?? p.tenant_slug ?? '—'}
+        </span>
+      ),
+    }] : []),
     {
       key: 'beneficiary',
       header: 'Recipient',
@@ -114,11 +129,25 @@ export function ApprovalQueue() {
         title="Approval queue"
         breadcrumbs={[{ label: 'Payments', href: '/payments' }, { label: 'Approval queue' }]}
         actions={
-          total > 0 && (
-            <Badge variant="warning" className="text-sm px-3 py-1">
-              {total} pending
-            </Badge>
-          )
+          <div className="flex items-center gap-3">
+            {isSuperAdmin && (
+              <select
+                value={selectedTenantId}
+                onChange={e => { setSelectedTenantId(e.target.value); setSelectedIds([]) }}
+                className="rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              >
+                <option value="">All clients</option>
+                {tenants.map(t => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+            )}
+            {total > 0 && (
+              <Badge variant="warning" className="text-sm px-3 py-1">
+                {total} pending
+              </Badge>
+            )}
+          </div>
         }
       />
 

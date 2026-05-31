@@ -2,6 +2,9 @@ import { apiClient } from './client'
 
 export interface Payment {
   id: string
+  tenant_id?: string
+  tenant_name?: string | null
+  tenant_slug?: string | null
   status: string
   source_amount: string
   source_currency: string
@@ -47,7 +50,7 @@ export interface FeePreview {
 }
 
 const payments = {
-  list: (params?: { page?: number; limit?: number; status?: string; direction?: string; from?: string; to?: string; search?: string }, signal?: AbortSignal) =>
+  list: (params?: { page?: number; limit?: number; status?: string; direction?: string; from?: string; to?: string; search?: string; tenantId?: string }, signal?: AbortSignal) =>
     apiClient.get<{ success: boolean; data: Payment[]; meta: { page: number; limit: number; total: number } }>('/payments', { params, signal }),
 
   get: (id: string) =>
@@ -67,8 +70,8 @@ const payments = {
   cancel: (id: string) =>
     apiClient.put<{ success: boolean; data: Payment }>(`/payments/${id}/cancel`),
 
-  approvalQueue: () =>
-    apiClient.get<{ success: boolean; data: Payment[] }>('/payments/approval-queue'),
+  approvalQueue: (tenantId?: string) =>
+    apiClient.get<{ success: boolean; data: Payment[] }>('/payments/approval-queue', { params: tenantId ? { tenantId } : undefined }),
 
   feePreview: (from: string, to: string, amount: string) =>
     apiClient.get<{ success: boolean; data: FeePreview }>('/payments/fee-preview', {
