@@ -15,7 +15,7 @@ import { Badge } from '@/components/ui/atoms/Badge'
 import { Pagination } from '@/components/ui/atoms/Pagination'
 import { ContentCard } from '@/layouts/ContentCard'
 import { Drawer } from '@/components/ui/molecules/Drawer'
-import { usePayments, usePayment } from '@/hooks/usePayments'
+import { usePayments, usePayment, useApprovalQueue } from '@/hooks/usePayments'
 import { useAdminTenants } from '@/hooks/useAdmin'
 import { useDebounce } from '@/hooks/useDebounce'
 import { toLocalDateStr } from '@/lib/utils'
@@ -128,8 +128,10 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
 export function PaymentList() {
   const navigate = useNavigate()
   const qc = useQueryClient()
-  const isSuperAdmin = useAuthStore(s => s.user?.role === 'super_admin')
-  const isAdmin = useAuthStore(s => s.user?.role === 'admin' || s.user?.role === 'super_admin')
+  const user = useAuthStore(s => s.user)
+  const isSuperAdmin = user?.role === 'super_admin'
+  const isAdmin = user?.role === 'admin' || user?.role === 'super_admin'
+  const canApprove = user?.role === 'super_admin' || user?.role === 'client_admin' || user?.role === 'checker'
 
   const [page, setPage] = useState(1)
   const [status, setStatus] = useState('')
@@ -143,6 +145,8 @@ export function PaymentList() {
 
   const { data: tenantsList } = useAdminTenants()
   const tenants = isSuperAdmin ? (tenantsList ?? []) : []
+  const { data: queueData } = useApprovalQueue()
+  const pendingCount = canApprove ? (queueData?.data?.length ?? 0) : 0
 
   const handlePreset = (p: Preset) => { setPreset(p); setDateRange(presetToRange(p)); setPage(1) }
   const handleCustomRange = (range: DateRange) => {
@@ -338,6 +342,21 @@ export function PaymentList() {
         title="Payments"
         actions={
           <div className="flex items-center gap-2">
+            {canApprove && (
+              <Link to="/payments/approval-queue">
+                <Button variant="outline" className="relative">
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Approval queue
+                  {pendingCount > 0 && (
+                    <span className="ml-1.5 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-warning px-1.5 text-[11px] font-bold text-warning-fg">
+                      {pendingCount}
+                    </span>
+                  )}
+                </Button>
+              </Link>
+            )}
             {isAdmin && (
               <Link to="/admin/manual-payments">
                 <Button variant="outline">
