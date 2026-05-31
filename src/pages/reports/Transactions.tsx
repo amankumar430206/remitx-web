@@ -9,6 +9,7 @@ import { Pagination } from '@/components/ui/atoms/Pagination'
 import { ContentCard } from '@/layouts/ContentCard'
 import { useTransactions } from '@/hooks/useReports'
 import reportsApi from '@/api/reports'
+import { toLocalDateStr } from '@/lib/utils'
 import type { DateRange } from '@/components/ui/molecules/DateRangePicker'
 import type { Column } from '@/components/ui/organisms/DataTable'
 import type { TransactionRow } from '@/api/reports'
@@ -154,8 +155,8 @@ export function Transactions() {
     page,
     limit: 20,
     direction: direction as 'debit' | 'credit' | undefined || undefined,
-    from: dateRange.startDate ? dateRange.startDate.toISOString().slice(0, 10) : undefined,
-    to: dateRange.endDate ? dateRange.endDate.toISOString().slice(0, 10) : undefined,
+    from: dateRange.startDate ? toLocalDateStr(dateRange.startDate) : undefined,
+    to: dateRange.endDate ? toLocalDateStr(dateRange.endDate) : undefined,
   }
 
   const { data, isLoading } = useTransactions(params)

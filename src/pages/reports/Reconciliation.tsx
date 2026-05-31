@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/ui/molecules/EmptyState'
 import { Badge } from '@/components/ui/atoms/Badge'
 import { ContentCard } from '@/layouts/ContentCard'
 import { useReconciliation } from '@/hooks/useReports'
+import { toLocalDateStr } from '@/lib/utils'
 import type { DateRange } from '@/components/ui/molecules/DateRangePicker'
 
 type Preset = '7d' | '30d' | '3m' | '6m' | 'ytd' | 'custom'
@@ -56,8 +57,8 @@ export function Reconciliation() {
   ], [preset, dateRange])
 
   const params = {
-    from: dateRange.startDate?.toISOString().slice(0, 10),
-    to:   dateRange.endDate?.toISOString().slice(0, 10),
+    from: dateRange.startDate ? toLocalDateStr(dateRange.startDate) : undefined,
+    to:   dateRange.endDate ? toLocalDateStr(dateRange.endDate) : undefined,
   }
 
   const { data: rows, isLoading } = useReconciliation(params)

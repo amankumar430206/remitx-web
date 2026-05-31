@@ -18,6 +18,7 @@ import { Drawer } from '@/components/ui/molecules/Drawer'
 import { usePayments, usePayment } from '@/hooks/usePayments'
 import { useAdminTenants } from '@/hooks/useAdmin'
 import { useDebounce } from '@/hooks/useDebounce'
+import { toLocalDateStr } from '@/lib/utils'
 import type { Payment } from '@/api/payments'
 import type { DateRange } from '@/components/ui/molecules/DateRangePicker'
 
@@ -154,8 +155,8 @@ export function PaymentList() {
     status: status || undefined,
     direction: isSuperAdmin ? undefined : (direction || undefined),
     search: debouncedSearch || undefined,
-    from: dateRange.startDate ? dateRange.startDate.toISOString().slice(0, 10) : undefined,
-    to: dateRange.endDate ? dateRange.endDate.toISOString().slice(0, 10) : undefined,
+    from: dateRange.startDate ? toLocalDateStr(dateRange.startDate) : undefined,
+    to: dateRange.endDate ? toLocalDateStr(dateRange.endDate) : undefined,
     tenantId: isSuperAdmin ? (selectedTenantId || undefined) : undefined,
   })
 
