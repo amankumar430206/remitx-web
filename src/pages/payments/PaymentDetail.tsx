@@ -78,9 +78,10 @@ export function PaymentDetail() {
   if (isError || !payment) return <ErrorState title="Payment not found" onRetry={refetch} />
 
   const isSuperAdmin = user?.role === 'super_admin'
-  const canApprove = payment.status === 'pending_approval' && (user?.role === 'admin' || user?.role === 'checker')
   const isOwnPayment = payment.user_id === user?.id
-  const canCancel = ['pending_approval', 'approved'].includes(payment.status) && isOwnPayment
+  const canApprove = payment.status === 'pending_approval' &&
+    (isSuperAdmin || user?.role === 'client_admin' || user?.role === 'checker')
+  const canCancel = ['pending_approval', 'pending_compliance', 'pending_manual_processing'].includes(payment.status) && isOwnPayment
 
   const timelineEvents = (payment.status_history ?? []).map(h => ({
     id: h.id,
@@ -97,7 +98,7 @@ export function PaymentDetail() {
         breadcrumbs={[{ label: 'Payments', href: '/payments' }, { label: `#${id?.slice(0, 8)}…` }]}
         actions={
           <div className="flex items-center gap-2">
-            {canApprove && !isOwnPayment && (
+            {canApprove && (!isOwnPayment || isSuperAdmin) && (
               <>
                 <Button variant="outline" size="sm" onClick={() => setShowRejectDialog(true)} disabled={approveMutation.isPending || rejectMutation.isPending}>
                   Reject
@@ -107,7 +108,7 @@ export function PaymentDetail() {
                 </Button>
               </>
             )}
-            {canApprove && isOwnPayment && (
+            {canApprove && isOwnPayment && !isSuperAdmin && (
               <span className="text-xs text-muted-fg italic">Awaiting approval from another user</span>
             )}
             {canCancel && (
