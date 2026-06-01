@@ -10,13 +10,16 @@ import { LoadingState } from '@/components/ui/molecules/LoadingState'
 import { ErrorState } from '@/components/ui/molecules/ErrorState'
 import { ConfirmDialog } from '@/components/ui/molecules/ConfirmDialog'
 import { Button } from '@/components/ui/atoms/Button'
+import { Input } from '@/components/ui/atoms/Input'
 import { Textarea } from '@/components/ui/atoms/Textarea'
 import { ContentCard } from '@/layouts/ContentCard'
 import { usePayment } from '@/hooks/usePayments'
 import { useAuthStore } from '@/stores/authStore'
 import paymentsApi from '@/api/payments'
+import adminApi from '@/api/admin'
 import { getApiError } from '@/lib/apiError'
 import { printReceiptAsTextPdf, copyReceiptText } from '@/lib/receipt'
+import { cn } from '@/lib/utils'
 
 function InfoRow({ label, value, mono }: { label: string; value: React.ReactNode; mono?: boolean }) {
   return (
@@ -40,6 +43,41 @@ function SectionHeader({ icon, title }: { icon: React.ReactNode; title: string }
   )
 }
 
+// ─── Status-specific action banner ────────────────────────────────────────────
+
+const STATUS_CONTEXT: Record<string, { color: string; icon: React.ReactNode; title: string; body: string }> = {
+  pending_compliance: {
+    color: 'border-warning/40 bg-warning/5',
+    icon: (
+      <svg className="h-4 w-4 text-warning-fg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+      </svg>
+    ),
+    title: 'Compliance review required',
+    body: 'This payment was flagged by AML checks and is awaiting compliance officer review. Approve to push to processing, or reject to return funds.',
+  },
+  pending_manual_processing: {
+    color: 'border-primary/30 bg-primary/5',
+    icon: (
+      <svg className="h-4 w-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+      </svg>
+    ),
+    title: 'Awaiting manual settlement',
+    body: 'Approved and queued for manual processing. Execute the bank transfer externally, then mark this payment as complete with the provider reference.',
+  },
+  processing: {
+    color: 'border-primary/30 bg-primary/5',
+    icon: (
+      <svg className="h-4 w-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+      </svg>
+    ),
+    title: 'Payment is processing',
+    body: 'The payment has been dispatched. If the provider has settled externally you can mark it complete, or fail it to reverse the debit.',
+  },
+}
+
 export function PaymentDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -48,40 +86,67 @@ export function PaymentDetail() {
 
   const { data: payment, isLoading, isError, refetch } = usePayment(id ?? '')
 
-  const [showRejectDialog, setShowRejectDialog] = useState(false)
-  const [rejectNote, setRejectNote] = useState('')
-  const [showCancelDialog, setShowCancelDialog] = useState(false)
-  const [copied, setCopied] = useState(false)
+  // ── dialog state ──────────────────────────────────────────────────────────
+  const [showRejectDialog, setShowRejectDialog]   = useState(false)
+  const [rejectNote, setRejectNote]               = useState('')
+  const [showCancelDialog, setShowCancelDialog]   = useState(false)
+  const [showCompleteDialog, setShowCompleteDialog] = useState(false)
+  const [showFailDialog, setShowFailDialog]       = useState(false)
+  const [processNotes, setProcessNotes]           = useState('')
+  const [providerRef, setProviderRef]             = useState('')
+  const [copied, setCopied]                       = useState(false)
+
+  // ── mutations ─────────────────────────────────────────────────────────────
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ['payments', id] })
+    qc.invalidateQueries({ queryKey: ['payments'] })
+  }
 
   const approveMutation = useMutation({
     mutationFn: () => paymentsApi.approve(id!),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['payments', id] }),
+    onSuccess: invalidate,
   })
 
   const rejectMutation = useMutation({
     mutationFn: () => paymentsApi.reject(id!, rejectNote),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['payments', id] })
-      setShowRejectDialog(false)
-    },
+    onSuccess: () => { invalidate(); setShowRejectDialog(false) },
   })
 
   const cancelMutation = useMutation({
     mutationFn: () => paymentsApi.cancel(id!),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['payments', id] })
-      setShowCancelDialog(false)
-    },
+    onSuccess: () => { invalidate(); setShowCancelDialog(false) },
+  })
+
+  const completeMutation = useMutation({
+    mutationFn: () => adminApi.payments.process(id!, 'complete', processNotes || undefined, providerRef || undefined),
+    onSuccess: () => { invalidate(); setShowCompleteDialog(false); setProcessNotes(''); setProviderRef('') },
+  })
+
+  const failMutation = useMutation({
+    mutationFn: () => adminApi.payments.process(id!, 'fail', processNotes || undefined),
+    onSuccess: () => { invalidate(); setShowFailDialog(false); setProcessNotes('') },
   })
 
   if (isLoading) return <LoadingState message="Loading payment details…" />
   if (isError || !payment) return <ErrorState title="Payment not found" onRetry={refetch} />
 
+  // ── role / status derivations ─────────────────────────────────────────────
   const isSuperAdmin = user?.role === 'super_admin'
+  const isAdminRole  = isSuperAdmin || user?.role === 'client_admin'
   const isOwnPayment = payment.user_id === user?.id
-  const canApprove = payment.status === 'pending_approval' &&
+
+  /** Can approve/reject: pending_approval or pending_compliance */
+  const canApprove = ['pending_approval', 'pending_compliance'].includes(payment.status) &&
     (isSuperAdmin || user?.role === 'client_admin' || user?.role === 'checker')
+
+  /** Can complete/fail: ops action for super_admin only */
+  const canProcess = isSuperAdmin &&
+    ['pending_manual_processing', 'processing'].includes(payment.status)
+
+  /** Initiator can cancel while still actionable */
   const canCancel = ['pending_approval', 'pending_compliance', 'pending_manual_processing'].includes(payment.status) && isOwnPayment
+
+  const statusCtx = STATUS_CONTEXT[payment.status]
 
   const timelineEvents = (payment.status_history ?? []).map(h => ({
     id: h.id,
@@ -91,30 +156,79 @@ export function PaymentDetail() {
     actor: h.actor_type,
   }))
 
+  const anyMutationPending = approveMutation.isPending || rejectMutation.isPending ||
+    completeMutation.isPending || failMutation.isPending || cancelMutation.isPending
+
   return (
     <div className="flex flex-col gap-6 max-w-3xl mx-auto">
       <PageHeader
         title="Payment details"
         breadcrumbs={[{ label: 'Payments', href: '/payments' }, { label: `#${id?.slice(0, 8)}…` }]}
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+
+            {/* ── Approve / Reject (pending_approval + pending_compliance) ── */}
             {canApprove && (!isOwnPayment || isSuperAdmin) && (
               <>
-                <Button variant="outline" size="sm" onClick={() => setShowRejectDialog(true)} disabled={approveMutation.isPending || rejectMutation.isPending}>
+                <Button
+                  variant="outline" size="sm"
+                  onClick={() => setShowRejectDialog(true)}
+                  disabled={anyMutationPending}
+                >
                   Reject
                 </Button>
-                <Button size="sm" loading={approveMutation.isPending} disabled={rejectMutation.isPending} onClick={() => approveMutation.mutate()}>
+                <Button
+                  size="sm"
+                  loading={approveMutation.isPending}
+                  disabled={anyMutationPending && !approveMutation.isPending}
+                  onClick={() => approveMutation.mutate()}
+                >
                   Approve
                 </Button>
               </>
             )}
+
+            {/* ── Ops: Complete / Fail (pending_manual_processing + processing) ── */}
+            {canProcess && (
+              <>
+                <Button
+                  variant="outline" size="sm"
+                  onClick={() => { setProcessNotes(''); setShowFailDialog(true) }}
+                  disabled={anyMutationPending}
+                  className="border-danger/40 text-danger-fg hover:bg-danger/5"
+                >
+                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  Mark as failed
+                </Button>
+                <Button
+                  size="sm"
+                  loading={completeMutation.isPending}
+                  disabled={anyMutationPending && !completeMutation.isPending}
+                  onClick={() => { setProcessNotes(''); setProviderRef(''); setShowCompleteDialog(true) }}
+                  className="bg-success text-success-fg hover:bg-success/90"
+                >
+                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                  Mark as complete
+                </Button>
+              </>
+            )}
+
+            {/* ── Cancel (initiator only) ── */}
             {canCancel && (
-              <Button variant="ghost" size="sm" onClick={() => setShowCancelDialog(true)} disabled={cancelMutation.isPending}>
+              <Button
+                variant="ghost" size="sm"
+                onClick={() => setShowCancelDialog(true)}
+                disabled={anyMutationPending}
+              >
                 Cancel payment
               </Button>
             )}
 
-            {/* Share receipt */}
+            {/* ── Share receipt ── */}
             <DropdownMenu.Root>
               <DropdownMenu.Trigger asChild>
                 <Button variant="outline" size="sm">
@@ -161,7 +275,9 @@ export function PaymentDetail() {
         }
       />
 
-      {/* ── Awaiting approval notice ── */}
+      {/* ── Status context banner ─────────────────────────────────────────────── */}
+
+      {/* Awaiting approval — own payment, non-super-admin */}
       {canApprove && isOwnPayment && !isSuperAdmin && (
         <div className="flex items-start gap-3 rounded-xl border border-warning/40 bg-warning/10 px-4 py-3">
           <svg className="mt-0.5 h-4 w-4 shrink-0 text-warning-fg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -174,13 +290,24 @@ export function PaymentDetail() {
         </div>
       )}
 
+      {/* Compliance / processing / manual — contextual info */}
+      {statusCtx && (canApprove || canProcess || isAdminRole) && (
+        <div className={cn('flex items-start gap-3 rounded-xl border px-4 py-3.5', statusCtx.color)}>
+          <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/10">
+            {statusCtx.icon}
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-foreground">{statusCtx.title}</p>
+            <p className="text-xs text-muted-fg mt-0.5 leading-relaxed">{statusCtx.body}</p>
+          </div>
+        </div>
+      )}
+
       {/* ── Hero card ── */}
       <div className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-surface to-background p-6">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent pointer-events-none" />
 
-        {/* Amount corridor */}
         <div className="relative flex items-center justify-between gap-4">
-          {/* Source */}
           <div className="flex flex-col gap-1">
             <span className="text-xs font-medium text-muted-fg uppercase tracking-wider">You send</span>
             <div className="flex items-baseline gap-2">
@@ -191,7 +318,6 @@ export function PaymentDetail() {
             </div>
           </div>
 
-          {/* Arrow + rate */}
           <div className="flex flex-col items-center gap-1.5 shrink-0">
             <div className="flex items-center gap-2">
               <div className="h-px w-8 bg-border" />
@@ -207,7 +333,6 @@ export function PaymentDetail() {
             </span>
           </div>
 
-          {/* Dest */}
           <div className="flex flex-col gap-1 items-end">
             <span className="text-xs font-medium text-muted-fg uppercase tracking-wider">They receive</span>
             <div className="flex items-baseline gap-2">
@@ -219,7 +344,6 @@ export function PaymentDetail() {
           </div>
         </div>
 
-        {/* Status + meta row */}
         <div className="relative mt-5 pt-4 border-t border-border flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
             <StatusBadge status={payment.status} />
@@ -242,7 +366,6 @@ export function PaymentDetail() {
 
       {/* ── Details grid ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Transfer info */}
         <ContentCard>
           <SectionHeader
             title="Transfer details"
@@ -259,7 +382,6 @@ export function PaymentDetail() {
           <InfoRow label="Payment ID" value={payment.id} mono />
         </ContentCard>
 
-        {/* Recipient info */}
         <ContentCard>
           <SectionHeader
             title="Recipient"
@@ -279,8 +401,8 @@ export function PaymentDetail() {
         </ContentCard>
       </div>
 
-      {/* ── Provider details (super_admin only) ── */}
-      {isSuperAdmin && (
+      {/* ── Provider details (admin only) ── */}
+      {isAdminRole && (
         <ContentCard>
           <SectionHeader
             title="Provider details"
@@ -300,6 +422,9 @@ export function PaymentDetail() {
           />
           <InfoRow label="Provider payment ID" value={payment.provider_payment_id ?? '—'} mono />
           {payment.ops_notes && <InfoRow label="Ops notes" value={payment.ops_notes} />}
+          {isSuperAdmin && payment.tenant_name && (
+            <InfoRow label="Client" value={payment.tenant_name} />
+          )}
         </ContentCard>
       )}
 
@@ -318,16 +443,20 @@ export function PaymentDetail() {
         </ContentCard>
       )}
 
-      {/* ── Errors ── */}
-      {(approveMutation.isError || rejectMutation.isError) && (
+      {/* ── Mutation errors ── */}
+      {(approveMutation.isError || rejectMutation.isError || completeMutation.isError || failMutation.isError) && (
         <div className="flex items-start gap-2 rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger-fg">
           <svg className="mt-0.5 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
-          {getApiError(approveMutation.error ?? rejectMutation.error, 'Action failed. Please try again.')}
+          {getApiError(
+            approveMutation.error ?? rejectMutation.error ?? completeMutation.error ?? failMutation.error,
+            'Action failed. Please try again.',
+          )}
         </div>
       )}
 
+      {/* ── Reject dialog ── */}
       <ConfirmDialog
         open={showRejectDialog}
         onOpenChange={setShowRejectDialog}
@@ -347,6 +476,7 @@ export function PaymentDetail() {
         />
       </ConfirmDialog>
 
+      {/* ── Cancel dialog ── */}
       <ConfirmDialog
         open={showCancelDialog}
         onOpenChange={setShowCancelDialog}
@@ -357,6 +487,69 @@ export function PaymentDetail() {
         onConfirm={() => cancelMutation.mutate()}
         loading={cancelMutation.isPending}
       />
+
+      {/* ── Mark as Complete dialog ── */}
+      <ConfirmDialog
+        open={showCompleteDialog}
+        onOpenChange={setShowCompleteDialog}
+        title="Mark payment as complete"
+        description="Confirm that the funds have been successfully transferred to the recipient."
+        confirmLabel="Mark as complete"
+        variant="default"
+        onConfirm={() => completeMutation.mutate()}
+        loading={completeMutation.isPending}
+      >
+        <div className="flex flex-col gap-3">
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-foreground">
+              Provider reference <span className="text-muted-fg font-normal">(optional)</span>
+            </label>
+            <Input
+              value={providerRef}
+              onChange={e => setProviderRef(e.target.value)}
+              placeholder="Transaction ID from banking portal…"
+              maxLength={128}
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-foreground">
+              Notes <span className="text-muted-fg font-normal">(optional)</span>
+            </label>
+            <Textarea
+              value={processNotes}
+              onChange={e => setProcessNotes(e.target.value)}
+              placeholder="Any additional notes for audit…"
+              rows={2}
+            />
+          </div>
+        </div>
+      </ConfirmDialog>
+
+      {/* ── Mark as Failed dialog ── */}
+      <ConfirmDialog
+        open={showFailDialog}
+        onOpenChange={setShowFailDialog}
+        title="Mark payment as failed"
+        description="The debit will be reversed and the sender's balance restored."
+        confirmLabel="Mark as failed"
+        variant="danger"
+        onConfirm={() => failMutation.mutate()}
+        loading={failMutation.isPending}
+        disabled={processNotes.trim().length < 3}
+      >
+        <div>
+          <label className="mb-1.5 block text-xs font-medium text-foreground">
+            Reason <span className="text-danger-fg">*</span>
+          </label>
+          <Textarea
+            value={processNotes}
+            onChange={e => setProcessNotes(e.target.value)}
+            placeholder="Why did this payment fail?…"
+            rows={3}
+          />
+          <p className="mt-1 text-xs text-muted-fg">Minimum 3 characters required.</p>
+        </div>
+      </ConfirmDialog>
     </div>
   )
 }
