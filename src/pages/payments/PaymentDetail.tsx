@@ -149,25 +149,28 @@ const Icons = {
 
 const STATUS_CONTEXT = {
   pending_compliance: {
-    color: 'border-warning/40 bg-warning/5',
+    color: 'bg-warning border-warning-fg/25',
     iconColor: 'text-warning-fg',
+    titleColor: 'text-warning-fg',
+    bodyColor: 'text-warning-fg/75',
     title: 'Compliance review required',
     body: 'This payment was flagged by AML screening and is awaiting a compliance officer review. Approve to release for processing, or reject to return the payment.',
-    icon: 'shield',
   },
   pending_manual_processing: {
-    color: 'border-primary/30 bg-primary/5',
-    iconColor: 'text-primary',
+    color: 'bg-info border-info-fg/25',
+    iconColor: 'text-info-fg',
+    titleColor: 'text-info-fg',
+    bodyColor: 'text-info-fg/75',
     title: 'Awaiting manual settlement',
     body: 'The payment has been approved and is queued for manual bank transfer. Execute the transfer externally, then mark this payment complete with the provider reference.',
-    icon: 'bank',
   },
   processing: {
-    color: 'border-primary/30 bg-primary/5',
-    iconColor: 'text-primary',
+    color: 'bg-info border-info-fg/25',
+    iconColor: 'text-info-fg',
+    titleColor: 'text-info-fg',
+    bodyColor: 'text-info-fg/75',
     title: 'Payment is processing',
     body: 'The payment has been dispatched to the provider. Once the transfer settles externally you can mark it complete, or fail it to reverse the debit.',
-    icon: 'refresh',
   },
 } as const
 
@@ -464,19 +467,17 @@ export function PaymentDetail() {
 
       {/* ── 1. Completed ──────────────────────────────────────────────────── */}
       {payment.status === 'completed' && (
-        <div className="flex items-start gap-3 rounded-xl border border-success/40 bg-success/10 px-4 py-3.5">
-          <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-success/20 text-success-fg">
-            {Icons.check}
-          </div>
-          <div className="flex flex-col gap-0.5">
+        <div className="flex items-start gap-3 rounded-xl border border-success-fg/25 bg-success px-4 py-3">
+          <span className="mt-0.5 shrink-0 text-success-fg">{Icons.check}</span>
+          <div className="flex flex-col gap-0.5 min-w-0">
             <span className="text-sm font-semibold text-success-fg">Transfer complete</span>
-            <span className="text-xs text-success-fg/80 leading-relaxed">
+            <span className="text-xs text-success-fg/75 leading-relaxed">
               Funds were successfully delivered to {payment.beneficiary_name ?? 'the recipient'}.
               {payment.completed_at && (
                 <> Settled {new Date(payment.completed_at).toLocaleString()}.</>
               )}
               {payment.provider_payment_id && (
-                <> Provider ref: <span className="font-mono">{payment.provider_payment_id}</span>.</>
+                <> Provider ref: <span className="font-mono break-all">{payment.provider_payment_id}</span>.</>
               )}
             </span>
           </div>
@@ -485,50 +486,36 @@ export function PaymentDetail() {
 
       {/* ── 2. Rejected ───────────────────────────────────────────────────── */}
       {payment.status === 'rejected' && (
-        <div className="flex items-start gap-3 rounded-xl border border-danger/40 bg-danger/10 px-4 py-3.5">
-          <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-danger/20 text-danger-fg">
-            {Icons.x}
-          </div>
+        <div className="flex items-start gap-3 rounded-xl border border-danger-fg/25 bg-danger px-4 py-3">
+          <span className="mt-0.5 shrink-0 text-danger-fg">{Icons.x}</span>
           <div className="flex flex-col gap-0.5">
             <span className="text-sm font-semibold text-danger-fg">Payment rejected</span>
-            {rejectionReason ? (
-              <span className="text-xs text-danger-fg/80 leading-relaxed">
-                Reason: {rejectionReason}
-              </span>
-            ) : (
-              <span className="text-xs text-danger-fg/70">No reason was recorded.</span>
-            )}
+            <span className="text-xs text-danger-fg/75 leading-relaxed">
+              {rejectionReason ? `Reason: ${rejectionReason}` : 'No reason was recorded.'}
+            </span>
           </div>
         </div>
       )}
 
       {/* ── 3. Failed ─────────────────────────────────────────────────────── */}
       {payment.status === 'failed' && (
-        <div className="flex items-start gap-3 rounded-xl border border-danger/40 bg-danger/10 px-4 py-3.5">
-          <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-danger/20 text-danger-fg">
-            {Icons.warn}
-          </div>
+        <div className="flex items-start gap-3 rounded-xl border border-danger-fg/25 bg-danger px-4 py-3">
+          <span className="mt-0.5 shrink-0 text-danger-fg">{Icons.warn}</span>
           <div className="flex flex-col gap-0.5">
             <span className="text-sm font-semibold text-danger-fg">Payment failed</span>
-            {failureReason ? (
-              <span className="text-xs text-danger-fg/80 leading-relaxed">
-                {failureReason} — The debit has been reversed and the balance restored.
-              </span>
-            ) : (
-              <span className="text-xs text-danger-fg/70">
-                The payment could not be completed. The debit has been reversed.
-              </span>
-            )}
+            <span className="text-xs text-danger-fg/75 leading-relaxed">
+              {failureReason
+                ? `${failureReason} — The debit has been reversed and the balance restored.`
+                : 'The payment could not be completed. The debit has been reversed.'}
+            </span>
           </div>
         </div>
       )}
 
       {/* ── 4. Cancelled ──────────────────────────────────────────────────── */}
       {payment.status === 'cancelled' && (
-        <div className="flex items-start gap-3 rounded-xl border border-border bg-surface-overlay px-4 py-3.5">
-          <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted/30 text-muted-fg">
-            {Icons.x}
-          </div>
+        <div className="flex items-start gap-3 rounded-xl border border-border bg-muted px-4 py-3">
+          <span className="mt-0.5 shrink-0 text-muted-fg">{Icons.x}</span>
           <div className="flex flex-col gap-0.5">
             <span className="text-sm font-semibold text-foreground">Payment cancelled</span>
             <span className="text-xs text-muted-fg leading-relaxed">
@@ -540,13 +527,11 @@ export function PaymentDetail() {
 
       {/* ── 5. Awaiting approval — own payment, not super_admin ───────────── */}
       {canApprove && isOwnPayment && !isSuperAdmin && (
-        <div className="flex items-start gap-3 rounded-xl border border-warning/40 bg-warning/10 px-4 py-3.5">
-          <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-warning/20 text-warning-fg">
-            {Icons.clock}
-          </div>
+        <div className="flex items-start gap-3 rounded-xl border border-warning-fg/25 bg-warning px-4 py-3">
+          <span className="mt-0.5 shrink-0 text-warning-fg">{Icons.clock}</span>
           <div className="flex flex-col gap-0.5">
             <span className="text-sm font-semibold text-warning-fg">Awaiting approval</span>
-            <span className="text-xs text-warning-fg/80 leading-relaxed">
+            <span className="text-xs text-warning-fg/75 leading-relaxed">
               You submitted this payment. Another authorised user (checker or admin) must approve it before it can be processed.
             </span>
           </div>
@@ -555,13 +540,11 @@ export function PaymentDetail() {
 
       {/* ── 6. Dual approval: first approval done, waiting for second ─────── */}
       {hasFirstApproval && !isOwnPayment && (
-        <div className="flex items-start gap-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3.5">
-          <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-            {Icons.users}
-          </div>
+        <div className="flex items-start gap-3 rounded-xl border border-info-fg/25 bg-info px-4 py-3">
+          <span className="mt-0.5 shrink-0 text-info-fg">{Icons.users}</span>
           <div className="flex flex-col gap-0.5">
-            <span className="text-sm font-semibold text-foreground">First approval recorded</span>
-            <span className="text-xs text-muted-fg leading-relaxed">
+            <span className="text-sm font-semibold text-info-fg">First approval recorded</span>
+            <span className="text-xs text-info-fg/75 leading-relaxed">
               {checkerName ?? 'A checker'} provided first approval. A second authorised checker must approve to finalise.
             </span>
           </div>
@@ -570,16 +553,16 @@ export function PaymentDetail() {
 
       {/* ── 7. Compliance / manual / processing context (admin view) ─────── */}
       {statusCtx && !isTerminal && (isAdminRole || canApprove) && (
-        <div className={cn('flex items-start gap-3 rounded-xl border px-4 py-3.5', statusCtx.color)}>
-          <div className={cn('mt-0.5 shrink-0', statusCtx.iconColor)}>
+        <div className={cn('flex items-start gap-3 rounded-xl border px-4 py-3', statusCtx.color)}>
+          <span className={cn('mt-0.5 shrink-0', statusCtx.iconColor)}>
             {payment.status === 'pending_compliance' ? Icons.shield :
               payment.status === 'processing' ? Icons.refresh : Icons.bank}
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-foreground">{statusCtx.title}</p>
-            <p className="text-xs text-muted-fg mt-0.5 leading-relaxed">{statusCtx.body}</p>
+          </span>
+          <div className="min-w-0">
+            <p className={cn('text-sm font-semibold', statusCtx.titleColor)}>{statusCtx.title}</p>
+            <p className={cn('text-xs mt-0.5 leading-relaxed', statusCtx.bodyColor)}>{statusCtx.body}</p>
             {amlNote && payment.status === 'pending_compliance' && (
-              <p className="mt-2 rounded-lg bg-warning/10 border border-warning/20 px-3 py-1.5 text-xs text-warning-fg leading-relaxed">
+              <p className="mt-2 rounded-lg bg-warning border border-warning-fg/25 px-3 py-1.5 text-xs text-warning-fg leading-relaxed">
                 AML note: {amlNote}
               </p>
             )}
