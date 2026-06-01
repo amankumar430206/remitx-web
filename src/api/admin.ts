@@ -18,7 +18,7 @@ export interface KycQueueItem {
   first_name: string | null
   last_name: string | null
   status: 'submitted' | 'pending'
-  documents: Array<{ filename: string; type: string; path: string }>
+  documents: TenantContactDocument[]
   created_at: string
 }
 
