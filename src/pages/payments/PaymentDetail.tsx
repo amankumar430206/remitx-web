@@ -297,7 +297,7 @@ export function PaymentDetail() {
           { label: `#${id?.slice(0, 8)}…` },
         ]}
         actions={
-          <div className="flex items-center gap-2 flex-wrap justify-end">
+          <div className="flex items-center gap-2 flex-wrap justify-end print:hidden">
 
             {/* Approve / Reject */}
             {canApprove && (!isOwnPayment || isSuperAdmin) && (
@@ -615,7 +615,15 @@ export function PaymentDetail() {
         </div>
       </div>
 
+      {/* ── Print-only header ─────────────────────────────────────────────── */}
+      <div className="hidden print:block border-b border-border pb-4">
+        <p className="text-xs text-muted-fg uppercase tracking-widest mb-1">Payment receipt</p>
+        <p className="text-lg font-bold text-foreground">{payment.reference ?? payment.id}</p>
+        <p className="text-xs text-muted-fg mt-0.5">Printed {new Date().toLocaleString()}</p>
+      </div>
+
       {/* ── Section quick-nav ─────────────────────────────────────────────── */}
+      <div className="print:hidden">
       <NavPills items={[
         { label: 'Transfer details', id: 'section-transfer' },
         { label: 'Recipient',        id: 'section-recipient' },
@@ -628,6 +636,7 @@ export function PaymentDetail() {
         ...(timelineEvents.length > 0
           ? [{ label: 'Status history', id: 'section-history' }] : []),
       ]} />
+      </div>
 
       {/* ══════════════════════════════════════════════════════════════════════
           DETAIL CARDS GRID
@@ -766,7 +775,7 @@ export function PaymentDetail() {
       {/* ── Mutation errors ───────────────────────────────────────────────── */}
       {(approveMutation.isError || rejectMutation.isError || completeMutation.isError ||
         failMutation.isError || cancelMutation.isError) && (
-        <div className="flex items-start gap-2 rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger-fg">
+        <div className="print:hidden flex items-start gap-2 rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger-fg">
           <svg className="mt-0.5 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
@@ -882,7 +891,7 @@ export function PaymentDetail() {
         <button
           type="button"
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          className="fixed bottom-6 right-6 z-50 flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface shadow-lg transition-all duration-200 hover:bg-surface-overlay hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0"
+          className="print:hidden fixed bottom-6 right-6 z-50 flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface shadow-lg transition-all duration-200 hover:bg-surface-overlay hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0"
           aria-label="Back to top"
         >
           <svg className="h-4 w-4 text-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
