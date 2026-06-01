@@ -185,7 +185,7 @@ export function Transactions() {
         presets={PRESETS}
         activePreset={preset}
         onPresetChange={p => handlePreset(p as Preset)}
-        dateRange={dateRange}
+        dateRange={preset === 'custom' ? dateRange : undefined}
         onCustomRange={handleCustomRange}
         advancedFilters={
           <div className="flex flex-col gap-1">
