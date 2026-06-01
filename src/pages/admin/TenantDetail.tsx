@@ -249,7 +249,7 @@ export function TenantDetail() {
             )}
 
             {activeTab === 'fee-setup' && (
-              <TenantFeeRules tenantId={tenant.id} />
+              <TenantFeeRules tenantId={tenant.id} tenantName={tenant.name} />
             )}
 
             {activeTab === 'providers' && (

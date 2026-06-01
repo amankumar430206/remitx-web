@@ -178,9 +178,10 @@ const feeColumns = (
 
 interface Props {
   tenantId: string
+  tenantName?: string
 }
 
-export function TenantFeeRules({ tenantId }: Props) {
+export function TenantFeeRules({ tenantId, tenantName }: Props) {
   const [addingFee, setAddingFee] = useState(false)
   const [deleteDialog, setDeleteDialog] = useState<string | null>(null)
   const [customizeRow, setCustomizeRow] = useState<FeeConfig | null>(null)
@@ -271,22 +272,31 @@ export function TenantFeeRules({ tenantId }: Props) {
           <div>
             <h3 className="text-sm font-semibold text-foreground">Fee rules</h3>
             <p className="text-xs text-muted-fg">
-              Admin-only · no custom rule = falls back to{' '}
-              <Link
-                to="/admin/global-fees"
-                className="text-primary underline-offset-2 hover:underline"
-              >
+              Rules apply only to{' '}
+              <span className="font-medium text-foreground">{tenantName ?? 'this tenant'}</span>
+              {' · '}no custom rule = falls back to{' '}
+              <Link to="/admin/global-fees" className="text-primary underline-offset-2 hover:underline">
                 global fee
               </Link>
             </p>
           </div>
           {!addingFee && (
-            <Button size="sm" onClick={() => setAddingFee(true)}>
-              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-              </svg>
-              Add rule
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="ghost" asChild>
+                <Link to="/admin/global-fees">
+                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                  </svg>
+                  Add global rule
+                </Link>
+              </Button>
+              <Button size="sm" onClick={() => setAddingFee(true)}>
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+                Add rule
+              </Button>
+            </div>
           )}
         </div>
 
