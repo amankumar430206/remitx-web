@@ -189,13 +189,6 @@ export function PaymentDetail() {
   const [processNotes,       setProcessNotes]       = useState('')
   const [providerRef,        setProviderRef]        = useState('')
   const [copied,             setCopied]             = useState(false)
-  const [showBackToTop,      setShowBackToTop]      = useState(false)
-
-  useEffect(() => {
-    const onScroll = () => setShowBackToTop(window.scrollY > 400)
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
 
   // ── mutations ─────────────────────────────────────────────────────────────
   const invalidate = () => {
@@ -953,19 +946,6 @@ export function PaymentDetail() {
         </div>
       </ConfirmDialog>
 
-      {/* ── Back to top ───────────────────────────────────────────────────── */}
-      {showBackToTop && (
-        <button
-          type="button"
-          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          className="print:hidden fixed bottom-6 right-6 z-50 flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface shadow-lg transition-all duration-200 hover:bg-surface-overlay hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0"
-          aria-label="Back to top"
-        >
-          <svg className="h-4 w-4 text-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
-          </svg>
-        </button>
-      )}
     </div>
   )
 }

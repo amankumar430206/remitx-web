@@ -110,6 +110,13 @@ export const FEATURE_FLAGS: FeatureFlagDef[] = [
     group: 'UX',
     defaultEnabled: true,
   },
+  {
+    key: 'back_to_top',
+    label: 'Back to Top Button',
+    description: 'Show a floating button that scrolls back to the top of any page',
+    group: 'UX',
+    defaultEnabled: true,
+  },
 ]
 
 export const FLAG_GROUPS = [...new Set(FEATURE_FLAGS.map(f => f.group))]

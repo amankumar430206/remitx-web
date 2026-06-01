@@ -3,6 +3,7 @@ import { TopNav } from './TopNav'
 import { TopBar } from './TopBar'
 import { MobileNav } from './MobileNav'
 import { Sidebar } from './Sidebar'
+import { BackToTop } from '@/components/ui/atoms/BackToTop'
 import { useLayoutStore } from '@/stores/layoutStore'
 import type { NavItem } from './TopNav'
 
@@ -31,6 +32,7 @@ export function PageLayout({ navItems, user, onLogout, logo, logoUrl, tenantName
             {children}
           </main>
         </div>
+        <BackToTop />
       </div>
     )
   }
@@ -42,6 +44,7 @@ export function PageLayout({ navItems, user, onLogout, logo, logoUrl, tenantName
       <main className={cn('flex-1 px-4 md:px-6 lg:px-8 py-6 w-full', className)}>
         {children}
       </main>
+      <BackToTop />
     </div>
   )
 }
