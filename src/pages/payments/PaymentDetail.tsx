@@ -1,6 +1,6 @@
 import { useParams } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { PageHeader } from '@/components/ui/organisms/PageHeader'
 import { Timeline } from '@/components/ui/organisms/Timeline'
@@ -189,6 +189,13 @@ export function PaymentDetail() {
   const [processNotes,       setProcessNotes]       = useState('')
   const [providerRef,        setProviderRef]        = useState('')
   const [copied,             setCopied]             = useState(false)
+  const [showBackToTop,      setShowBackToTop]      = useState(false)
+
+  useEffect(() => {
+    const onScroll = () => setShowBackToTop(window.scrollY > 400)
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
 
   // ── mutations ─────────────────────────────────────────────────────────────
   const invalidate = () => {
@@ -380,6 +387,15 @@ export function PaymentDetail() {
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                     Download PDF
+                  </DropdownMenu.Item>
+                  <DropdownMenu.Item
+                    className="flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-surface-overlay outline-none transition-colors"
+                    onSelect={() => window.print()}
+                  >
+                    <svg className="h-4 w-4 text-muted-fg shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                    </svg>
+                    Print page
                   </DropdownMenu.Item>
                   <DropdownMenu.Item
                     className="flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-surface-overlay outline-none transition-colors"
@@ -861,6 +877,19 @@ export function PaymentDetail() {
         </div>
       </ConfirmDialog>
 
+      {/* ── Back to top ───────────────────────────────────────────────────── */}
+      {showBackToTop && (
+        <button
+          type="button"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          className="fixed bottom-6 right-6 z-50 flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface shadow-lg transition-all duration-200 hover:bg-surface-overlay hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0"
+          aria-label="Back to top"
+        >
+          <svg className="h-4 w-4 text-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
+          </svg>
+        </button>
+      )}
     </div>
   )
 }
