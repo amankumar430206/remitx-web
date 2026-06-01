@@ -47,6 +47,7 @@ const KycQueue            = lazy(() => import('@/pages/admin/KycQueue').then(m =
 const ManualPaymentQueue  = lazy(() => import('@/pages/admin/ManualPaymentQueue').then(m => ({ default: m.ManualPaymentQueue })))
 const AllPayments         = lazy(() => import('@/pages/admin/AllPayments').then(m => ({ default: m.AllPayments })))
 const ProviderConfig      = lazy(() => import('@/pages/admin/ProviderConfig').then(m => ({ default: m.ProviderConfig })))
+const GlobalFeeRules      = lazy(() => import('@/pages/admin/GlobalFeeRules').then(m => ({ default: m.GlobalFeeRules })))
 const OnBehalfPayment     = lazy(() => import('@/pages/admin/OnBehalfPayment').then(m => ({ default: m.OnBehalfPayment })))
 const DesignSystem        = lazy(() => import('@/pages/DesignSystem').then(m => ({ default: m.DesignSystem })))
 const CorridorMap         = lazy(() => import('@/pages/CorridorMap').then(m => ({ default: m.CorridorMap })))
@@ -146,6 +147,7 @@ function App() {
                 <Route path="manual-payments" element={page(<ManualPaymentQueue />)} />
                 <Route path="payments" element={page(<AllPayments />)} />
                 <Route path="providers" element={page(<ProviderConfig />)} />
+                <Route path="global-fees" element={page(<GlobalFeeRules />)} />
               </Route>
 
               <Route path="/admin/payments/on-behalf" element={page(<OnBehalfPayment />)} />

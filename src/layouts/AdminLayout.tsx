@@ -6,6 +6,7 @@ const TABS = [
   { label: 'Manual payments',  href: '/admin/manual-payments' },
   { label: 'All payments',     href: '/admin/payments' },
   { label: 'Providers',        href: '/admin/providers' },
+  { label: 'Global fees',      href: '/admin/global-fees' },
 ]
 
 export function AdminLayout() {

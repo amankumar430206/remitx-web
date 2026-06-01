@@ -148,7 +148,7 @@ export function useFeeConfigs(tenantId: string) {
 export function useCreateFeeConfig() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ tenantId, ...payload }: { tenantId: string; sourceCurrency: string; destCurrency?: string | null; feeType: 'flat' | 'percent'; feeValue: number; minFee?: number | null; maxFee?: number | null }) =>
+    mutationFn: ({ tenantId, ...payload }: { tenantId: string; sourceCurrency: string; destCurrency?: string | null; inheritGlobal?: boolean; feeType?: 'flat' | 'percent'; feeValue?: number; minFee?: number | null; maxFee?: number | null }) =>
       adminApi.fees.create(tenantId, payload).then(r => r.data.data),
     onSuccess: (_, { tenantId }) => qc.invalidateQueries({ queryKey: ['admin-fee-configs', tenantId] }),
   })
@@ -157,7 +157,7 @@ export function useCreateFeeConfig() {
 export function useUpdateFeeConfig() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ tenantId, feeId, ...payload }: { tenantId: string; feeId: string; feeType?: 'flat' | 'percent'; feeValue?: number; minFee?: number | null; maxFee?: number | null; isActive?: boolean }) =>
+    mutationFn: ({ tenantId, feeId, ...payload }: { tenantId: string; feeId: string; inheritGlobal?: boolean; feeType?: 'flat' | 'percent'; feeValue?: number; minFee?: number | null; maxFee?: number | null; isActive?: boolean }) =>
       adminApi.fees.update(tenantId, feeId, payload).then(r => r.data.data),
     onSuccess: (_, { tenantId }) => qc.invalidateQueries({ queryKey: ['admin-fee-configs', tenantId] }),
   })
@@ -169,6 +169,39 @@ export function useDeleteFeeConfig() {
     mutationFn: ({ tenantId, feeId }: { tenantId: string; feeId: string }) =>
       adminApi.fees.delete(tenantId, feeId),
     onSuccess: (_, { tenantId }) => qc.invalidateQueries({ queryKey: ['admin-fee-configs', tenantId] }),
+  })
+}
+
+export function useGlobalFeeConfigs() {
+  return useQuery({
+    queryKey: ['admin-global-fee-configs'],
+    queryFn: () => adminApi.globalFees.list().then(r => r.data.data),
+  })
+}
+
+export function useCreateGlobalFeeConfig() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (payload: { sourceCurrency: string; destCurrency?: string | null; feeType: 'flat' | 'percent'; feeValue: number; minFee?: number | null; maxFee?: number | null }) =>
+      adminApi.globalFees.create(payload).then(r => r.data.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-global-fee-configs'] }),
+  })
+}
+
+export function useUpdateGlobalFeeConfig() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ feeId, ...payload }: { feeId: string; feeType?: 'flat' | 'percent'; feeValue?: number; minFee?: number | null; maxFee?: number | null; isActive?: boolean }) =>
+      adminApi.globalFees.update(feeId, payload).then(r => r.data.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-global-fee-configs'] }),
+  })
+}
+
+export function useDeleteGlobalFeeConfig() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (feeId: string) => adminApi.globalFees.delete(feeId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-global-fee-configs'] }),
   })
 }
 

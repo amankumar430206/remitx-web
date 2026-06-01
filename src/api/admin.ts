@@ -73,6 +73,20 @@ export interface FeeConfig {
   tenant_id: string
   source_currency: string
   dest_currency: string | null
+  inherit_global: boolean
+  fee_type: 'flat' | 'percent' | null
+  fee_value: string | null
+  min_fee: string | null
+  max_fee: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface GlobalFeeConfig {
+  id: string
+  source_currency: string
+  dest_currency: string | null
   fee_type: 'flat' | 'percent'
   fee_value: string
   min_fee: string | null
@@ -207,14 +221,16 @@ const admin = {
     create: (tenantId: string, payload: {
       sourceCurrency: string
       destCurrency?: string | null
-      feeType: 'flat' | 'percent'
-      feeValue: number
+      inheritGlobal?: boolean
+      feeType?: 'flat' | 'percent'
+      feeValue?: number
       minFee?: number | null
       maxFee?: number | null
     }) =>
       apiClient.post<{ success: boolean; data: FeeConfig }>(`/admin/tenants/${tenantId}/fee-config`, payload),
 
     update: (tenantId: string, feeId: string, payload: {
+      inheritGlobal?: boolean
       feeType?: 'flat' | 'percent'
       feeValue?: number
       minFee?: number | null
@@ -225,6 +241,33 @@ const admin = {
 
     delete: (tenantId: string, feeId: string) =>
       apiClient.delete(`/admin/tenants/${tenantId}/fee-config/${feeId}`),
+  },
+
+  globalFees: {
+    list: () =>
+      apiClient.get<{ success: boolean; data: GlobalFeeConfig[] }>('/admin/fee-config'),
+
+    create: (payload: {
+      sourceCurrency: string
+      destCurrency?: string | null
+      feeType: 'flat' | 'percent'
+      feeValue: number
+      minFee?: number | null
+      maxFee?: number | null
+    }) =>
+      apiClient.post<{ success: boolean; data: GlobalFeeConfig }>('/admin/fee-config', payload),
+
+    update: (feeId: string, payload: {
+      feeType?: 'flat' | 'percent'
+      feeValue?: number
+      minFee?: number | null
+      maxFee?: number | null
+      isActive?: boolean
+    }) =>
+      apiClient.put<{ success: boolean; data: GlobalFeeConfig }>(`/admin/fee-config/${feeId}`, payload),
+
+    delete: (feeId: string) =>
+      apiClient.delete(`/admin/fee-config/${feeId}`),
   },
 
   kyc: {
