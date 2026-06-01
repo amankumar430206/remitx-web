@@ -286,6 +286,55 @@ export function PaymentDetail() {
 
   const statusCtx = STATUS_CONTEXT[payment.status as keyof typeof STATUS_CONTEXT] ?? null
 
+  const printPaymentDetails = () => {
+    const win = window.open('', '_blank', 'width=720,height=800')
+    if (!win) return
+    const rows: [string, string][] = [
+      ['Reference',     payment.reference ?? payment.id],
+      ['Status',        payment.status.replace(/_/g, ' ')],
+      ['Send',          `${parseFloat(payment.source_amount).toLocaleString(undefined, { minimumFractionDigits: 2 })} ${payment.source_currency}`],
+      ['Receive',       `${parseFloat(payment.dest_amount).toLocaleString(undefined, { minimumFractionDigits: 2 })} ${payment.dest_currency}`],
+      ['Exchange rate', `1 ${payment.source_currency} = ${parseFloat(payment.exchange_rate).toFixed(4)} ${payment.dest_currency}`],
+      ['Fee',           `${parseFloat(payment.fee_amount ?? '0').toFixed(2)} ${payment.source_currency}`],
+      ['Purpose',       payment.purpose_code],
+      ['Submitted',     new Date(payment.created_at).toLocaleString()],
+      ...(payment.completed_at ? [['Completed', new Date(payment.completed_at).toLocaleString()] as [string,string]] : []),
+      ...(payment.note ? [['Note', payment.note] as [string,string]] : []),
+      ['Recipient',     payment.beneficiary_name ?? '—'],
+      ['Country',       payment.beneficiary_country_code ?? '—'],
+      ...(payment.beneficiary_bank_name       ? [['Bank',           payment.beneficiary_bank_name]       as [string,string]] : []),
+      ...(payment.beneficiary_account_number  ? [['Account no.',    payment.beneficiary_account_number]  as [string,string]] : []),
+      ...(payment.beneficiary_iban            ? [['IBAN',           payment.beneficiary_iban]            as [string,string]] : []),
+      ...(payment.beneficiary_swift_bic       ? [['SWIFT / BIC',    payment.beneficiary_swift_bic]       as [string,string]] : []),
+      ...(payment.account_number_ref          ? [['Source account', payment.account_number_ref]          as [string,string]] : []),
+      ...(payment.provider_payment_id         ? [['Provider ref',   payment.provider_payment_id]         as [string,string]] : []),
+    ]
+    const html = `<!DOCTYPE html><html><head>
+<title>Payment ${payment.reference ?? payment.id}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, sans-serif; padding: 40px; color: #111827; font-size: 13px; line-height: 1.5; }
+  h1 { font-size: 20px; font-weight: 700; margin-bottom: 2px; }
+  .meta { color: #6B7280; font-size: 11px; margin-bottom: 28px; }
+  table { width: 100%; border-collapse: collapse; }
+  tr { border-bottom: 1px solid #E5E7EB; }
+  tr:last-child { border-bottom: none; }
+  td { padding: 9px 6px; vertical-align: top; }
+  td:first-child { color: #6B7280; width: 38%; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; padding-top: 11px; }
+  td:last-child { font-weight: 600; }
+</style>
+</head><body>
+<h1>Payment Details</h1>
+<p class="meta">Printed ${new Date().toLocaleString()} · ${payment.reference ?? payment.id}</p>
+<table>${rows.map(([l, v]) => `<tr><td>${l}</td><td>${v}</td></tr>`).join('')}</table>
+</body></html>`
+    win.document.write(html)
+    win.document.close()
+    win.focus()
+    win.print()
+    win.onafterprint = () => win.close()
+  }
+
   return (
     <div className="flex flex-col gap-6 max-w-3xl mx-auto">
 
@@ -390,7 +439,7 @@ export function PaymentDetail() {
                   </DropdownMenu.Item>
                   <DropdownMenu.Item
                     className="flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-surface-overlay outline-none transition-colors"
-                    onSelect={() => downloadReceiptPdf(payment)}
+                    onSelect={printPaymentDetails}
                   >
                     <svg className="h-4 w-4 text-muted-fg shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
