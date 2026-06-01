@@ -1,3 +1,4 @@
+import { jsPDF } from 'jspdf'
 import type { Payment } from '@/api/payments'
 
 function fmt(amount: string | number, currency: string): string {
@@ -350,6 +351,141 @@ export function printReceiptAsTextPdf(p: Payment): void {
   _printHtml(buildTextReceiptHtml(p))
 }
 
+
+/** Generates a PDF receipt and triggers a direct browser download — no preview. */
+export function downloadReceiptPdf(p: Payment): void {
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' })
+  const pw   = doc.internal.pageSize.getWidth()   // 210
+  const mx   = 20   // left/right margin
+  const cw   = pw - mx * 2                        // content width = 170
+  let y      = 20
+
+  const hex  = (h: string) => {
+    const v = h.replace('#', '')
+    return [parseInt(v.slice(0,2),16), parseInt(v.slice(2,4),16), parseInt(v.slice(4,6),16)] as [number,number,number]
+  }
+  const sc   = statusColor(p.status)
+  const scRgb = hex(sc)
+
+  // ── Header ────────────────────────────────────────────────────────────────
+  doc.setFillColor(99, 102, 241)
+  doc.roundedRect(mx, y, 10, 10, 2, 2, 'F')
+  doc.setTextColor(255, 255, 255)
+  doc.setFontSize(9)
+  doc.setFont('helvetica', 'bold')
+  doc.text('R', mx + 3.5, y + 7)
+
+  doc.setTextColor(15, 23, 42)
+  doc.setFontSize(15)
+  doc.text('RemitX', mx + 14, y + 7.5)
+
+  doc.setFontSize(9)
+  doc.setFont('helvetica', 'normal')
+  doc.setTextColor(100, 116, 139)
+  doc.text('Payment Receipt', pw - mx, y + 7.5, { align: 'right' })
+
+  y += 14
+  doc.setDrawColor(226, 232, 240)
+  doc.line(mx, y, pw - mx, y)
+  y += 10
+
+  // ── Hero box ──────────────────────────────────────────────────────────────
+  doc.setFillColor(15, 23, 52)
+  doc.roundedRect(mx, y, cw, 46, 4, 4, 'F')
+
+  doc.setTextColor(170, 175, 200)
+  doc.setFontSize(7)
+  doc.setFont('helvetica', 'normal')
+  doc.text('YOU SENT', pw / 2, y + 9, { align: 'center' })
+
+  doc.setTextColor(241, 245, 249)
+  doc.setFontSize(24)
+  doc.setFont('helvetica', 'bold')
+  doc.text(fmt(p.source_amount, p.source_currency), pw / 2, y + 22, { align: 'center' })
+
+  doc.setFontSize(9)
+  doc.setFont('helvetica', 'normal')
+  doc.setTextColor(100, 200, 160)
+  doc.text(`${p.dest_currency}  ${fmt(p.dest_amount, p.dest_currency)}`, pw / 2, y + 31, { align: 'center' })
+
+  // Status pill
+  const sLabel = statusLabel(p.status).toUpperCase()
+  const pillW  = doc.getTextWidth(sLabel) + 10
+  doc.setFillColor(...scRgb)
+  doc.roundedRect(pw / 2 - pillW / 2, y + 35, pillW, 6, 1.5, 1.5, 'F')
+  doc.setTextColor(255, 255, 255)
+  doc.setFontSize(7)
+  doc.setFont('helvetica', 'bold')
+  doc.text(sLabel, pw / 2, y + 39.5, { align: 'center' })
+
+  y += 54
+
+  // ── Data rows ─────────────────────────────────────────────────────────────
+  const hasFee   = parseFloat(p.fee_amount) > 0
+  const totalDeb = (parseFloat(p.source_amount) + parseFloat(p.fee_amount)).toFixed(2)
+  const rate     = parseFloat(p.exchange_rate).toFixed(4)
+
+  const rows: Array<{ label: string; value: string; bold?: boolean; color?: string } | 'divider'> = [
+    { label: 'Transfer amount', value: fmt(p.source_amount, p.source_currency) },
+    { label: 'Fee',             value: hasFee ? fmt(p.fee_amount, p.source_currency) : fmt('0', p.source_currency) },
+    ...(hasFee ? [{ label: 'Total debit', value: fmt(totalDeb, p.source_currency), bold: true }] : []),
+    { label: 'Exchange rate',   value: `1 ${p.source_currency} = ${rate} ${p.dest_currency}` },
+    { label: 'They receive',    value: fmt(p.dest_amount, p.dest_currency), bold: true, color: '#10B981' },
+    'divider',
+    { label: 'Recipient',       value: p.beneficiary_name ?? '-' },
+    { label: 'Country',         value: p.beneficiary_country_code ?? '-' },
+    ...(p.beneficiary_bank_name       ? [{ label: 'Bank',        value: p.beneficiary_bank_name }]       : []),
+    ...(p.beneficiary_account_number  ? [{ label: 'Account no.', value: p.beneficiary_account_number }]  : []),
+    ...(p.beneficiary_iban            ? [{ label: 'IBAN',        value: p.beneficiary_iban }]            : []),
+    ...(p.beneficiary_swift_bic       ? [{ label: 'SWIFT/BIC',   value: p.beneficiary_swift_bic }]       : []),
+    'divider',
+    { label: 'Purpose',         value: p.purpose_code },
+    ...(p.reference ? [{ label: 'Reference', value: p.reference }] : []),
+    { label: 'Submitted',       value: fmtDate(p.created_at) },
+    ...(p.completed_at ? [{ label: 'Completed', value: fmtDate(p.completed_at) }] : []),
+    'divider',
+    { label: 'Payment ID',      value: p.id },
+  ]
+
+  for (const row of rows) {
+    if (row === 'divider') {
+      doc.setDrawColor(226, 232, 240)
+      doc.line(mx, y + 2, pw - mx, y + 2)
+      y += 6
+      continue
+    }
+    doc.setFontSize(8.5)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(100, 116, 139)
+    doc.text(row.label, mx, y)
+
+    doc.setFont('helvetica', row.bold ? 'bold' : 'normal')
+    if (row.color) {
+      doc.setTextColor(...hex(row.color))
+    } else {
+      doc.setTextColor(15, 23, 42)
+    }
+    doc.text(row.value, pw - mx, y, { align: 'right' })
+
+    doc.setDrawColor(241, 245, 249)
+    doc.line(mx, y + 2, pw - mx, y + 2)
+    y += 7
+  }
+
+  // ── Footer ────────────────────────────────────────────────────────────────
+  y += 8
+  doc.setDrawColor(226, 232, 240)
+  doc.line(mx, y, pw - mx, y)
+  y += 6
+  doc.setFontSize(7.5)
+  doc.setFont('helvetica', 'normal')
+  doc.setTextColor(148, 163, 184)
+  doc.text('This is an official payment receipt issued by RemitX. Please retain for your records.', pw / 2, y, { align: 'center' })
+  y += 5
+  doc.text(`Generated on ${new Date().toLocaleString()}`, pw / 2, y, { align: 'center' })
+
+  doc.save(`remitx-receipt-${p.reference ?? p.id.slice(0, 8)}.pdf`)
+}
 
 /** Copies the plain-text receipt to clipboard. Returns true on success. */
 export async function copyReceiptText(p: Payment): Promise<boolean> {
