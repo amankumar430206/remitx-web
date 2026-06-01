@@ -2,7 +2,6 @@ import { Link, NavLink, useNavigate } from 'react-router-dom'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { cn } from '@/lib/utils'
 import { Avatar } from '@/components/ui/atoms/Avatar'
-import { Badge } from '@/components/ui/atoms/Badge'
 import { ThemeToggle } from '@/components/ui/atoms/ThemeToggle'
 import { NotificationBell } from '@/components/ui/organisms/NotificationBell'
 
@@ -22,68 +21,145 @@ export interface TopNavProps {
   tenantName?: string
 }
 
-const ArrowsIcon = () => (
-  <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+// ─── Density helpers ─────────────────────────────────────────────────────────
+
+type Density = 'normal' | 'compact' | 'dense'
+
+function getDensity(count: number): Density {
+  if (count >= 11) return 'dense'
+  if (count >= 8)  return 'compact'
+  return 'normal'
+}
+
+const DENSITY = {
+  header: {
+    normal:  'h-14 px-5 gap-5',
+    compact: 'h-13 px-4 gap-4',
+    dense:   'h-12 px-3 gap-3',
+  },
+  logo: {
+    normal:  'mr-2',
+    compact: 'mr-1',
+    dense:   'mr-0',
+  },
+  logoText: {
+    normal:  'text-base',
+    compact: 'text-sm',
+    dense:   'text-sm hidden xl:block',
+  },
+  logoIcon: {
+    normal:  'h-7 w-7',
+    compact: 'h-6 w-6',
+    dense:   'h-6 w-6',
+  },
+  navGap: {
+    normal:  'gap-0.5',
+    compact: 'gap-0',
+    dense:   'gap-0',
+  },
+  item: {
+    normal:  'px-2.5 py-1.5 text-sm  gap-1.5 rounded-md',
+    compact: 'px-2   py-1.5 text-[13px] gap-1 rounded-md',
+    dense:   'px-1.5 py-1   text-xs   gap-1   rounded',
+  },
+  icon: {
+    normal:  'h-4 w-4',
+    compact: 'h-3.5 w-3.5',
+    dense:   'h-3.5 w-3.5',
+  },
+  badge: {
+    normal:  'h-4 min-w-[1rem] text-[10px] px-1',
+    compact: 'h-3.5 min-w-[0.875rem] text-[9px] px-0.5',
+    dense:   'h-3.5 min-w-[0.875rem] text-[9px] px-0.5',
+  },
+} as const
+
+// ─── Arrow icon ───────────────────────────────────────────────────────────────
+
+const ArrowsIcon = ({ cls }: { cls: string }) => (
+  <svg className={cn(cls, 'text-white')} fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
   </svg>
 )
 
+// ─── Component ───────────────────────────────────────────────────────────────
+
 export function TopNav({ logo, logoUrl, navItems, user, onLogout, tenantName }: TopNavProps) {
   const navigate = useNavigate()
+  const d = getDensity(navItems.length)
 
   return (
-    <header className="hidden md:flex h-14 items-center px-5 gap-5 sticky top-0 z-40 nav-glass">
+    <header className={cn(
+      'hidden md:flex items-center sticky top-0 z-40 nav-glass',
+      DENSITY.header[d],
+    )}>
 
-      {/* Logo — client logo takes priority, then slot prop, then default RemitX icon */}
-      <Link to="/" className="flex items-center gap-2 shrink-0 mr-2">
+      {/* Logo */}
+      <Link to="/" className={cn('flex items-center gap-2 shrink-0', DENSITY.logo[d])}>
         {logoUrl ? (
           <img
             src={logoUrl}
             alt="Logo"
-            className="h-7 w-auto max-w-[120px] object-contain"
+            className={cn('w-auto max-w-[100px] object-contain', DENSITY.logoIcon[d].replace('w-', 'h-'))}
             onError={(e) => { e.currentTarget.style.display = 'none' }}
           />
         ) : logo ?? (
           <div className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-lg btn-gradient flex items-center justify-center shadow-md shadow-blue-900/50">
-              <ArrowsIcon />
+            <div className={cn(
+              'rounded-lg btn-gradient flex items-center justify-center shadow-md shadow-blue-900/50',
+              DENSITY.logoIcon[d],
+            )}>
+              <ArrowsIcon cls={d === 'dense' ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
             </div>
-            <span className="font-bold text-white text-base tracking-tight">RemitX</span>
+            <span className={cn('font-bold text-white tracking-tight', DENSITY.logoText[d])}>
+              RemitX
+            </span>
           </div>
         )}
         {tenantName && !logoUrl && (
-          <span className="ml-1 text-[10px] text-nav-fg font-normal bg-white/[0.07] px-1.5 py-0.5 rounded">
+          <span className={cn(
+            'text-nav-fg font-normal bg-white/[0.07] rounded',
+            d === 'dense' ? 'hidden xl:inline text-[9px] px-1 py-0.5' : 'text-[10px] px-1.5 py-0.5',
+          )}>
             {tenantName}
           </span>
         )}
       </Link>
 
       {/* Divider */}
-      <div className="h-5 w-px bg-white/10" />
+      <div className="h-5 w-px bg-white/10 shrink-0" />
 
       {/* Nav links */}
-      <nav className="flex items-center gap-0.5 flex-1">
+      <nav className={cn('flex items-center flex-1 min-w-0', DENSITY.navGap[d])}>
         {navItems.map(item => (
           <NavLink
             key={item.href}
             to={item.href}
             className={({ isActive }) => cn(
-              'relative flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium transition-all duration-150',
+              'relative flex items-center font-medium transition-all duration-150 whitespace-nowrap shrink-0',
+              DENSITY.item[d],
               isActive
                 ? 'bg-nav-item-active text-nav-fg-active'
-                : 'text-nav-fg hover:text-nav-fg-active hover:bg-nav-item-hover'
+                : 'text-nav-fg hover:text-nav-fg-active hover:bg-nav-item-hover',
             )}
           >
             {({ isActive }) => (
               <>
                 {item.icon && (
-                  <span className={cn('transition-colors', isActive ? 'text-blue-400' : '')}>
+                  <span className={cn(
+                    'transition-colors shrink-0',
+                    DENSITY.icon[d],
+                    isActive ? 'text-blue-400' : '',
+                  )}>
                     {item.icon}
                   </span>
                 )}
                 {item.label}
                 {item.badge !== undefined && item.badge > 0 && (
-                  <span className="ml-0.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-danger-fg px-1 text-[10px] font-semibold text-white">
+                  <span className={cn(
+                    'ml-0.5 flex items-center justify-center rounded-full bg-danger-fg font-semibold text-white',
+                    DENSITY.badge[d],
+                  )}>
                     {item.badge > 99 ? '99+' : item.badge}
                   </span>
                 )}
@@ -101,18 +177,24 @@ export function TopNav({ logo, logoUrl, navItems, user, onLogout, tenantName }: 
       <ThemeToggle />
 
       {/* Divider */}
-      <div className="h-5 w-px bg-white/10" />
+      <div className="h-5 w-px bg-white/10 shrink-0" />
 
       {/* User menu */}
       {user && (
         <DropdownMenu.Root>
           <DropdownMenu.Trigger asChild>
-            <button className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-nav-item-hover focus:outline-none focus:ring-1 focus:ring-white/20 transition-colors">
+            <button className={cn(
+              'flex items-center gap-2 rounded-lg hover:bg-nav-item-hover focus:outline-none focus:ring-1 focus:ring-white/20 transition-colors shrink-0',
+              d === 'dense' ? 'px-1.5 py-1' : 'px-2 py-1.5',
+            )}>
               <Avatar alt={user.name} src={user.avatarUrl} size="sm" />
-              <span className="hidden lg:block text-sm font-medium text-nav-fg-active max-w-[120px] truncate">
+              <span className={cn(
+                'text-sm font-medium text-nav-fg-active truncate',
+                d === 'dense' ? 'hidden 2xl:block max-w-[80px]' : 'hidden lg:block max-w-[120px]',
+              )}>
                 {user.name}
               </span>
-              <svg className="h-3.5 w-3.5 text-nav-fg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="h-3.5 w-3.5 text-nav-fg shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
             </button>
