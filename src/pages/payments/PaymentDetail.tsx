@@ -47,6 +47,29 @@ function InfoRow({
   )
 }
 
+function NavPills({ items }: { items: Array<{ label: string; id: string }> }) {
+  if (items.length === 0) return null
+  const scrollTo = (id: string) =>
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  return (
+    <div className="flex items-center gap-2 overflow-x-auto pb-0.5 [scrollbar-width:none] [-webkit-overflow-scrolling:touch]">
+      {items.map(item => (
+        <button
+          key={item.id}
+          type="button"
+          onClick={() => scrollTo(item.id)}
+          className="shrink-0 inline-flex items-center gap-1 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-medium text-muted-fg transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
+        >
+          {item.label}
+          <svg className="h-2.5 w-2.5 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+      ))}
+    </div>
+  )
+}
+
 function SectionHeader({ icon, title }: { icon: React.ReactNode; title: string }) {
   return (
     <div className="flex items-center gap-2 mb-4">
@@ -572,13 +595,27 @@ export function PaymentDetail() {
         </div>
       </div>
 
+      {/* ── Section quick-nav ─────────────────────────────────────────────── */}
+      <NavPills items={[
+        { label: 'Transfer details', id: 'section-transfer' },
+        { label: 'Recipient',        id: 'section-recipient' },
+        ...((payment.account_currency || payment.account_number_ref)
+          ? [{ label: 'Source account', id: 'section-account' }] : []),
+        ...((payment.submitter_email || payment.checker_email)
+          ? [{ label: 'People', id: 'section-people' }] : []),
+        ...(isAdminRole
+          ? [{ label: 'Provider details', id: 'section-provider' }] : []),
+        ...(timelineEvents.length > 0
+          ? [{ label: 'Status history', id: 'section-history' }] : []),
+      ]} />
+
       {/* ══════════════════════════════════════════════════════════════════════
           DETAIL CARDS GRID
       ══════════════════════════════════════════════════════════════════════ */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
         {/* Transfer details */}
-        <ContentCard>
+        <div id="section-transfer"><ContentCard>
           <SectionHeader title="Transfer details" icon={Icons.transfer} />
           <InfoRow
             label="Exchange rate"
@@ -593,10 +630,10 @@ export function PaymentDetail() {
           {payment.completed_at && (
             <InfoRow label="Completed" value={new Date(payment.completed_at).toLocaleString()} />
           )}
-        </ContentCard>
+        </ContentCard></div>
 
         {/* Recipient / Beneficiary */}
-        <ContentCard>
+        <div id="section-recipient"><ContentCard>
           <SectionHeader title="Recipient" icon={Icons.user} />
           <InfoRow label="Name"    value={payment.beneficiary_name    ?? '—'} />
           <InfoRow label="Country" value={payment.beneficiary_country_code ?? '—'} />
@@ -615,12 +652,12 @@ export function PaymentDetail() {
           {payment.beneficiary_swift_bic && (
             <InfoRow label="SWIFT / BIC" value={payment.beneficiary_swift_bic} mono />
           )}
-        </ContentCard>
+        </ContentCard></div>
       </div>
 
       {/* ── Source account ────────────────────────────────────────────────── */}
       {(payment.account_currency || payment.account_number_ref) && (
-        <ContentCard>
+        <div id="section-account"><ContentCard>
           <SectionHeader title="Source account" icon={Icons.bank} />
           {payment.account_currency && (
             <InfoRow label="Account currency" value={payment.account_currency} />
@@ -628,12 +665,12 @@ export function PaymentDetail() {
           {payment.account_number_ref && (
             <InfoRow label="Account number" value={payment.account_number_ref} mono />
           )}
-        </ContentCard>
+        </ContentCard></div>
       )}
 
       {/* ── People (submitter + checker) ──────────────────────────────────── */}
       {(payment.submitter_email || payment.checker_email) && (
-        <ContentCard>
+        <div id="section-people"><ContentCard>
           <SectionHeader title="People" icon={Icons.users} />
           {payment.submitter_email && (
             <div className="flex items-start justify-between gap-4 py-3 border-b border-border">
@@ -661,12 +698,12 @@ export function PaymentDetail() {
               </div>
             </div>
           )}
-        </ContentCard>
+        </ContentCard></div>
       )}
 
       {/* ── Provider details (admin only) ─────────────────────────────────── */}
       {isAdminRole && (
-        <ContentCard>
+        <div id="section-provider"><ContentCard>
           <SectionHeader title="Provider details" icon={Icons.transfer} />
           <InfoRow
             label="Provider"
@@ -688,12 +725,12 @@ export function PaymentDetail() {
           {isSuperAdmin && payment.tenant_name && (
             <InfoRow label="Client" value={payment.tenant_name} />
           )}
-        </ContentCard>
+        </ContentCard></div>
       )}
 
       {/* ── Status timeline ───────────────────────────────────────────────── */}
       {timelineEvents.length > 0 && (
-        <ContentCard>
+        <div id="section-history"><ContentCard>
           <SectionHeader
             title="Status history"
             icon={
@@ -703,7 +740,7 @@ export function PaymentDetail() {
             }
           />
           <Timeline events={timelineEvents} />
-        </ContentCard>
+        </ContentCard></div>
       )}
 
       {/* ── Mutation errors ───────────────────────────────────────────────── */}
