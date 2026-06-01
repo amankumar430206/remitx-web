@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -269,7 +270,15 @@ export function TenantFeeRules({ tenantId }: Props) {
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <div>
             <h3 className="text-sm font-semibold text-foreground">Fee rules</h3>
-            <p className="text-xs text-muted-fg">Admin-only · no custom rule = falls back to global fee</p>
+            <p className="text-xs text-muted-fg">
+              Admin-only · no custom rule = falls back to{' '}
+              <Link
+                to="/admin/global-fees"
+                className="text-primary underline-offset-2 hover:underline"
+              >
+                global fee
+              </Link>
+            </p>
           </div>
           {!addingFee && (
             <Button size="sm" onClick={() => setAddingFee(true)}>
