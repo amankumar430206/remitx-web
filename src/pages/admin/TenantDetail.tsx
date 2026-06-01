@@ -228,41 +228,55 @@ export function TenantDetail() {
       {/* TabErrorBoundary catches render errors; Suspense shows a spinner  */}
       {/* while a lazy chunk downloads on first visit. Subsequent visits to */}
       {/* the same tab are instant — no fallback flash once cached.         */}
-      <TabErrorBoundary>
-        <Suspense fallback={<LoadingState className="py-20" />}>
-          <div className="pt-6 flex flex-col gap-6">
+      <div className="pt-6 flex flex-col gap-6">
 
-            {activeTab === 'overview' && (
-              <>
-                <TenantOverview
-                  tenant={tenant}
-                  editing={editing}
-                  onEdit={() => setEditing(true)}
-                  onCancelEdit={() => setEditing(false)}
-                />
-                <TenantContact tenantId={tenant.id} />
-              </>
-            )}
+        {activeTab === 'overview' && (
+          <TabErrorBoundary key="overview">
+            <Suspense fallback={<LoadingState className="py-20" />}>
+              <TenantOverview
+                tenant={tenant}
+                editing={editing}
+                onEdit={() => setEditing(true)}
+                onCancelEdit={() => setEditing(false)}
+              />
+              <TenantContact tenantId={tenant.id} />
+            </Suspense>
+          </TabErrorBoundary>
+        )}
 
-            {activeTab === 'users' && (
+        {activeTab === 'users' && (
+          <TabErrorBoundary key="users">
+            <Suspense fallback={<LoadingState className="py-20" />}>
               <TenantUsers tenantId={tenant.id} />
-            )}
+            </Suspense>
+          </TabErrorBoundary>
+        )}
 
-            {activeTab === 'fee-setup' && (
+        {activeTab === 'fee-setup' && (
+          <TabErrorBoundary key="fee-setup">
+            <Suspense fallback={<LoadingState className="py-20" />}>
               <TenantFeeRules tenantId={tenant.id} tenantName={tenant.name} />
-            )}
+            </Suspense>
+          </TabErrorBoundary>
+        )}
 
-            {activeTab === 'providers' && (
+        {activeTab === 'providers' && (
+          <TabErrorBoundary key="providers">
+            <Suspense fallback={<LoadingState className="py-20" />}>
               <TenantCorridors tenantId={tenant.id} />
-            )}
+            </Suspense>
+          </TabErrorBoundary>
+        )}
 
-            {activeTab === 'branding' && (
+        {activeTab === 'branding' && (
+          <TabErrorBoundary key="branding">
+            <Suspense fallback={<LoadingState className="py-20" />}>
               <TenantBranding tenantId={tenant.id} />
-            )}
+            </Suspense>
+          </TabErrorBoundary>
+        )}
 
-          </div>
-        </Suspense>
-      </TabErrorBoundary>
+      </div>
 
       {/* ── Status dialog ──────────────────────────────────────────────── */}
       <ConfirmDialog

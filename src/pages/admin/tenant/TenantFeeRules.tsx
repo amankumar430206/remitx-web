@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -182,6 +182,7 @@ interface Props {
 }
 
 export function TenantFeeRules({ tenantId, tenantName }: Props) {
+  const navigate = useNavigate()
   const [addingFee, setAddingFee] = useState(false)
   const [deleteDialog, setDeleteDialog] = useState<string | null>(null)
   const [customizeRow, setCustomizeRow] = useState<FeeConfig | null>(null)
@@ -282,13 +283,11 @@ export function TenantFeeRules({ tenantId, tenantName }: Props) {
           </div>
           {!addingFee && (
             <div className="flex items-center gap-2">
-              <Button size="sm" variant="ghost" asChild>
-                <Link to="/admin/global-fees">
-                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-                  </svg>
-                  Add global rule
-                </Link>
+              <Button size="sm" variant="ghost" onClick={() => navigate('/admin/global-fees')}>
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+                Add global rule
               </Button>
               <Button size="sm" onClick={() => setAddingFee(true)}>
                 <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
