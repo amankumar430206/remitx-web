@@ -3,7 +3,8 @@ import { PageHeader } from '@/components/ui/organisms/PageHeader'
 import { DataTable } from '@/components/ui/organisms/DataTable'
 import { SmartFilterBar } from '@/components/ui/organisms/SmartFilterBar'
 import type { ActiveFilterChip, StatusChipOption } from '@/components/ui/organisms/SmartFilterBar'
-import { Badge } from '@/components/ui/atoms/Badge'
+import { StatusBadge } from '@/components/ui/molecules/StatusBadge'
+import { AmountDisplay } from '@/components/ui/molecules/AmountDisplay'
 import { Button } from '@/components/ui/atoms/Button'
 import { Pagination } from '@/components/ui/atoms/Pagination'
 import { ContentCard } from '@/layouts/ContentCard'
@@ -40,12 +41,6 @@ function presetToRange(preset: Preset): DateRange {
 
 function fmtDate(d: Date) {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-}
-
-const STATUS_VARIANT: Record<string, 'success' | 'warning' | 'danger' | 'default'> = {
-  completed: 'success',
-  pending: 'warning',
-  failed: 'danger',
 }
 
 const DIRECTION_CHIPS: StatusChipOption[] = [
@@ -85,29 +80,17 @@ const columns: Column<TransactionRow>[] = [
   {
     key: 'source_amount',
     header: 'You sent',
-    render: row => (
-      <span className="font-mono text-sm text-danger-fg">
-        −{row.source_amount} {row.source_currency}
-      </span>
-    ),
+    render: row => <AmountDisplay amount={row.source_amount} currency={row.source_currency} negative />,
   },
   {
     key: 'dest_amount',
     header: 'Recipient got',
-    render: row => (
-      <span className="font-mono text-sm text-success-fg">
-        +{row.dest_amount} {row.dest_currency}
-      </span>
-    ),
+    render: row => <AmountDisplay amount={row.dest_amount} currency={row.dest_currency} positive />,
   },
   {
     key: 'status',
     header: 'Status',
-    render: row => (
-      <Badge variant={STATUS_VARIANT[row.status] ?? 'default'} className="capitalize">
-        {row.status.replace(/_/g, ' ')}
-      </Badge>
-    ),
+    render: row => <StatusBadge status={row.status} />,
   },
 ]
 
