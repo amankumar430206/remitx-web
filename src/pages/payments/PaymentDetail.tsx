@@ -645,6 +645,13 @@ export function PaymentDetail() {
 
         <div className="relative mt-5 pt-4 border-t border-border flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
+            {/* Debit / Credit pill */}
+            <span className="inline-flex items-center gap-1 rounded-full border border-danger/25 bg-danger/10 px-2.5 py-0.5 text-xs font-semibold text-danger-fg">
+              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+              Debit
+            </span>
             <StatusBadge status={payment.status} />
             {payment.beneficiary_name && (
               <span className="text-sm text-muted-fg">
@@ -695,6 +702,17 @@ export function PaymentDetail() {
         {/* Transfer details */}
         <div id="section-transfer"><ContentCard>
           <SectionHeader title="Transfer details" icon={Icons.transfer} />
+          <InfoRow
+            label="Type"
+            value={
+              <span className="inline-flex items-center gap-1 rounded-full border border-danger/25 bg-danger/10 px-2.5 py-0.5 text-xs font-semibold text-danger-fg">
+                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+                Debit
+              </span>
+            }
+          />
           <InfoRow
             label="Exchange rate"
             value={`1 ${payment.source_currency} = ${parseFloat(payment.exchange_rate).toFixed(4)} ${payment.dest_currency}`}
