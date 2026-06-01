@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -11,7 +11,7 @@ import { LoadingState } from '@/components/ui/molecules/LoadingState'
 import { ConfirmDialog } from '@/components/ui/molecules/ConfirmDialog'
 import { FormField } from '@/components/ui/molecules/FormField'
 import { ContentCard } from '@/layouts/ContentCard'
-import { useProviderConfig, useAddTenantCorridor, useDeleteTenantCorridor } from '@/hooks/useAdmin'
+import { useProviderConfig, useAddTenantCorridor, useDeleteTenantCorridor, useSetTenantDefaultProvider } from '@/hooks/useAdmin'
 import type { CorridorConfig } from '@/api/admin'
 import type { Column } from '@/components/ui/organisms/DataTable'
 
@@ -37,10 +37,33 @@ interface Props {
 export function TenantCorridors({ tenantId }: Props) {
   const [addOpen, setAddOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<CorridorConfig | null>(null)
+  const [defaultProvider, setDefaultProvider] = useState<string>('')
+  const [defaultSaved, setDefaultSaved] = useState(false)
 
-  const { data: corridors, isLoading } = useProviderConfig(tenantId)
+  const { data: providerConfig, isLoading } = useProviderConfig(tenantId)
+  const corridors = providerConfig?.corridors ?? []
   const addMutation = useAddTenantCorridor()
   const deleteMutation = useDeleteTenantCorridor()
+  const setDefaultMutation = useSetTenantDefaultProvider()
+
+  // Sync local state when data first loads (run once)
+  useEffect(() => {
+    if (providerConfig !== undefined) {
+      setDefaultProvider(providerConfig.defaultProviderName ?? '')
+    }
+  }, [providerConfig?.defaultProviderName]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleSaveDefault = () => {
+    setDefaultMutation.mutate(
+      { tenantId, providerName: defaultProvider || null },
+      {
+        onSuccess: () => {
+          setDefaultSaved(true)
+          setTimeout(() => setDefaultSaved(false), 2000)
+        },
+      },
+    )
+  }
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<CorridorForm>({
     resolver: zodResolver(corridorSchema),
@@ -126,6 +149,57 @@ export function TenantCorridors({ tenantId }: Props) {
 
   return (
     <>
+      {/* ── Default provider card ── */}
+      <ContentCard>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-foreground">Default provider</h3>
+            <p className="text-xs text-muted-fg mt-0.5 max-w-sm">
+              Catch-all provider for this client. Applied after any corridor-specific rules
+              and before the global platform defaults.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <select
+              value={defaultProvider}
+              onChange={e => { setDefaultProvider(e.target.value); setDefaultSaved(false) }}
+              className={cn(
+                'h-9 min-w-[160px] rounded border bg-surface px-3 py-1 text-sm text-foreground shadow-sm transition-colors',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1',
+                'border-border hover:border-border-strong',
+              )}
+            >
+              <option value="">— None (use global) —</option>
+              {PROVIDERS.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+            <Button
+              size="sm"
+              onClick={handleSaveDefault}
+              loading={setDefaultMutation.isPending}
+              disabled={defaultProvider === (providerConfig?.defaultProviderName ?? '')}
+            >
+              {defaultSaved ? '✓ Saved' : 'Save'}
+            </Button>
+          </div>
+        </div>
+        {/* Resolution legend */}
+        <div className="mt-4 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-fg">
+          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-primary font-medium">1. Corridor rules below</span>
+          <span className="text-muted-fg/50">→</span>
+          <span className={cn('rounded-full px-2 py-0.5 font-medium',
+            defaultProvider
+              ? 'bg-success/10 text-success-fg'
+              : 'bg-surface border border-border text-muted-fg'
+          )}>
+            2. This default {defaultProvider ? `(${defaultProvider})` : '(not set)'}
+          </span>
+          <span className="text-muted-fg/50">→</span>
+          <span className="rounded-full bg-surface border border-border px-2 py-0.5 font-medium">3. Global platform</span>
+          <span className="text-muted-fg/50">→</span>
+          <span className="rounded-full bg-surface border border-border px-2 py-0.5 font-medium">4. manual</span>
+        </div>
+      </ContentCard>
+
       <ContentCard padding="none">
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <div>

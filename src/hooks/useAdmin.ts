@@ -180,6 +180,15 @@ export function useProviderConfig(tenantId: string) {
   })
 }
 
+export function useSetTenantDefaultProvider() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ tenantId, providerName }: { tenantId: string; providerName: string | null }) =>
+      adminApi.providers.setDefaultProvider(tenantId, providerName).then(r => r.data.data),
+    onSuccess: (_, { tenantId }) => qc.invalidateQueries({ queryKey: ['admin-providers', tenantId] }),
+  })
+}
+
 export function useUpdateProviderConfig() {
   const qc = useQueryClient()
   return useMutation({

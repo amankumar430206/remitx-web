@@ -261,16 +261,22 @@ const admin = {
 
   providers: {
     get: (tenantId: string) =>
-      apiClient.get<{ success: boolean; data: CorridorConfig[] }>(`/admin/tenants/${tenantId}/provider-config`),
+      apiClient.get<{ success: boolean; data: { corridors: CorridorConfig[]; defaultProviderName: string | null } }>(`/admin/tenants/${tenantId}/provider-config`),
 
     update: (tenantId: string, corridors: Array<{ sourceCurrency: string; destCurrency?: string; providerName: string; priority?: number }>) =>
-      apiClient.put<{ success: boolean; data: CorridorConfig[] }>(`/admin/tenants/${tenantId}/provider-config`, { corridors }),
+      apiClient.put<{ success: boolean; data: { corridors: CorridorConfig[]; defaultProviderName: string | null } }>(`/admin/tenants/${tenantId}/provider-config`, { corridors }),
 
     addCorridor: (tenantId: string, corridor: { sourceCurrency: string; destCurrency?: string | null; providerName: string; priority?: number }) =>
       apiClient.post<{ success: boolean; data: CorridorConfig }>(`/admin/tenants/${tenantId}/provider-config`, corridor),
 
     deleteCorridor: (tenantId: string, corridorId: string) =>
       apiClient.delete(`/admin/tenants/${tenantId}/provider-config/${corridorId}`),
+
+    setDefaultProvider: (tenantId: string, providerName: string | null) =>
+      apiClient.put<{ success: boolean; data: { id: string; default_provider_name: string | null } }>(
+        `/admin/tenants/${tenantId}/default-provider`,
+        { providerName },
+      ),
   },
 
   providerDefaults: {
