@@ -3,6 +3,7 @@ import { apiClient } from './client'
 // Raw payment row returned by /reporting/transactions
 export interface TransactionRow {
   id: string
+  reference: string
   status: string
   source_amount: string
   source_currency: string
@@ -11,12 +12,15 @@ export interface TransactionRow {
   fee_amount: string
   exchange_rate: string
   purpose_code: string
-  reference?: string
+  provider_name: string
+  provider_payment_id: string | null
   user_id: string
   beneficiary_id: string
+  beneficiary_name: string | null
+  beneficiary_country: string | null
   created_at: string
   updated_at: string
-  completed_at?: string
+  completed_at: string | null
 }
 
 // Reconciliation report row from reconciliation_reports table

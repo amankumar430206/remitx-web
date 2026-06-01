@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { PageHeader } from '@/components/ui/organisms/PageHeader'
 import { DataTable } from '@/components/ui/organisms/DataTable'
 import { SmartFilterBar } from '@/components/ui/organisms/SmartFilterBar'
-import type { ActiveFilterChip, StatusChipOption } from '@/components/ui/organisms/SmartFilterBar'
+import type { ActiveFilterChip } from '@/components/ui/organisms/SmartFilterBar'
 import { StatusBadge } from '@/components/ui/molecules/StatusBadge'
 import { AmountDisplay } from '@/components/ui/molecules/AmountDisplay'
 import { Button } from '@/components/ui/atoms/Button'
@@ -43,39 +43,44 @@ function fmtDate(d: Date) {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-const DIRECTION_CHIPS: StatusChipOption[] = [
-  { label: 'All',    value: '',       variant: 'none'    },
-  { label: 'Debit',  value: 'debit',  variant: 'danger'  },
-  { label: 'Credit', value: 'credit', variant: 'success' },
-]
-
-function DirectionBadge({ direction }: { direction: 'debit' | 'credit' }) {
-  return direction === 'debit' ? (
-    <span className="inline-flex items-center gap-1 rounded-full bg-danger/10 border border-danger/20 px-2 py-0.5 text-[11px] font-semibold text-danger-fg">
-      <span className="text-[9px]">▼</span> Debit
-    </span>
-  ) : (
-    <span className="inline-flex items-center gap-1 rounded-full bg-success/10 border border-success/20 px-2 py-0.5 text-[11px] font-semibold text-success-fg">
-      <span className="text-[9px]">▲</span> Credit
-    </span>
-  )
-}
 
 const columns: Column<TransactionRow>[] = [
   {
-    key: 'id',
-    header: 'Type',
-    render: () => <DirectionBadge direction="debit" />,
+    key: 'reference',
+    header: 'Reference',
+    render: row => (
+      <span className="font-mono text-xs font-semibold text-foreground tracking-wide">
+        {row.reference ?? '—'}
+      </span>
+    ),
   },
   {
     key: 'created_at',
     header: 'Date',
-    render: row => <span className="text-xs text-muted-fg">{new Date(row.created_at).toLocaleDateString()}</span>,
+    render: row => (
+      <div className="flex flex-col gap-0.5">
+        <span className="text-xs text-foreground">{new Date(row.created_at).toLocaleDateString()}</span>
+        {row.completed_at && (
+          <span className="text-[10px] text-muted-fg">
+            Settled {new Date(row.completed_at).toLocaleDateString()}
+          </span>
+        )}
+      </div>
+    ),
   },
   {
-    key: 'purpose_code',
-    header: 'Purpose',
-    render: row => <span className="capitalize text-sm">{row.purpose_code?.toLowerCase().replace(/_/g, ' ') ?? '—'}</span>,
+    key: 'beneficiary_id',
+    header: 'Beneficiary',
+    render: row => row.beneficiary_name ? (
+      <div className="flex flex-col gap-0.5">
+        <span className="text-sm font-medium text-foreground">{row.beneficiary_name}</span>
+        {row.beneficiary_country && (
+          <span className="text-[10px] text-muted-fg uppercase tracking-wide">{row.beneficiary_country}</span>
+        )}
+      </div>
+    ) : (
+      <span className="text-xs text-muted-fg">—</span>
+    ),
   },
   {
     key: 'source_amount',
@@ -86,6 +91,35 @@ const columns: Column<TransactionRow>[] = [
     key: 'dest_amount',
     header: 'Recipient got',
     render: row => <AmountDisplay amount={row.dest_amount} currency={row.dest_currency} positive />,
+  },
+  {
+    key: 'exchange_rate',
+    header: 'Rate',
+    render: row => (
+      <span className="font-mono text-xs text-muted-fg tabular-nums">
+        {parseFloat(row.exchange_rate).toFixed(4)}
+      </span>
+    ),
+  },
+  {
+    key: 'fee_amount',
+    header: 'Fee',
+    render: row => (
+      <span className="font-mono text-xs tabular-nums text-foreground">
+        {parseFloat(row.fee_amount) === 0
+          ? <span className="text-muted-fg">Free</span>
+          : <AmountDisplay amount={row.fee_amount} currency={row.source_currency} />}
+      </span>
+    ),
+  },
+  {
+    key: 'purpose_code',
+    header: 'Purpose',
+    render: row => (
+      <span className="capitalize text-xs text-muted-fg">
+        {row.purpose_code?.toLowerCase().replace(/_/g, ' ') ?? '—'}
+      </span>
+    ),
   },
   {
     key: 'status',
@@ -99,7 +133,6 @@ export function Transactions() {
   const [preset, setPreset] = useState<Preset>('30d')
   const [dateRange, setDateRange] = useState<DateRange>(() => presetToRange('30d'))
   const [search, setSearch] = useState('')
-  const [direction, setDirection] = useState('')
   const [exporting, setExporting] = useState(false)
 
   const handlePreset = (p: Preset) => {
@@ -112,14 +145,9 @@ export function Transactions() {
     if (range.startDate) { setPreset('custom'); setDateRange(range); setPage(1) }
   }
 
-  const clearAll = () => { setSearch(''); setDirection(''); handlePreset('30d') }
+  const clearAll = () => { setSearch(''); handlePreset('30d') }
 
   const activeChips = useMemo<ActiveFilterChip[]>(() => [
-    ...(direction ? [{
-      key: 'direction',
-      label: direction.charAt(0).toUpperCase() + direction.slice(1),
-      onRemove: () => { setDirection(''); setPage(1) },
-    }] : []),
     ...(preset !== '30d' ? [{
       key: 'date',
       label: preset === 'custom' && dateRange.startDate && dateRange.endDate
@@ -132,12 +160,11 @@ export function Transactions() {
       label: `"${search}"`,
       onRemove: () => setSearch(''),
     }] : []),
-  ], [direction, preset, dateRange, search])
+  ], [preset, dateRange, search])
 
   const params = {
     page,
     limit: 20,
-    direction: direction as 'debit' | 'credit' | undefined || undefined,
     from: dateRange.startDate ? toLocalDateStr(dateRange.startDate) : undefined,
     to: dateRange.endDate ? toLocalDateStr(dateRange.endDate) : undefined,
   }
@@ -187,33 +214,6 @@ export function Transactions() {
         onPresetChange={p => handlePreset(p as Preset)}
         dateRange={preset === 'custom' ? dateRange : undefined}
         onCustomRange={handleCustomRange}
-        advancedFilters={
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-muted-fg">Type</label>
-            <div className="flex gap-1.5">
-              {DIRECTION_CHIPS.map(chip => (
-                <button
-                  key={chip.value}
-                  type="button"
-                  onClick={() => { setDirection(chip.value); setPage(1) }}
-                  className={[
-                    'px-3 py-1.5 rounded-md text-xs font-medium border transition-colors',
-                    direction === chip.value
-                      ? chip.value === 'debit'
-                        ? 'bg-danger/10 border-danger/30 text-danger-fg'
-                        : chip.value === 'credit'
-                        ? 'bg-success/10 border-success/30 text-success-fg'
-                        : 'bg-primary text-primary-fg border-primary'
-                      : 'bg-surface border-border text-muted-fg hover:text-foreground hover:border-border-strong',
-                  ].join(' ')}
-                >
-                  {chip.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        }
-        activeAdvancedCount={direction ? 1 : 0}
         activeChips={activeChips}
         onClearAll={activeChips.length > 0 ? clearAll : undefined}
       />
