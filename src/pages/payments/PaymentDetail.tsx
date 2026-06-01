@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
@@ -21,11 +21,26 @@ import { getApiError } from '@/lib/apiError'
 import { printReceiptAsTextPdf, copyReceiptText } from '@/lib/receipt'
 import { cn } from '@/lib/utils'
 
-function InfoRow({ label, value, mono }: { label: string; value: React.ReactNode; mono?: boolean }) {
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function InfoRow({
+  label,
+  value,
+  mono,
+}: {
+  label: string
+  value: React.ReactNode
+  mono?: boolean
+}) {
   return (
     <div className="flex items-start justify-between gap-4 py-3 border-b border-border last:border-0">
       <span className="text-xs text-muted-fg shrink-0">{label}</span>
-      <span className={`text-sm font-medium text-foreground text-right flex-1 ${mono ? 'font-mono text-xs' : ''}`}>
+      <span
+        className={cn(
+          'text-sm font-medium text-foreground text-right flex-1',
+          mono && 'font-mono text-xs',
+        )}
+      >
         {value}
       </span>
     </div>
@@ -43,58 +58,110 @@ function SectionHeader({ icon, title }: { icon: React.ReactNode; title: string }
   )
 }
 
-// ─── Status-specific action banner ────────────────────────────────────────────
+// ─── Icon set (re-used inline) ────────────────────────────────────────────────
 
-const STATUS_CONTEXT: Record<string, { color: string; icon: React.ReactNode; title: string; body: string }> = {
+const Icons = {
+  check: (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+    </svg>
+  ),
+  warn: (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+    </svg>
+  ),
+  info: (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  ),
+  x: (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+    </svg>
+  ),
+  shield: (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+    </svg>
+  ),
+  clock: (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  ),
+  refresh: (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+    </svg>
+  ),
+  transfer: (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+    </svg>
+  ),
+  user: (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+    </svg>
+  ),
+  users: (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+    </svg>
+  ),
+  bank: (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+    </svg>
+  ),
+}
+
+// ─── Status context configs ───────────────────────────────────────────────────
+
+const STATUS_CONTEXT = {
   pending_compliance: {
     color: 'border-warning/40 bg-warning/5',
-    icon: (
-      <svg className="h-4 w-4 text-warning-fg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-      </svg>
-    ),
+    iconColor: 'text-warning-fg',
     title: 'Compliance review required',
-    body: 'This payment was flagged by AML checks and is awaiting compliance officer review. Approve to push to processing, or reject to return funds.',
+    body: 'This payment was flagged by AML screening and is awaiting a compliance officer review. Approve to release for processing, or reject to return the payment.',
+    icon: 'shield',
   },
   pending_manual_processing: {
     color: 'border-primary/30 bg-primary/5',
-    icon: (
-      <svg className="h-4 w-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-      </svg>
-    ),
+    iconColor: 'text-primary',
     title: 'Awaiting manual settlement',
-    body: 'Approved and queued for manual processing. Execute the bank transfer externally, then mark this payment as complete with the provider reference.',
+    body: 'The payment has been approved and is queued for manual bank transfer. Execute the transfer externally, then mark this payment complete with the provider reference.',
+    icon: 'bank',
   },
   processing: {
     color: 'border-primary/30 bg-primary/5',
-    icon: (
-      <svg className="h-4 w-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-      </svg>
-    ),
+    iconColor: 'text-primary',
     title: 'Payment is processing',
-    body: 'The payment has been dispatched. If the provider has settled externally you can mark it complete, or fail it to reverse the debit.',
+    body: 'The payment has been dispatched to the provider. Once the transfer settles externally you can mark it complete, or fail it to reverse the debit.',
+    icon: 'refresh',
   },
-}
+} as const
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export function PaymentDetail() {
   const { id } = useParams<{ id: string }>()
-  const navigate = useNavigate()
   const qc = useQueryClient()
   const user = useAuthStore(s => s.user)
 
   const { data: payment, isLoading, isError, refetch } = usePayment(id ?? '')
 
   // ── dialog state ──────────────────────────────────────────────────────────
-  const [showRejectDialog, setShowRejectDialog]   = useState(false)
-  const [rejectNote, setRejectNote]               = useState('')
-  const [showCancelDialog, setShowCancelDialog]   = useState(false)
+  const [showRejectDialog,   setShowRejectDialog]   = useState(false)
+  const [rejectNote,         setRejectNote]         = useState('')
+  const [showCancelDialog,   setShowCancelDialog]   = useState(false)
   const [showCompleteDialog, setShowCompleteDialog] = useState(false)
-  const [showFailDialog, setShowFailDialog]       = useState(false)
-  const [processNotes, setProcessNotes]           = useState('')
-  const [providerRef, setProviderRef]             = useState('')
-  const [copied, setCopied]                       = useState(false)
+  const [showFailDialog,     setShowFailDialog]     = useState(false)
+  const [processNotes,       setProcessNotes]       = useState('')
+  const [providerRef,        setProviderRef]        = useState('')
+  const [copied,             setCopied]             = useState(false)
 
   // ── mutations ─────────────────────────────────────────────────────────────
   const invalidate = () => {
@@ -131,24 +198,31 @@ export function PaymentDetail() {
   if (isError || !payment) return <ErrorState title="Payment not found" onRetry={refetch} />
 
   // ── role / status derivations ─────────────────────────────────────────────
-  const isSuperAdmin = user?.role === 'super_admin'
-  const isAdminRole  = isSuperAdmin || user?.role === 'client_admin'
-  const isOwnPayment = payment.user_id === user?.id
+  const isSuperAdmin  = user?.role === 'super_admin'
+  const isAdminRole   = isSuperAdmin || user?.role === 'client_admin'
+  const isOwnPayment  = payment.user_id === user?.id
+  const isTerminal    = ['completed', 'failed', 'rejected', 'cancelled'].includes(payment.status)
 
-  /** Can approve/reject: pending_approval or pending_compliance */
+  /** Approve/reject: pending_approval or pending_compliance */
   const canApprove = ['pending_approval', 'pending_compliance'].includes(payment.status) &&
     (isSuperAdmin || user?.role === 'client_admin' || user?.role === 'checker')
 
-  /** Can complete/fail: ops action for super_admin only */
+  /** Ops: complete / fail — super_admin only */
   const canProcess = isSuperAdmin &&
     ['pending_manual_processing', 'processing'].includes(payment.status)
 
   /** Initiator can cancel while still actionable */
-  const canCancel = ['pending_approval', 'pending_compliance', 'pending_manual_processing'].includes(payment.status) && isOwnPayment
+  const canCancel = ['pending_approval', 'pending_compliance', 'pending_manual_processing'].includes(payment.status) &&
+    isOwnPayment
 
-  const statusCtx = STATUS_CONTEXT[payment.status]
+  const anyMutationPending =
+    approveMutation.isPending || rejectMutation.isPending ||
+    completeMutation.isPending || failMutation.isPending || cancelMutation.isPending
 
-  const timelineEvents = (payment.status_history ?? []).map(h => ({
+  // ── status history helpers ────────────────────────────────────────────────
+  const history = payment.status_history ?? []
+
+  const timelineEvents = history.map(h => ({
     id: h.id,
     status: h.status,
     note: h.notes,
@@ -156,18 +230,42 @@ export function PaymentDetail() {
     actor: h.actor_type,
   }))
 
-  const anyMutationPending = approveMutation.isPending || rejectMutation.isPending ||
-    completeMutation.isPending || failMutation.isPending || cancelMutation.isPending
+  /** Last notes entry for a given status */
+  const lastNotesFor = (s: string) =>
+    [...history].reverse().find(h => h.status === s)?.notes
+
+  const rejectionReason  = lastNotesFor('rejected')
+  const failureReason    = lastNotesFor('failed')
+  const cancellationNote = lastNotesFor('cancelled')
+  const amlNote          = history.find(h => h.status === 'pending_compliance')?.notes
+
+  // ── dual approval: first approval already recorded ────────────────────────
+  const hasFirstApproval  = payment.status === 'pending_approval' && !!payment.checker_id
+  const checkerName = payment.checker_first_name
+    ? `${payment.checker_first_name} ${payment.checker_last_name ?? ''}`.trim()
+    : payment.checker_email
+
+  // ── submitter display ─────────────────────────────────────────────────────
+  const submitterName = payment.submitter_first_name
+    ? `${payment.submitter_first_name} ${payment.submitter_last_name ?? ''}`.trim()
+    : payment.submitter_email
+
+  const statusCtx = STATUS_CONTEXT[payment.status as keyof typeof STATUS_CONTEXT] ?? null
 
   return (
     <div className="flex flex-col gap-6 max-w-3xl mx-auto">
+
+      {/* ── Page header ────────────────────────────────────────────────────── */}
       <PageHeader
         title="Payment details"
-        breadcrumbs={[{ label: 'Payments', href: '/payments' }, { label: `#${id?.slice(0, 8)}…` }]}
+        breadcrumbs={[
+          { label: 'Payments', href: '/payments' },
+          { label: `#${id?.slice(0, 8)}…` },
+        ]}
         actions={
           <div className="flex items-center gap-2 flex-wrap justify-end">
 
-            {/* ── Approve / Reject (pending_approval + pending_compliance) ── */}
+            {/* Approve / Reject */}
             {canApprove && (!isOwnPayment || isSuperAdmin) && (
               <>
                 <Button
@@ -188,7 +286,7 @@ export function PaymentDetail() {
               </>
             )}
 
-            {/* ── Ops: Complete / Fail (pending_manual_processing + processing) ── */}
+            {/* Ops: Complete / Fail */}
             {canProcess && (
               <>
                 <Button
@@ -217,7 +315,7 @@ export function PaymentDetail() {
               </>
             )}
 
-            {/* ── Cancel (initiator only) ── */}
+            {/* Cancel */}
             {canCancel && (
               <Button
                 variant="ghost" size="sm"
@@ -228,7 +326,7 @@ export function PaymentDetail() {
               </Button>
             )}
 
-            {/* ── Share receipt ── */}
+            {/* Share receipt */}
             <DropdownMenu.Root>
               <DropdownMenu.Trigger asChild>
                 <Button variant="outline" size="sm">
@@ -275,35 +373,138 @@ export function PaymentDetail() {
         }
       />
 
-      {/* ── Status context banner ─────────────────────────────────────────────── */}
+      {/* ══════════════════════════════════════════════════════════════════════
+          STATUS BANNERS — ordered by priority
+      ══════════════════════════════════════════════════════════════════════ */}
 
-      {/* Awaiting approval — own payment, non-super-admin */}
-      {canApprove && isOwnPayment && !isSuperAdmin && (
-        <div className="flex items-start gap-3 rounded-xl border border-warning/40 bg-warning/10 px-4 py-3">
-          <svg className="mt-0.5 h-4 w-4 shrink-0 text-warning-fg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-          </svg>
+      {/* ── 1. Completed ──────────────────────────────────────────────────── */}
+      {payment.status === 'completed' && (
+        <div className="flex items-start gap-3 rounded-xl border border-success/40 bg-success/10 px-4 py-3.5">
+          <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-success/20 text-success-fg">
+            {Icons.check}
+          </div>
           <div className="flex flex-col gap-0.5">
-            <span className="text-sm font-medium text-warning-fg">Awaiting approval</span>
-            <span className="text-xs text-warning-fg/80">You submitted this payment. Another authorised user must approve it before it can be processed.</span>
+            <span className="text-sm font-semibold text-success-fg">Transfer complete</span>
+            <span className="text-xs text-success-fg/80 leading-relaxed">
+              Funds were successfully delivered to {payment.beneficiary_name ?? 'the recipient'}.
+              {payment.completed_at && (
+                <> Settled {new Date(payment.completed_at).toLocaleString()}.</>
+              )}
+              {payment.provider_payment_id && (
+                <> Provider ref: <span className="font-mono">{payment.provider_payment_id}</span>.</>
+              )}
+            </span>
           </div>
         </div>
       )}
 
-      {/* Compliance / processing / manual — contextual info */}
-      {statusCtx && (canApprove || canProcess || isAdminRole) && (
+      {/* ── 2. Rejected ───────────────────────────────────────────────────── */}
+      {payment.status === 'rejected' && (
+        <div className="flex items-start gap-3 rounded-xl border border-danger/40 bg-danger/10 px-4 py-3.5">
+          <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-danger/20 text-danger-fg">
+            {Icons.x}
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <span className="text-sm font-semibold text-danger-fg">Payment rejected</span>
+            {rejectionReason ? (
+              <span className="text-xs text-danger-fg/80 leading-relaxed">
+                Reason: {rejectionReason}
+              </span>
+            ) : (
+              <span className="text-xs text-danger-fg/70">No reason was recorded.</span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── 3. Failed ─────────────────────────────────────────────────────── */}
+      {payment.status === 'failed' && (
+        <div className="flex items-start gap-3 rounded-xl border border-danger/40 bg-danger/10 px-4 py-3.5">
+          <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-danger/20 text-danger-fg">
+            {Icons.warn}
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <span className="text-sm font-semibold text-danger-fg">Payment failed</span>
+            {failureReason ? (
+              <span className="text-xs text-danger-fg/80 leading-relaxed">
+                {failureReason} — The debit has been reversed and the balance restored.
+              </span>
+            ) : (
+              <span className="text-xs text-danger-fg/70">
+                The payment could not be completed. The debit has been reversed.
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── 4. Cancelled ──────────────────────────────────────────────────── */}
+      {payment.status === 'cancelled' && (
+        <div className="flex items-start gap-3 rounded-xl border border-border bg-surface-overlay px-4 py-3.5">
+          <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted/30 text-muted-fg">
+            {Icons.x}
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <span className="text-sm font-semibold text-foreground">Payment cancelled</span>
+            <span className="text-xs text-muted-fg leading-relaxed">
+              {cancellationNote ?? 'This payment was cancelled before it was processed.'}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* ── 5. Awaiting approval — own payment, not super_admin ───────────── */}
+      {canApprove && isOwnPayment && !isSuperAdmin && (
+        <div className="flex items-start gap-3 rounded-xl border border-warning/40 bg-warning/10 px-4 py-3.5">
+          <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-warning/20 text-warning-fg">
+            {Icons.clock}
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <span className="text-sm font-semibold text-warning-fg">Awaiting approval</span>
+            <span className="text-xs text-warning-fg/80 leading-relaxed">
+              You submitted this payment. Another authorised user (checker or admin) must approve it before it can be processed.
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* ── 6. Dual approval: first approval done, waiting for second ─────── */}
+      {hasFirstApproval && !isOwnPayment && (
+        <div className="flex items-start gap-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3.5">
+          <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+            {Icons.users}
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <span className="text-sm font-semibold text-foreground">First approval recorded</span>
+            <span className="text-xs text-muted-fg leading-relaxed">
+              {checkerName ?? 'A checker'} provided first approval. A second authorised checker must approve to finalise.
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* ── 7. Compliance / manual / processing context (admin view) ─────── */}
+      {statusCtx && !isTerminal && (isAdminRole || canApprove) && (
         <div className={cn('flex items-start gap-3 rounded-xl border px-4 py-3.5', statusCtx.color)}>
-          <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/10">
-            {statusCtx.icon}
+          <div className={cn('mt-0.5 shrink-0', statusCtx.iconColor)}>
+            {payment.status === 'pending_compliance' ? Icons.shield :
+              payment.status === 'processing' ? Icons.refresh : Icons.bank}
           </div>
           <div>
             <p className="text-sm font-semibold text-foreground">{statusCtx.title}</p>
             <p className="text-xs text-muted-fg mt-0.5 leading-relaxed">{statusCtx.body}</p>
+            {amlNote && payment.status === 'pending_compliance' && (
+              <p className="mt-2 rounded-lg bg-warning/10 border border-warning/20 px-3 py-1.5 text-xs text-warning-fg leading-relaxed">
+                AML note: {amlNote}
+              </p>
+            )}
           </div>
         </div>
       )}
 
-      {/* ── Hero card ── */}
+      {/* ══════════════════════════════════════════════════════════════════════
+          HERO CARD
+      ══════════════════════════════════════════════════════════════════════ */}
       <div className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-surface to-background p-6">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent pointer-events-none" />
 
@@ -312,7 +513,10 @@ export function PaymentDetail() {
             <span className="text-xs font-medium text-muted-fg uppercase tracking-wider">You send</span>
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-bold text-foreground tabular-nums">
-                {parseFloat(payment.source_amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {parseFloat(payment.source_amount).toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
               </span>
               <span className="text-lg font-semibold text-muted-fg">{payment.source_currency}</span>
             </div>
@@ -337,7 +541,10 @@ export function PaymentDetail() {
             <span className="text-xs font-medium text-muted-fg uppercase tracking-wider">They receive</span>
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-bold text-foreground tabular-nums">
-                {parseFloat(payment.dest_amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {parseFloat(payment.dest_amount).toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
               </span>
               <span className="text-lg font-semibold text-muted-fg">{payment.dest_currency}</span>
             </div>
@@ -355,7 +562,8 @@ export function PaymentDetail() {
           </div>
           <div className="flex items-center gap-4 text-xs text-muted-fg">
             <span>
-              Fee: <span className="font-medium text-foreground">
+              Fee:{' '}
+              <span className="font-medium text-foreground">
                 {parseFloat(payment.fee_amount ?? '0').toFixed(2)} {payment.source_currency}
               </span>
             </span>
@@ -364,54 +572,102 @@ export function PaymentDetail() {
         </div>
       </div>
 
-      {/* ── Details grid ── */}
+      {/* ══════════════════════════════════════════════════════════════════════
+          DETAIL CARDS GRID
+      ══════════════════════════════════════════════════════════════════════ */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+        {/* Transfer details */}
         <ContentCard>
-          <SectionHeader
-            title="Transfer details"
-            icon={
-              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-              </svg>
-            }
+          <SectionHeader title="Transfer details" icon={Icons.transfer} />
+          <InfoRow
+            label="Exchange rate"
+            value={`1 ${payment.source_currency} = ${parseFloat(payment.exchange_rate).toFixed(4)} ${payment.dest_currency}`}
           />
-          <InfoRow label="Exchange rate" value={`1 ${payment.source_currency} = ${parseFloat(payment.exchange_rate).toFixed(4)} ${payment.dest_currency}`} />
           <InfoRow label="Fee" value={<AmountDisplay amount={payment.fee_amount} currency={payment.source_currency} />} />
           <InfoRow label="Purpose" value={payment.purpose_code} />
+          {payment.note && <InfoRow label="Submitter note" value={payment.note} />}
           {payment.reference && <InfoRow label="Reference" value={payment.reference} mono />}
           <InfoRow label="Payment ID" value={payment.id} mono />
-        </ContentCard>
-
-        <ContentCard>
-          <SectionHeader
-            title="Recipient"
-            icon={
-              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-            }
-          />
-          <InfoRow label="Name" value={payment.beneficiary_name ?? '—'} />
-          <InfoRow label="Country" value={payment.beneficiary_country_code ?? '—'} />
           <InfoRow label="Submitted" value={new Date(payment.created_at).toLocaleString()} />
           {payment.completed_at && (
             <InfoRow label="Completed" value={new Date(payment.completed_at).toLocaleString()} />
           )}
-          {payment.note && <InfoRow label="Note" value={payment.note} />}
+        </ContentCard>
+
+        {/* Recipient / Beneficiary */}
+        <ContentCard>
+          <SectionHeader title="Recipient" icon={Icons.user} />
+          <InfoRow label="Name"    value={payment.beneficiary_name    ?? '—'} />
+          <InfoRow label="Country" value={payment.beneficiary_country_code ?? '—'} />
+          {payment.beneficiary_currency && (
+            <InfoRow label="Currency" value={payment.beneficiary_currency} />
+          )}
+          {payment.beneficiary_bank_name && (
+            <InfoRow label="Bank" value={payment.beneficiary_bank_name} />
+          )}
+          {payment.beneficiary_account_number && (
+            <InfoRow label="Account no." value={payment.beneficiary_account_number} mono />
+          )}
+          {payment.beneficiary_iban && (
+            <InfoRow label="IBAN" value={payment.beneficiary_iban} mono />
+          )}
+          {payment.beneficiary_swift_bic && (
+            <InfoRow label="SWIFT / BIC" value={payment.beneficiary_swift_bic} mono />
+          )}
         </ContentCard>
       </div>
 
-      {/* ── Provider details (admin only) ── */}
+      {/* ── Source account ────────────────────────────────────────────────── */}
+      {(payment.account_currency || payment.account_number_ref) && (
+        <ContentCard>
+          <SectionHeader title="Source account" icon={Icons.bank} />
+          {payment.account_currency && (
+            <InfoRow label="Account currency" value={payment.account_currency} />
+          )}
+          {payment.account_number_ref && (
+            <InfoRow label="Account number" value={payment.account_number_ref} mono />
+          )}
+        </ContentCard>
+      )}
+
+      {/* ── People (submitter + checker) ──────────────────────────────────── */}
+      {(payment.submitter_email || payment.checker_email) && (
+        <ContentCard>
+          <SectionHeader title="People" icon={Icons.users} />
+          {payment.submitter_email && (
+            <div className="flex items-start justify-between gap-4 py-3 border-b border-border">
+              <span className="text-xs text-muted-fg shrink-0">Submitted by</span>
+              <div className="text-right">
+                {submitterName && (
+                  <p className="text-sm font-medium text-foreground">{submitterName}</p>
+                )}
+                <p className="text-xs text-muted-fg">{payment.submitter_email}</p>
+              </div>
+            </div>
+          )}
+          {payment.checker_email && (
+            <div className="flex items-start justify-between gap-4 py-3 last:border-0">
+              <span className="text-xs text-muted-fg shrink-0">
+                {payment.status === 'pending_approval' && payment.checker_id
+                  ? 'First approver'
+                  : 'Approved by'}
+              </span>
+              <div className="text-right">
+                {checkerName && (
+                  <p className="text-sm font-medium text-foreground">{checkerName}</p>
+                )}
+                <p className="text-xs text-muted-fg">{payment.checker_email}</p>
+              </div>
+            </div>
+          )}
+        </ContentCard>
+      )}
+
+      {/* ── Provider details (admin only) ─────────────────────────────────── */}
       {isAdminRole && (
         <ContentCard>
-          <SectionHeader
-            title="Provider details"
-            icon={
-              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-              </svg>
-            }
-          />
+          <SectionHeader title="Provider details" icon={Icons.transfer} />
           <InfoRow
             label="Provider"
             value={
@@ -420,15 +676,22 @@ export function PaymentDetail() {
               </span>
             }
           />
-          <InfoRow label="Provider payment ID" value={payment.provider_payment_id ?? '—'} mono />
-          {payment.ops_notes && <InfoRow label="Ops notes" value={payment.ops_notes} />}
+          {payment.provider_payment_id && (
+            <InfoRow label="Provider payment ID" value={payment.provider_payment_id} mono />
+          )}
+          {!payment.provider_payment_id && (
+            <InfoRow label="Provider payment ID" value="—" />
+          )}
+          {payment.ops_notes && (
+            <InfoRow label="Ops notes" value={payment.ops_notes} />
+          )}
           {isSuperAdmin && payment.tenant_name && (
             <InfoRow label="Client" value={payment.tenant_name} />
           )}
         </ContentCard>
       )}
 
-      {/* ── Status timeline ── */}
+      {/* ── Status timeline ───────────────────────────────────────────────── */}
       {timelineEvents.length > 0 && (
         <ContentCard>
           <SectionHeader
@@ -443,25 +706,31 @@ export function PaymentDetail() {
         </ContentCard>
       )}
 
-      {/* ── Mutation errors ── */}
-      {(approveMutation.isError || rejectMutation.isError || completeMutation.isError || failMutation.isError) && (
+      {/* ── Mutation errors ───────────────────────────────────────────────── */}
+      {(approveMutation.isError || rejectMutation.isError || completeMutation.isError ||
+        failMutation.isError || cancelMutation.isError) && (
         <div className="flex items-start gap-2 rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger-fg">
           <svg className="mt-0.5 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
           {getApiError(
-            approveMutation.error ?? rejectMutation.error ?? completeMutation.error ?? failMutation.error,
+            approveMutation.error ?? rejectMutation.error ??
+            completeMutation.error ?? failMutation.error ?? cancelMutation.error,
             'Action failed. Please try again.',
           )}
         </div>
       )}
 
-      {/* ── Reject dialog ── */}
+      {/* ══════════════════════════════════════════════════════════════════════
+          DIALOGS
+      ══════════════════════════════════════════════════════════════════════ */}
+
+      {/* Reject */}
       <ConfirmDialog
         open={showRejectDialog}
         onOpenChange={setShowRejectDialog}
         title="Reject payment"
-        description="Please provide a reason for rejecting this payment. This will be visible to the submitter."
+        description="Provide a reason for rejecting this payment. The submitter will see this message."
         confirmLabel="Reject"
         variant="danger"
         onConfirm={() => rejectMutation.mutate()}
@@ -471,12 +740,12 @@ export function PaymentDetail() {
         <Textarea
           value={rejectNote}
           onChange={e => setRejectNote(e.target.value)}
-          placeholder="Enter rejection reason (required)…"
+          placeholder="Enter rejection reason (minimum 5 characters)…"
           rows={3}
         />
       </ConfirmDialog>
 
-      {/* ── Cancel dialog ── */}
+      {/* Cancel */}
       <ConfirmDialog
         open={showCancelDialog}
         onOpenChange={setShowCancelDialog}
@@ -488,7 +757,7 @@ export function PaymentDetail() {
         loading={cancelMutation.isPending}
       />
 
-      {/* ── Mark as Complete dialog ── */}
+      {/* Mark as complete */}
       <ConfirmDialog
         open={showCompleteDialog}
         onOpenChange={setShowCompleteDialog}
@@ -518,19 +787,19 @@ export function PaymentDetail() {
             <Textarea
               value={processNotes}
               onChange={e => setProcessNotes(e.target.value)}
-              placeholder="Any additional notes for audit…"
+              placeholder="Any additional notes for the audit trail…"
               rows={2}
             />
           </div>
         </div>
       </ConfirmDialog>
 
-      {/* ── Mark as Failed dialog ── */}
+      {/* Mark as failed */}
       <ConfirmDialog
         open={showFailDialog}
         onOpenChange={setShowFailDialog}
         title="Mark payment as failed"
-        description="The debit will be reversed and the sender's balance restored."
+        description="The debit will be reversed and the sender's balance restored. This action cannot be undone."
         confirmLabel="Mark as failed"
         variant="danger"
         onConfirm={() => failMutation.mutate()}
@@ -550,6 +819,7 @@ export function PaymentDetail() {
           <p className="mt-1 text-xs text-muted-fg">Minimum 3 characters required.</p>
         </div>
       </ConfirmDialog>
+
     </div>
   )
 }
