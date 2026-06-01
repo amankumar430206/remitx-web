@@ -49,8 +49,12 @@ function InfoRow({
 
 function NavPills({ items }: { items: Array<{ label: string; id: string }> }) {
   if (items.length === 0) return null
-  const scrollTo = (id: string) =>
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  const scrollTo = (id: string) => {
+    const el = document.getElementById(id)
+    if (!el) return
+    const top = el.getBoundingClientRect().top + window.scrollY - window.innerHeight * 0.2
+    window.scrollTo({ top, behavior: 'smooth' })
+  }
   return (
     <div className="flex items-center gap-2 overflow-x-auto pb-0.5 [scrollbar-width:none] [-webkit-overflow-scrolling:touch]">
       {items.map(item => (
