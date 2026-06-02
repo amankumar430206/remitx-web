@@ -165,6 +165,7 @@ export function Transactions() {
   const params = {
     page,
     limit: 20,
+    search: search || undefined,
     from: dateRange.startDate ? toLocalDateStr(dateRange.startDate) : undefined,
     to: dateRange.endDate ? toLocalDateStr(dateRange.endDate) : undefined,
   }
