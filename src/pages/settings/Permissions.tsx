@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { PageHeader } from '@/components/ui/organisms/PageHeader'
 import { DataTable, type Column } from '@/components/ui/organisms/DataTable'
 import { LoadingState } from '@/components/ui/molecules/LoadingState'
@@ -7,8 +8,7 @@ import { ConfirmDialog } from '@/components/ui/molecules/ConfirmDialog'
 import { Button } from '@/components/ui/atoms/Button'
 import { Badge } from '@/components/ui/atoms/Badge'
 import { ContentCard } from '@/layouts/ContentCard'
-import { useRoles, usePermissionCatalog, useDeleteRole } from '@/hooks/useRoles'
-import { RoleEditorDrawer } from './RoleEditorDrawer'
+import { useRoles, useDeleteRole } from '@/hooks/useRoles'
 import type { Role } from '@/api/tenants'
 
 // super_admin is a platform-level role, not tenant-editable — hide it here.
@@ -20,12 +20,10 @@ function deleteErrorMessage(err: unknown): string {
 }
 
 export function Permissions() {
+  const navigate = useNavigate()
   const { data: roles, isLoading, isError, refetch } = useRoles()
-  const { data: catalog } = usePermissionCatalog()
   const deleteRole = useDeleteRole()
 
-  const [editorOpen, setEditorOpen] = useState(false)
-  const [editing, setEditing] = useState<Role | null>(null)
   const [toDelete, setToDelete] = useState<Role | null>(null)
   const [deleteErr, setDeleteErr] = useState<string | null>(null)
 
@@ -34,8 +32,8 @@ export function Permissions() {
     [roles],
   )
 
-  const openCreate = () => { setEditing(null); setEditorOpen(true) }
-  const openEdit = (role: Role) => { setEditing(role); setEditorOpen(true) }
+  const openCreate = () => navigate('/settings/permissions/new')
+  const openEdit = (role: Role) => navigate(`/settings/permissions/${role.key}`)
 
   const confirmDelete = async () => {
     if (!toDelete) return
@@ -119,15 +117,6 @@ export function Permissions() {
           emptyDescription="Create your first custom role to get started."
         />
       </ContentCard>
-
-      {catalog && (
-        <RoleEditorDrawer
-          open={editorOpen}
-          onClose={() => setEditorOpen(false)}
-          role={editing}
-          catalog={catalog}
-        />
-      )}
 
       <ConfirmDialog
         open={toDelete !== null}
