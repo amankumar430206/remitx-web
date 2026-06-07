@@ -10,11 +10,14 @@ export interface StatCardProps {
   loading?: boolean
   className?: string
   onClick?: () => void
+  /** Label for the action button shown on clickable cards. Defaults to "View". */
+  actionLabel?: string
   variant?: 'default' | 'gradient'
 }
 
-export function StatCard({ title, value, description, icon, trend, loading, className, onClick, variant = 'default' }: StatCardProps) {
+export function StatCard({ title, value, description, icon, trend, loading, className, onClick, actionLabel, variant = 'default' }: StatCardProps) {
   const isGrad = variant === 'gradient'
+  const actionable = !isGrad && !!onClick
 
   return (
     <div
@@ -78,6 +81,21 @@ export function StatCard({ title, value, description, icon, trend, loading, clas
           </svg>
           {Math.abs(trend.value)}% {trend.label ?? 'vs last period'}
         </div>
+      )}
+
+      {actionable && !loading && (
+        // Outlined CTA so it's obvious the card is interactive. stopPropagation
+        // prevents firing the card-level onClick a second time.
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onClick?.() }}
+          className="mt-auto inline-flex items-center gap-1.5 self-start rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:border-border-strong hover:bg-surface-overlay"
+        >
+          {actionLabel ?? 'View'}
+          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
       )}
     </div>
   )

@@ -360,6 +360,7 @@ export function TenantList() {
           icon={<IconBuildings />}
           loading={isLoading}
           onClick={status ? () => setStatus('') : undefined}
+          actionLabel="Clear filter"
         />
         <StatCard
           title="Active"
@@ -368,6 +369,7 @@ export function TenantList() {
           icon={<IconCheckCircle />}
           loading={isLoading}
           onClick={() => setStatus(status === 'active' ? '' : 'active')}
+          actionLabel={status === 'active' ? 'Clear filter' : 'Filter active'}
         />
         <StatCard
           title="Suspended"
@@ -375,6 +377,7 @@ export function TenantList() {
           icon={<IconPause />}
           loading={isLoading}
           onClick={() => setStatus(status === 'suspended' ? '' : 'suspended')}
+          actionLabel={status === 'suspended' ? 'Clear filter' : 'Filter suspended'}
         />
         <StatCard
           title="KYC pending"
@@ -383,6 +386,7 @@ export function TenantList() {
           icon={<IconShield />}
           loading={isLoading}
           onClick={totalPendingKyc > 0 ? () => navigate('/admin/kyc-queue') : undefined}
+          actionLabel="Review queue"
         />
       </div>
 
