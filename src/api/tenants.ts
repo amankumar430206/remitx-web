@@ -19,9 +19,39 @@ export interface UpdateThemePayload {
   logoUrl?: string | null
 }
 
+export interface Role {
+  /** Stable slug, stored on users. Alias `role` kept for backward compat. */
+  key: string
+  role: string
+  name: string
+  description: string | null
+  isSystem: boolean
+  permissions: string[]
+}
+
+/** @deprecated use Role */
 export interface RolePermissions {
   role: string
   permissions: string[]
+}
+
+export interface PermissionCatalogGroup {
+  domain: string
+  label: string
+  permissions: Array<{ key: string; label: string; wildcard?: boolean }>
+}
+
+export interface CreateRolePayload {
+  name: string
+  key?: string
+  description?: string | null
+  permissions: string[]
+}
+
+export interface UpdateRolePayload {
+  name?: string
+  description?: string | null
+  permissions?: string[]
 }
 
 const tenants = {
@@ -33,10 +63,16 @@ const tenants = {
     apiClient.get<{ success: boolean; data: Record<string, boolean> }>('/tenants/feature-flags'),
   updateFeatureFlags: (flags: Record<string, boolean>) =>
     apiClient.put<{ success: boolean; data: Record<string, boolean> }>('/tenants/feature-flags', flags),
+  permissionCatalog: () =>
+    apiClient.get<{ success: boolean; data: PermissionCatalogGroup[] }>('/tenants/permissions/catalog'),
   listRoles: () =>
-    apiClient.get<{ success: boolean; data: RolePermissions[] }>('/tenants/roles'),
-  upsertRole: (role: string, permissions: string[]) =>
-    apiClient.post<{ success: boolean; data: RolePermissions }>('/tenants/roles', { role, permissions }),
+    apiClient.get<{ success: boolean; data: Role[] }>('/tenants/roles'),
+  createRole: (payload: CreateRolePayload) =>
+    apiClient.post<{ success: boolean; data: Role }>('/tenants/roles', payload),
+  updateRole: (key: string, payload: UpdateRolePayload) =>
+    apiClient.put<{ success: boolean; data: Role }>(`/tenants/roles/${key}`, payload),
+  deleteRole: (key: string) =>
+    apiClient.delete<{ success: boolean; data: { key: string; deleted: boolean } }>(`/tenants/roles/${key}`),
 }
 
 export default tenants

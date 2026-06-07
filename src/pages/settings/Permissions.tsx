@@ -1,155 +1,150 @@
-import { useState, useEffect, useMemo } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMemo, useState } from 'react'
 import { PageHeader } from '@/components/ui/organisms/PageHeader'
-import { PermissionMatrix } from '@/components/ui/organisms/PermissionMatrix'
+import { DataTable, type Column } from '@/components/ui/organisms/DataTable'
 import { LoadingState } from '@/components/ui/molecules/LoadingState'
 import { ErrorState } from '@/components/ui/molecules/ErrorState'
+import { ConfirmDialog } from '@/components/ui/molecules/ConfirmDialog'
 import { Button } from '@/components/ui/atoms/Button'
+import { Badge } from '@/components/ui/atoms/Badge'
 import { ContentCard } from '@/layouts/ContentCard'
-import tenantsApi from '@/api/tenants'
+import { useRoles, usePermissionCatalog, useDeleteRole } from '@/hooks/useRoles'
+import { RoleEditorDrawer } from './RoleEditorDrawer'
+import type { Role } from '@/api/tenants'
 
-// Preferred display order — any role returned by the API not in this list
-// gets appended at the end automatically.
-const ROLE_ORDER = ['client_admin', 'maker', 'checker', 'subclient_admin', 'subclient_user']
+// super_admin is a platform-level role, not tenant-editable — hide it here.
+const HIDDEN_ROLE_KEYS = new Set(['super_admin'])
 
-const ROLE_LABELS: Record<string, string> = {
-  client_admin:    'Admin',
-  maker:           'Maker',
-  checker:         'Checker',
-  subclient_admin: 'Sub-client Admin',
-  subclient_user:  'Sub-client User',
+function deleteErrorMessage(err: unknown): string {
+  const e = err as { response?: { data?: { error?: { message?: string } } } }
+  return e?.response?.data?.error?.message ?? 'Could not delete this role.'
 }
 
-const PERMISSIONS = [
-  { key: 'payments:create',       label: 'Create payment',       group: 'Payments' },
-  { key: 'payments:view',         label: 'View payments',        group: 'Payments' },
-  { key: 'payments:view_all',     label: 'View all payments',    group: 'Payments' },
-  { key: 'payments:approve',      label: 'Approve payment',      group: 'Payments' },
-  { key: 'payments:cancel',       label: 'Cancel payment',       group: 'Payments' },
-  { key: 'beneficiaries:view',    label: 'View beneficiaries',   group: 'Beneficiaries' },
-  { key: 'beneficiaries:create',  label: 'Add / edit',           group: 'Beneficiaries' },
-  { key: 'beneficiaries:delete',  label: 'Delete beneficiary',   group: 'Beneficiaries' },
-  { key: 'accounts:view',         label: 'View accounts',        group: 'Accounts' },
-  { key: 'accounts:create',       label: 'Create account',       group: 'Accounts' },
-  { key: 'reports:view',          label: 'View reports',         group: 'Reports' },
-  { key: 'reports:export',        label: 'Export reports',       group: 'Reports' },
-  { key: 'users:invite',          label: 'Invite users',         group: 'Users' },
-  { key: 'users:manage',          label: 'Manage users',         group: 'Users' },
-  { key: 'admin:config',          label: 'Tenant configuration', group: 'Admin' },
-  { key: 'compliance:review',     label: 'Review compliance',    group: 'Admin' },
-]
-
-const ALL_PERMISSION_KEYS = PERMISSIONS.map(p => p.key)
-
 export function Permissions() {
-  const qc = useQueryClient()
-  const [matrix, setMatrix] = useState<Record<string, string[]>>({})
-  const [dirty, setDirty] = useState(false)
-  const [savedMsg, setSavedMsg] = useState(false)
+  const { data: roles, isLoading, isError, refetch } = useRoles()
+  const { data: catalog } = usePermissionCatalog()
+  const deleteRole = useDeleteRole()
 
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['roles'],
-    queryFn: () => tenantsApi.listRoles().then(r => r.data.data),
-  })
+  const [editorOpen, setEditorOpen] = useState(false)
+  const [editing, setEditing] = useState<Role | null>(null)
+  const [toDelete, setToDelete] = useState<Role | null>(null)
+  const [deleteErr, setDeleteErr] = useState<string | null>(null)
 
-  // Derive the role list from the API — ordered by ROLE_ORDER, extras appended.
-  // super_admin is excluded (hardcoded full-access, not user-editable).
-  const roles = useMemo(() => {
-    if (!data) return ROLE_ORDER
-    const fromApi = data.map((d: { role: string }) => d.role).filter((r: string) => r !== 'super_admin')
-    const ordered = ROLE_ORDER.filter(r => fromApi.includes(r))
-    const extras   = fromApi.filter((r: string) => !ROLE_ORDER.includes(r))
-    return [...ordered, ...extras]
-  }, [data])
+  const visibleRoles = useMemo(
+    () => (roles ?? []).filter(r => !HIDDEN_ROLE_KEYS.has(r.key)),
+    [roles],
+  )
 
-  // Populate matrix from API data
-  useEffect(() => {
-    if (!data) return
-    const m: Record<string, string[]> = {}
-    for (const { role, permissions } of data) {
-      m[role] = permissions
+  const openCreate = () => { setEditing(null); setEditorOpen(true) }
+  const openEdit = (role: Role) => { setEditing(role); setEditorOpen(true) }
+
+  const confirmDelete = async () => {
+    if (!toDelete) return
+    setDeleteErr(null)
+    try {
+      await deleteRole.mutateAsync(toDelete.key)
+      setToDelete(null)
+    } catch (err) {
+      setDeleteErr(deleteErrorMessage(err))
     }
-    // Ensure all derived roles have an entry even if not yet in DB
-    for (const r of roles) {
-      if (!m[r]) m[r] = []
-    }
-    setMatrix(m)
-    setDirty(false)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data])
-
-  const saveMutation = useMutation({
-    mutationFn: async () => {
-      await Promise.all(
-        roles.map(role => tenantsApi.upsertRole(role, matrix[role] ?? []))
-      )
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['roles'] })
-      setDirty(false)
-      setSavedMsg(true)
-      setTimeout(() => setSavedMsg(false), 2500)
-    },
-  })
-
-  const handleChange = (role: string, permission: string, granted: boolean) => {
-    setMatrix(prev => ({
-      ...prev,
-      [role]: granted
-        ? [...(prev[role] ?? []), permission]
-        : (prev[role] ?? []).filter(p => p !== permission),
-    }))
-    setDirty(true)
-    setSavedMsg(false)
   }
 
-  const handleToggleAll = (role: string, grant: boolean) => {
-    setMatrix(prev => ({
-      ...prev,
-      [role]: grant ? [...ALL_PERMISSION_KEYS] : [],
-    }))
-    setDirty(true)
-    setSavedMsg(false)
-  }
+  const columns: Column<Role>[] = [
+    {
+      key: 'name',
+      header: 'Role',
+      render: (r) => (
+        <div className="flex items-center gap-2">
+          <span className="font-medium text-foreground">{r.name}</span>
+          <Badge variant={r.isSystem ? 'outline' : 'primary'}>
+            {r.isSystem ? 'System' : 'Custom'}
+          </Badge>
+        </div>
+      ),
+    },
+    {
+      key: 'key',
+      header: 'Key',
+      render: (r) => <code className="font-mono text-xs text-muted-fg">{r.key}</code>,
+    },
+    {
+      key: 'description',
+      header: 'Description',
+      render: (r) => <span className="text-muted-fg">{r.description || '—'}</span>,
+    },
+    {
+      key: 'permissions',
+      header: 'Permissions',
+      className: 'text-center',
+      headerClassName: 'text-center',
+      render: (r) => <span className="text-foreground">{r.permissions.length}</span>,
+    },
+    {
+      key: 'actions',
+      header: '',
+      className: 'text-right',
+      render: (r) => (
+        <div className="flex justify-end gap-2">
+          <Button size="sm" variant="outline" onClick={() => openEdit(r)}>Edit</Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-danger-fg hover:bg-danger/10"
+            onClick={() => { setDeleteErr(null); setToDelete(r) }}
+          >
+            Delete
+          </Button>
+        </div>
+      ),
+    },
+  ]
 
-  if (isLoading) return <LoadingState message="Loading permissions…" />
-  if (isError) return <ErrorState title="Could not load permissions" onRetry={refetch} />
+  if (isLoading) return <LoadingState message="Loading roles…" />
+  if (isError) return <ErrorState title="Could not load roles" onRetry={refetch} />
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Role Permissions"
-        breadcrumbs={[{ label: 'Settings' }, { label: 'Permissions' }]}
-        description="Control what each role can do across the platform. Changes apply immediately on save."
-        actions={
-          <div className="flex items-center gap-3">
-            {savedMsg && <span className="text-sm text-success-fg font-medium">Saved</span>}
-            {dirty && !saveMutation.isPending && (
-              <span className="text-xs text-warning-fg font-medium">Unsaved changes</span>
-            )}
-            <Button
-              size="sm"
-              loading={saveMutation.isPending}
-              disabled={!dirty}
-              onClick={() => saveMutation.mutate()}
-            >
-              Save permissions
-            </Button>
-          </div>
-        }
+        title="Roles & Permissions"
+        breadcrumbs={[{ label: 'Settings' }, { label: 'Roles' }]}
+        description="Define roles and the permissions they grant. Custom roles can be assigned to users just like the built-in ones."
+        actions={<Button size="sm" onClick={openCreate}>New role</Button>}
       />
 
       <ContentCard padding="none">
-        <PermissionMatrix
-          roles={roles}
-          roleLabels={ROLE_LABELS}
-          permissions={PERMISSIONS}
-          value={matrix}
-          onChange={handleChange}
-          onToggleAll={handleToggleAll}
-          className="border-0 rounded-xl"
+        <DataTable
+          columns={columns}
+          data={visibleRoles}
+          getRowId={(r) => r.key}
+          emptyTitle="No roles yet"
+          emptyDescription="Create your first custom role to get started."
         />
       </ContentCard>
+
+      {catalog && (
+        <RoleEditorDrawer
+          open={editorOpen}
+          onClose={() => setEditorOpen(false)}
+          role={editing}
+          catalog={catalog}
+        />
+      )}
+
+      <ConfirmDialog
+        open={toDelete !== null}
+        onOpenChange={(o) => { if (!o) setToDelete(null) }}
+        title={`Delete role "${toDelete?.name}"?`}
+        description="This removes the role and its permissions. Users still assigned to it must be reassigned first."
+        confirmLabel="Delete role"
+        variant="danger"
+        loading={deleteRole.isPending}
+        onConfirm={confirmDelete}
+      >
+        {deleteErr && (
+          <div className="rounded-lg border border-danger-fg/30 bg-danger/10 px-3 py-2 text-sm text-danger-fg">
+            {deleteErr}
+          </div>
+        )}
+      </ConfirmDialog>
     </div>
   )
 }
