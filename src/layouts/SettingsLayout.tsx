@@ -12,14 +12,17 @@ const BASE_TABS = [
 
 const ADMIN_TABS = [
   { label: 'Users', href: '/settings/users' },
-  { label: 'Permissions', href: '/settings/permissions' },
+  { label: 'Roles', href: '/settings/permissions' },
   { label: 'Sub-clients', href: '/settings/sub-clients' },
   { label: 'Feature flags', href: '/settings/features' },
 ]
 
+// Tenant admins (client_admin) and platform super admins manage roles/users/etc.
+const ADMIN_ROLES = new Set(['super_admin', 'client_admin'])
+
 export function SettingsLayout() {
   const user = useAuthStore(s => s.user)
-  const isAdmin = user?.role === 'admin' || user?.role === 'super_admin'
+  const isAdmin = ADMIN_ROLES.has(user?.role ?? '')
   const tabs = isAdmin ? [...BASE_TABS, ...ADMIN_TABS] : BASE_TABS
 
   return (
