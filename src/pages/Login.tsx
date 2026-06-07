@@ -89,11 +89,12 @@ export function Login() {
   const navigate = useNavigate()
   const { login } = useAuth()
   const tenantSlug = useAuthStore(s => s.tenantSlug)
+  const clearAuth = useAuthStore(s => s.clearAuth)
   const [serverError, setServerError] = useState('')
 
   const [activeDevEmail, setActiveDevEmail] = useState<string | null>(null)
 
-  const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm<FormData>({
+  const { register, handleSubmit, setError, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { tenantSlug: tenantSlug ?? 'remitx' },
   })
@@ -108,8 +109,23 @@ export function Login() {
         navigate('/dashboard')
       }
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message
-      setServerError(msg ?? 'Invalid credentials')
+      const error = (err as { response?: { data?: { error?: { code?: string; message?: string } } } })?.response?.data?.error
+
+      // Tenant resolution fails before credentials are ever checked — usually a
+      // stale workspace slug saved from a workspace that no longer exists. Surface
+      // it on the Workspace field and drop the stale value so a reload falls back
+      // to the default, instead of showing a confusing "tenant not found".
+      if (error?.code === 'TENANT_NOT_FOUND' || error?.code === 'TENANT_INACTIVE') {
+        setError('tenantSlug', {
+          message: error.code === 'TENANT_INACTIVE'
+            ? 'This workspace is not active'
+            : `Workspace "${data.tenantSlug}" was not found — check the name`,
+        })
+        clearAuth()
+        return
+      }
+
+      setServerError(error?.message ?? 'Invalid credentials')
     }
   }
 
