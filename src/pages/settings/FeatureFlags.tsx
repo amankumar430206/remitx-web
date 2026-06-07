@@ -4,7 +4,7 @@ import { PageHeader } from '@/components/ui/organisms/PageHeader'
 import { ContentCard } from '@/layouts/ContentCard'
 import { Button } from '@/components/ui/atoms/Button'
 import { useFeatureFlagStore } from '@/stores/featureFlagStore'
-import { useAuthStore } from '@/stores/authStore'
+import { usePermissions } from '@/hooks/usePermissions'
 import { FEATURE_FLAGS, FLAG_GROUPS, DEFAULT_FLAGS } from '@/config/featureFlags'
 import tenantsApi from '@/api/tenants'
 import { cn } from '@/lib/utils'
@@ -36,8 +36,9 @@ function Toggle({ enabled, onChange, disabled }: { enabled: boolean; onChange: (
 export function FeatureFlags() {
   const qc = useQueryClient()
   const setFlags = useFeatureFlagStore(s => s.setFlags)
-  const user = useAuthStore(s => s.user)
-  const isAdmin = user?.role === 'admin' || user?.role === 'super_admin'
+  const { has } = usePermissions()
+  // Editing feature flags is platform-level — super admin only (admin:features).
+  const canManageFlags = has('admin:features')
 
   const [localFlags, setLocalFlags] = useState<Record<string, boolean>>(DEFAULT_FLAGS)
   const [saved, setSaved] = useState(false)
@@ -64,7 +65,7 @@ export function FeatureFlags() {
   })
 
   const toggle = (key: string, value: boolean) => {
-    if (!isAdmin) return
+    if (!canManageFlags) return
     setLocalFlags(prev => ({ ...prev, [key]: value }))
     setSaved(false)
   }
@@ -82,7 +83,7 @@ export function FeatureFlags() {
         title="Feature flags"
         breadcrumbs={[{ label: 'Settings' }, { label: 'Feature flags' }]}
         actions={
-          isAdmin ? (
+          canManageFlags ? (
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" onClick={resetDefaults}>
                 Reset defaults
@@ -95,7 +96,7 @@ export function FeatureFlags() {
         }
       />
 
-      {!isAdmin && (
+      {!canManageFlags && (
         <div className="rounded-xl bg-warning/10 border border-warning-fg/20 px-4 py-3 text-sm text-warning-fg">
           You have read-only access. Contact an admin to change feature flags.
         </div>
@@ -138,7 +139,7 @@ export function FeatureFlags() {
                       <span className={cn('text-xs font-medium', enabled ? 'text-success-fg' : 'text-muted-fg')}>
                         {enabled ? 'Enabled' : 'Disabled'}
                       </span>
-                      <Toggle enabled={enabled} onChange={v => toggle(flag.key, v)} disabled={!isAdmin} />
+                      <Toggle enabled={enabled} onChange={v => toggle(flag.key, v)} disabled={!canManageFlags} />
                     </div>
                   </div>
                 )

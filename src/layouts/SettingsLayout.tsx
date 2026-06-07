@@ -1,7 +1,7 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 
-import { useAuthStore } from '@/stores/authStore'
+import { usePermissions } from '@/hooks/usePermissions'
 
 const BASE_TABS = [
   { label: 'Profile', href: '/settings/profile' },
@@ -10,20 +10,19 @@ const BASE_TABS = [
   { label: 'Theme', href: '/settings/theme' },
 ]
 
+// Each admin tab is shown only if the user holds the permission its page requires
+// — fully dynamic, so custom roles get exactly the tabs they're allowed.
+// Feature flags is platform-level (admin:features) → super admin only.
 const ADMIN_TABS = [
-  { label: 'Users', href: '/settings/users' },
-  { label: 'Roles', href: '/settings/permissions' },
-  { label: 'Sub-clients', href: '/settings/sub-clients' },
-  { label: 'Feature flags', href: '/settings/features' },
+  { label: 'Users', href: '/settings/users', permission: 'users:*' },
+  { label: 'Roles', href: '/settings/permissions', permission: 'admin:config' },
+  { label: 'Sub-clients', href: '/settings/sub-clients', permission: 'subclients:*' },
+  { label: 'Feature flags', href: '/settings/features', permission: 'admin:features' },
 ]
 
-// Tenant admins (client_admin) and platform super admins manage roles/users/etc.
-const ADMIN_ROLES = new Set(['super_admin', 'client_admin'])
-
 export function SettingsLayout() {
-  const user = useAuthStore(s => s.user)
-  const isAdmin = ADMIN_ROLES.has(user?.role ?? '')
-  const tabs = isAdmin ? [...BASE_TABS, ...ADMIN_TABS] : BASE_TABS
+  const { has } = usePermissions()
+  const tabs = [...BASE_TABS, ...ADMIN_TABS.filter(t => has(t.permission))]
 
   return (
     <div className="flex flex-col gap-6">
