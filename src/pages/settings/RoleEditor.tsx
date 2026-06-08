@@ -9,8 +9,9 @@ import { Textarea } from '@/components/ui/atoms/Textarea'
 import { Checkbox } from '@/components/ui/atoms/Checkbox'
 import { Badge } from '@/components/ui/atoms/Badge'
 import { ContentCard } from '@/layouts/ContentCard'
-import { useRoles, usePermissionCatalog, useCreateRole, useUpdateRole } from '@/hooks/useRoles'
+import { useRoles, usePermissionCatalog, useRoleTemplates, useCreateRole, useUpdateRole } from '@/hooks/useRoles'
 import { getApiError } from '@/lib/apiError'
+import type { RoleTemplate } from '@/api/tenants'
 
 const ROLES_PATH = '/settings/permissions'
 
@@ -21,6 +22,7 @@ export function RoleEditor() {
 
   const { data: roles, isLoading: rolesLoading, isError: rolesError, refetch } = useRoles()
   const { data: catalog, isLoading: catalogLoading } = usePermissionCatalog()
+  const { data: templates } = useRoleTemplates()
   const createRole = useCreateRole()
   const updateRole = useUpdateRole()
   const pending = createRole.isPending || updateRole.isPending
@@ -65,6 +67,13 @@ export function RoleEditor() {
       for (const k of keys) { if (on) next.add(k); else next.delete(k) }
       return next
     })
+
+  // Load a starting point: prefill name (if blank), description, and permissions.
+  const applyTemplate = (t: RoleTemplate) => {
+    if (!name.trim()) setName(t.name)
+    setDescription(t.description)
+    setPerms(new Set(t.permissions))
+  }
 
   const handleSave = async () => {
     setError(null)
@@ -124,6 +133,30 @@ export function RoleEditor() {
         <div className="rounded-lg border border-danger-fg/30 bg-danger/10 px-4 py-3 text-sm text-danger-fg">
           {error}
         </div>
+      )}
+
+      {!isEdit && templates && templates.length > 0 && (
+        <ContentCard>
+          <div className="flex flex-col gap-3">
+            <div>
+              <h2 className="text-sm font-semibold text-foreground">Start from a template</h2>
+              <p className="text-xs text-muted-fg">Optional — prefill common roles, then adjust. Or build from scratch below.</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {templates.map(t => (
+                <button
+                  key={t.key}
+                  type="button"
+                  onClick={() => applyTemplate(t)}
+                  className="flex flex-col items-start gap-0.5 rounded-lg border border-border bg-surface px-3 py-2 text-left transition-colors hover:border-primary/60 hover:bg-surface-raised"
+                >
+                  <span className="text-sm font-medium text-foreground">{t.name}</span>
+                  <span className="text-[11px] text-muted-fg">{t.permissions.length} permissions</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </ContentCard>
       )}
 
       <ContentCard>

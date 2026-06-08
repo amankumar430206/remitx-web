@@ -17,6 +17,14 @@ export function usePermissionCatalog() {
   })
 }
 
+export function useRoleTemplates() {
+  return useQuery({
+    queryKey: ['role-templates'],
+    queryFn: () => tenantsApi.roleTemplates().then(r => r.data.data),
+    staleTime: Infinity, // templates are static for the life of the app
+  })
+}
+
 export function useCreateRole() {
   const qc = useQueryClient()
   return useMutation({

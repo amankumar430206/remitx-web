@@ -41,6 +41,13 @@ export interface PermissionCatalogGroup {
   permissions: Array<{ key: string; label: string; wildcard?: boolean }>
 }
 
+export interface RoleTemplate {
+  key: string
+  name: string
+  description: string
+  permissions: string[]
+}
+
 export interface CreateRolePayload {
   name: string
   key?: string
@@ -65,6 +72,8 @@ const tenants = {
     apiClient.put<{ success: boolean; data: Record<string, boolean> }>('/tenants/feature-flags', flags),
   permissionCatalog: () =>
     apiClient.get<{ success: boolean; data: PermissionCatalogGroup[] }>('/tenants/permissions/catalog'),
+  roleTemplates: () =>
+    apiClient.get<{ success: boolean; data: RoleTemplate[] }>('/tenants/role-templates'),
   listRoles: () =>
     apiClient.get<{ success: boolean; data: Role[] }>('/tenants/roles'),
   createRole: (payload: CreateRolePayload) =>
