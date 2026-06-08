@@ -13,19 +13,17 @@ import { Badge } from '@/components/ui/atoms/Badge'
 import { Input } from '@/components/ui/atoms/Input'
 import { Select } from '@/components/ui/atoms/Select'
 import { ContentCard } from '@/layouts/ContentCard'
-import { useUsers, useInviteUser, useUpdateUserStatus } from '@/hooks/useUsers'
+import { useUsers, useInviteUser, useUpdateUserStatus, useUpdateUserPermissions } from '@/hooks/useUsers'
+import { useRoles } from '@/hooks/useRoles'
 import type { User } from '@/api/users'
 import type { Column } from '@/components/ui/organisms/DataTable'
 
-const ROLE_OPTIONS = [
-  { value: 'client_admin', label: 'Client Admin' },
-  { value: 'maker', label: 'Maker' },
-  { value: 'checker', label: 'Checker' },
-]
+// super_admin is a platform role — never assignable to tenant users.
+const HIDDEN_ROLE_KEYS = new Set(['super_admin'])
 
 const inviteSchema = z.object({
   email: z.string().email('Valid email is required'),
-  role: z.enum(['client_admin', 'maker', 'checker']),
+  role: z.string().min(1, 'Role is required'),
   firstName: z.string().optional(),
   lastName: z.string().optional(),
 })
@@ -35,14 +33,26 @@ type InviteValues = z.infer<typeof inviteSchema>
 export function Users() {
   const [showInviteForm, setShowInviteForm] = useState(false)
   const [suspendTarget, setSuspendTarget] = useState<User | null>(null)
+  const [roleTarget, setRoleTarget] = useState<User | null>(null)
+  const [newRole, setNewRole] = useState('')
 
   const { data: users, isLoading } = useUsers()
+  const { data: roles } = useRoles()
   const inviteMutation = useInviteUser()
   const statusMutation = useUpdateUserStatus()
+  const roleMutation = useUpdateUserPermissions()
+
+  // Assignable roles come from the live roles list (defaults + custom), minus super_admin.
+  const roleOptions = (roles ?? [])
+    .filter(r => !HIDDEN_ROLE_KEYS.has(r.key))
+    .map(r => ({ value: r.key, label: r.name }))
+
+  const roleLabel = (key: string) =>
+    roles?.find(r => r.key === key)?.name ?? key.replace(/_/g, ' ')
 
   const { register, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm<InviteValues>({
     resolver: zodResolver(inviteSchema),
-    defaultValues: { role: 'maker' },
+    defaultValues: { role: 'user' },
   })
 
   const onInvite = (values: InviteValues) => {
@@ -54,6 +64,19 @@ export function Users() {
   const toggleStatus = (user: User) => {
     const next = user.status === 'active' ? 'inactive' : 'active'
     statusMutation.mutate({ id: user.id, status: next })
+  }
+
+  const openRoleChange = (user: User) => {
+    setRoleTarget(user)
+    setNewRole(user.role)
+  }
+
+  const confirmRoleChange = () => {
+    if (!roleTarget || !newRole) return
+    roleMutation.mutate(
+      { id: roleTarget.id, role: newRole },
+      { onSuccess: () => setRoleTarget(null) },
+    )
   }
 
   const columns: Column<User>[] = [
@@ -72,7 +95,7 @@ export function Users() {
     {
       key: 'role',
       header: 'Role',
-      render: row => <Badge variant="secondary" className="capitalize">{row.role.replace('_', ' ')}</Badge>,
+      render: row => <Badge variant="secondary">{roleLabel(row.role)}</Badge>,
     },
     {
       key: 'status',
@@ -89,6 +112,13 @@ export function Users() {
       header: '',
       render: row => (
         <div className="flex items-center gap-2 justify-end">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={e => { e.stopPropagation(); openRoleChange(row) }}
+          >
+            Change role
+          </Button>
           {row.status !== 'invited' && (
             <Button
               variant="ghost"
@@ -145,8 +175,8 @@ export function Users() {
                 <FormField label="Role" error={errors.role?.message} required>
                   <Select
                     value={watch('role')}
-                    onValueChange={v => setValue('role', v as InviteValues['role'])}
-                    options={ROLE_OPTIONS}
+                    onValueChange={v => setValue('role', v)}
+                    options={roleOptions}
                     error={!!errors.role}
                   />
                 </FormField>
@@ -182,6 +212,26 @@ export function Users() {
           emptyDescription="Invite team members to get started."
         />
       </ContentCard>
+
+      <ConfirmDialog
+        open={!!roleTarget}
+        onOpenChange={open => !open && setRoleTarget(null)}
+        title="Change role"
+        description={`Assign a new role to ${roleTarget?.email}. Their permissions update on next sign-in.`}
+        confirmLabel="Save role"
+        onConfirm={confirmRoleChange}
+        loading={roleMutation.isPending}
+        disabled={!newRole || newRole === roleTarget?.role}
+      >
+        <FormField label="Role" required>
+          <Select value={newRole} onValueChange={setNewRole} options={roleOptions} />
+        </FormField>
+        {roleMutation.isError && (
+          <p className="mt-2 text-sm text-danger-fg">
+            {getApiError(roleMutation.error, 'Could not change role.')}
+          </p>
+        )}
+      </ConfirmDialog>
 
       <ConfirmDialog
         open={!!suspendTarget}
