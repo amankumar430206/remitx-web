@@ -34,6 +34,7 @@ export function Permissions() {
 
   const openCreate = () => navigate('/settings/permissions/new')
   const openEdit = (role: Role) => navigate(`/settings/permissions/${role.key}`)
+  const openCompare = () => navigate('/settings/permissions/compare')
 
   const confirmDelete = async () => {
     if (!toDelete) return
@@ -77,20 +78,37 @@ export function Permissions() {
       render: (r) => <span className="text-foreground">{r.permissions.length}</span>,
     },
     {
+      key: 'users',
+      header: 'Users',
+      className: 'text-center',
+      headerClassName: 'text-center',
+      render: (r) => (
+        <span className={r.userCount > 0 ? 'font-medium text-foreground' : 'text-muted-fg'}>
+          {r.userCount}
+        </span>
+      ),
+    },
+    {
       key: 'actions',
       header: '',
       className: 'text-right',
       render: (r) => (
         <div className="flex justify-end gap-2">
-          <Button size="sm" variant="outline" onClick={() => openEdit(r)}>Edit</Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="text-danger-fg hover:bg-danger/10"
-            onClick={() => { setDeleteErr(null); setToDelete(r) }}
-          >
-            Delete
-          </Button>
+          {r.isSystem ? (
+            <Button size="sm" variant="outline" onClick={() => openEdit(r)}>View</Button>
+          ) : (
+            <>
+              <Button size="sm" variant="outline" onClick={() => openEdit(r)}>Edit</Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-danger-fg hover:bg-danger/10"
+                onClick={() => { setDeleteErr(null); setToDelete(r) }}
+              >
+                Delete
+              </Button>
+            </>
+          )}
         </div>
       ),
     },
@@ -105,7 +123,12 @@ export function Permissions() {
         title="Roles & Permissions"
         breadcrumbs={[{ label: 'Settings' }, { label: 'Roles' }]}
         description="Define roles and the permissions they grant. Custom roles can be assigned to users just like the built-in ones."
-        actions={<Button size="sm" onClick={openCreate}>New role</Button>}
+        actions={
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" onClick={openCompare}>Compare roles</Button>
+            <Button size="sm" onClick={openCreate}>New role</Button>
+          </div>
+        }
       />
 
       <ContentCard padding="none">

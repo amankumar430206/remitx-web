@@ -109,25 +109,41 @@ export function RoleEditor() {
     )
   }
 
-  const canSave = name.trim().length > 0 && !pending
+  const isSystemRole = isEdit && (role?.isSystem ?? false)
+  const canSave = name.trim().length > 0 && !pending && !isSystemRole
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title={isEdit ? `Edit role` : 'New role'}
-        breadcrumbs={[{ label: 'Settings' }, { label: 'Roles', href: ROLES_PATH }, { label: isEdit ? (role?.name ?? 'Edit') : 'New role' }]}
-        description={isEdit
-          ? 'Update this role’s details and the permissions it grants.'
-          : 'Define a new role and choose the permissions it grants. It can then be assigned to users.'}
+        title={isSystemRole ? `${role?.name ?? ‘Role’} (System)` : isEdit ? ‘Edit role’ : ‘New role’}
+        breadcrumbs={[{ label: ‘Settings’ }, { label: ‘Roles’, href: ROLES_PATH }, { label: isEdit ? (role?.name ?? ‘Edit’) : ‘New role’ }]}
+        description={isSystemRole
+          ? ‘System roles are built into the platform and cannot be modified. Create a custom role to define your own permissions.’
+          : isEdit
+            ? ‘Update this role’s details and the permissions it grants.’
+            : ‘Define a new role and choose the permissions it grants. It can then be assigned to users.’}
         actions={
           <div className="flex items-center gap-3">
-            <Button variant="outline" onClick={() => navigate(ROLES_PATH)} disabled={pending}>Cancel</Button>
-            <Button onClick={handleSave} loading={pending} disabled={!canSave}>
-              {isEdit ? 'Save changes' : 'Create role'}
+            <Button variant="outline" onClick={() => navigate(ROLES_PATH)} disabled={pending}>
+              {isSystemRole ? ‘Back’ : ‘Cancel’}
             </Button>
+            {!isSystemRole && (
+              <Button onClick={handleSave} loading={pending} disabled={!canSave}>
+                {isEdit ? ‘Save changes’ : ‘Create role’}
+              </Button>
+            )}
           </div>
         }
       />
+
+      {isSystemRole && (
+        <div className="flex items-start gap-3 rounded-lg border border-warning-border bg-warning/10 px-4 py-3 text-sm text-warning-fg">
+          <svg className="mt-0.5 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+          </svg>
+          <span>System roles are read-only. To use a different permission set, create a custom role using "New role" from the roles list.</span>
+        </div>
+      )}
 
       {error && (
         <div className="rounded-lg border border-danger-fg/30 bg-danger/10 px-4 py-3 text-sm text-danger-fg">
@@ -195,18 +211,29 @@ export function RoleEditor() {
                     {group.label}
                     {some && <span className="text-[11px] font-normal text-muted-fg">{granted}/{groupKeys.length}</span>}
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => toggleGroup(groupKeys, !all)}
-                    className="text-xs font-medium text-primary hover:underline"
-                  >
-                    {all ? 'Clear all' : 'Select all'}
-                  </button>
+                  {!isSystemRole && (
+                    <button
+                      type="button"
+                      onClick={() => toggleGroup(groupKeys, !all)}
+                      className="text-xs font-medium text-primary hover:underline"
+                    >
+                      {all ? 'Clear all' : 'Select all'}
+                    </button>
+                  )}
                 </div>
                 <div className="flex flex-col divide-y divide-border">
                   {group.permissions.map(p => (
-                    <label key={p.key} className="flex cursor-pointer items-center gap-2.5 px-4 py-2.5 hover:bg-surface-raised">
-                      <Checkbox checked={perms.has(p.key)} onCheckedChange={c => togglePerm(p.key, c === true)} />
+                    <label
+                      key={p.key}
+                      className={isSystemRole
+                        ? 'flex items-center gap-2.5 px-4 py-2.5'
+                        : 'flex cursor-pointer items-center gap-2.5 px-4 py-2.5 hover:bg-surface-raised'}
+                    >
+                      <Checkbox
+                        checked={perms.has(p.key)}
+                        onCheckedChange={c => !isSystemRole && togglePerm(p.key, c === true)}
+                        disabled={isSystemRole}
+                      />
                       <span className="text-sm text-foreground">{p.label}</span>
                       {p.wildcard && <Badge variant="outline" className="ml-auto">Full domain</Badge>}
                     </label>
@@ -218,12 +245,14 @@ export function RoleEditor() {
         </div>
       </div>
 
-      <div className="flex justify-end gap-3 border-t border-border pt-5">
-        <Button variant="outline" onClick={() => navigate(ROLES_PATH)} disabled={pending}>Cancel</Button>
-        <Button onClick={handleSave} loading={pending} disabled={!canSave}>
-          {isEdit ? 'Save changes' : 'Create role'}
-        </Button>
-      </div>
+      {!isSystemRole && (
+        <div className="flex justify-end gap-3 border-t border-border pt-5">
+          <Button variant="outline" onClick={() => navigate(ROLES_PATH)} disabled={pending}>Cancel</Button>
+          <Button onClick={handleSave} loading={pending} disabled={!canSave}>
+            {isEdit ? 'Save changes' : 'Create role'}
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

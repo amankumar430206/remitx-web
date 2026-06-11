@@ -39,6 +39,7 @@ const Notifications       = lazy(() => import('@/pages/settings/Notifications').
 const Users               = lazy(() => import('@/pages/settings/Users').then(m => ({ default: m.Users })))
 const Permissions         = lazy(() => import('@/pages/settings/Permissions').then(m => ({ default: m.Permissions })))
 const RoleEditor          = lazy(() => import('@/pages/settings/RoleEditor').then(m => ({ default: m.RoleEditor })))
+const RoleComparison      = lazy(() => import('@/pages/settings/RoleComparison').then(m => ({ default: m.RoleComparison })))
 const SubClients          = lazy(() => import('@/pages/settings/SubClients').then(m => ({ default: m.SubClients })))
 const Theme               = lazy(() => import('@/pages/settings/Theme').then(m => ({ default: m.Theme })))
 const FeatureFlags        = lazy(() => import('@/pages/settings/FeatureFlags').then(m => ({ default: m.FeatureFlags })))
@@ -133,6 +134,7 @@ function App() {
                 <Route path="users" element={page(<Users />)} />
                 <Route path="permissions" element={page(<Permissions />)} />
                 <Route path="permissions/new" element={page(<RoleEditor />)} />
+                <Route path="permissions/compare" element={page(<RoleComparison />)} />
                 <Route path="permissions/:key" element={page(<RoleEditor />)} />
                 <Route path="sub-clients" element={page(<SubClients />)} />
                 <Route path="theme" element={page(<Theme />)} />

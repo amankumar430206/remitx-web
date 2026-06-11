@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -6,10 +6,73 @@ import { PageHeader } from '@/components/ui/organisms/PageHeader'
 import { FormField } from '@/components/ui/molecules/FormField'
 import { Button } from '@/components/ui/atoms/Button'
 import { Input } from '@/components/ui/atoms/Input'
+import { Badge } from '@/components/ui/atoms/Badge'
 import { ContentCard } from '@/layouts/ContentCard'
 import { useAuthStore } from '@/stores/authStore'
 import { useUpdateProfile, useChangePassword } from '@/hooks/useUsers'
+import { usePermissions } from '@/hooks/usePermissions'
 import { getApiError } from '@/lib/apiError'
+
+function formatPermission(p: string): { domain: string; action: string } {
+  const [domain, action] = p.split(':')
+  return {
+    domain: (domain ?? p).charAt(0).toUpperCase() + (domain ?? p).slice(1).replace(/_/g, ' '),
+    action: action === '*' ? 'Full access' : (action ?? '').replace(/_/g, ' '),
+  }
+}
+
+function MyPermissionsCard({ role, permissions }: { role: string; permissions: string[] }) {
+  const grouped = useMemo(() => {
+    const map: Record<string, string[]> = {}
+    for (const p of permissions) {
+      const [domain] = p.split(':')
+      if (!map[domain]) map[domain] = []
+      map[domain].push(p)
+    }
+    return map
+  }, [permissions])
+
+  const roleLabel = role.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+
+  return (
+    <ContentCard>
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-foreground">Your role &amp; permissions</h3>
+          <Badge variant="outline">{roleLabel}</Badge>
+        </div>
+
+        {permissions.length === 0 ? (
+          <p className="text-sm text-muted-fg">No permissions assigned to your role.</p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {Object.entries(grouped).map(([domain, perms]) => {
+              const domainLabel = domain.charAt(0).toUpperCase() + domain.slice(1).replace(/_/g, ' ')
+              return (
+                <div key={domain}>
+                  <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted-fg">{domainLabel}</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {perms.map(p => {
+                      const { action } = formatPermission(p)
+                      return (
+                        <span
+                          key={p}
+                          className="inline-flex items-center rounded-md border border-border bg-surface-raised px-2 py-0.5 text-xs text-foreground"
+                        >
+                          {action}
+                        </span>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    </ContentCard>
+  )
+}
 
 const profileSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
@@ -32,6 +95,7 @@ export function Profile() {
   const user = useAuthStore(s => s.user)
   const updateProfile = useUpdateProfile()
   const changePassword = useChangePassword()
+  const { permissions } = usePermissions()
 
   const {
     register: regProfile,
@@ -137,6 +201,10 @@ export function Profile() {
           </div>
         </form>
       </ContentCard>
+
+      {user?.role && (
+        <MyPermissionsCard role={user.role} permissions={permissions} />
+      )}
     </div>
   )
 }

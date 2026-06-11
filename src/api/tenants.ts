@@ -27,6 +27,7 @@ export interface Role {
   description: string | null
   isSystem: boolean
   permissions: string[]
+  userCount: number
 }
 
 /** @deprecated use Role */
