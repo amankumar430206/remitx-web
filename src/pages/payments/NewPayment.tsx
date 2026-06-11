@@ -218,7 +218,7 @@ function Step1({ onNext }: { onNext: () => void }) {
         </div>
       )}
 
-      <div className="flex flex-col gap-2">
+      <div className={cn('flex flex-col gap-2', (data?.data?.length ?? 0) > 10 && 'max-h-[480px] overflow-y-auto pr-1')}>
         {(data?.data ?? []).map(b => {
           const isSelected = selected === b.id
           const initials = b.name.slice(0, 2).toUpperCase()
@@ -294,6 +294,8 @@ function Step2({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
     stored.feeAmount != null ? { feeAmount: stored.feeAmount, configured: stored.feeConfigured ?? false } : null
   )
   const [balanceVisible, setBalanceVisible] = useState(true)
+  const [lockMins, setLockMins] = useState(5)
+  const lockMinsRef = useRef(5)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const { data: accountsData } = useQuery({
@@ -320,6 +322,17 @@ function Step2({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
   const exceedsBalance = accountBalance !== null && parsedAmount > 0 && parsedAmount > accountBalance
   const accountsLoaded = accountsData !== undefined
 
+  const handleLockChange = useCallback((mins: number) => {
+    setLockMins(mins)
+    lockMinsRef.current = mins
+    setQuote(prev => {
+      if (!prev) return prev
+      const updated = { ...prev, expiresAt: new Date(Date.now() + mins * 60 * 1000).toISOString() }
+      setData({ quote: updated })
+      return updated
+    })
+  }, [setData])
+
   const fetchQuote = useCallback(async (amount: string, from: string, to: string) => {
     if (!amount || parseFloat(amount) <= 0 || from === to) return
     setQuoteLoading(true)
@@ -327,9 +340,8 @@ function Step2({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
     try {
       const res = await fxApi.quote(from, to, amount)
       const q = res.data.data
-      const apiExpiry = new Date(q.expiresAt).getTime()
-      const minExpiry = Date.now() + MIN_LOCK_MS
-      const adjustedQuote: FxQuote = { ...q, expiresAt: new Date(Math.max(apiExpiry, minExpiry)).toISOString() }
+      const lockMs = lockMinsRef.current * 60 * 1000
+      const adjustedQuote: FxQuote = { ...q, expiresAt: new Date(Date.now() + lockMs).toISOString() }
       setQuote(adjustedQuote)
 
       setFeeLoading(true)
@@ -465,28 +477,52 @@ function Step2({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
         </div>
 
         {/* Rate strip */}
-        <div className="bg-surface-raised px-4 py-2.5 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-xs text-muted-fg min-w-0">
-            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-              </svg>
-            </div>
-            {quoteLoading ? (
-              <div className="flex items-center gap-1.5">
-                <Spinner size="sm" />
-                <span>Fetching rate…</span>
+        <div className="bg-surface-raised px-4 py-2.5 flex flex-col gap-2">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-xs text-muted-fg min-w-0">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
               </div>
-            ) : quote ? (
-              <span className="font-medium tabular-nums">
-                1 {quote.from} = <span className="text-foreground font-semibold">{parseFloat(quote.rate).toFixed(4)}</span> {quote.to}
-              </span>
-            ) : (
-              <span>Enter amount to see rate</span>
+              {quoteLoading ? (
+                <div className="flex items-center gap-1.5">
+                  <Spinner size="sm" />
+                  <span>Fetching rate…</span>
+                </div>
+              ) : quote ? (
+                <span className="font-medium tabular-nums">
+                  1 {quote.from} = <span className="text-foreground font-semibold">{parseFloat(quote.rate).toFixed(4)}</span> {quote.to}
+                </span>
+              ) : (
+                <span>Enter amount to see rate</span>
+              )}
+            </div>
+            {quote && !quoteLoading && (
+              <RateLockPill expiresAt={quote.expiresAt} onExpire={handleExpire} />
             )}
           </div>
+
+          {/* Lock duration pills */}
           {quote && !quoteLoading && (
-            <RateLockPill expiresAt={quote.expiresAt} onExpire={handleExpire} />
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[11px] text-muted-fg shrink-0">Lock for</span>
+              {[5, 15, 30, 60].map(m => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => handleLockChange(m)}
+                  className={cn(
+                    'rounded-full border px-2.5 py-0.5 text-[11px] font-semibold transition-all duration-150',
+                    lockMins === m
+                      ? 'bg-primary border-primary text-white shadow-sm shadow-primary/25'
+                      : 'border-border bg-transparent text-muted-fg hover:border-primary/50 hover:text-foreground',
+                  )}
+                >
+                  {m}m
+                </button>
+              ))}
+            </div>
           )}
         </div>
 
@@ -676,15 +712,6 @@ function Step3({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
 
 // ─── Step 4 — Confirm ────────────────────────────────────────────────────────
 
-function ConfirmRow({ label, value, mono }: { label: string; value: React.ReactNode; mono?: boolean }) {
-  return (
-    <div className="flex items-center justify-between py-3 border-b border-border last:border-0">
-      <span className="text-xs text-muted-fg">{label}</span>
-      <span className={cn('text-sm font-semibold text-foreground text-right', mono && 'font-mono text-xs')}>{value}</span>
-    </div>
-  )
-}
-
 function Step4({ onBack }: { onBack: () => void }) {
   const navigate = useNavigate()
   const qc = useQueryClient()
@@ -694,8 +721,10 @@ function Step4({ onBack }: { onBack: () => void }) {
   const q = stored.quote
   const feeAmount = stored.feeAmount ? parseFloat(stored.feeAmount) : 0
   const feeConfigured = stored.feeConfigured ?? false
+  const hasFee = feeConfigured && feeAmount > 0
   const totalDebit = q ? parseFloat(q.fromAmount) + feeAmount : 0
   const kycPending = user?.kyc_status !== 'approved'
+  const beneInitials = (stored.beneficiaryName ?? '?').slice(0, 2).toUpperCase()
 
   const { mutate, isPending, isError, error } = useMutation({
     mutationFn: () => {
@@ -720,62 +749,159 @@ function Step4({ onBack }: { onBack: () => void }) {
     },
   })
 
+  const fmt = (n: string | number, decimals = 2) =>
+    parseFloat(String(n)).toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
+
   return (
-    <div className="flex flex-col gap-5">
-      <div>
-        <h3 className="text-base font-semibold text-foreground">Confirm your payment</h3>
-        <p className="text-sm text-muted-fg mt-0.5">Review everything before sending.</p>
+    <div className="flex flex-col gap-4">
+      {/* Header + rate lock */}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h3 className="text-base font-semibold text-foreground">Confirm your payment</h3>
+          <p className="text-sm text-muted-fg mt-0.5">Review everything before sending.</p>
+        </div>
+        {q && (
+          <div className="shrink-0 pt-0.5">
+            <RateLockPill expiresAt={q.expiresAt} onExpire={onBack} />
+          </div>
+        )}
       </div>
 
-      {/* Amount hero */}
-      <div className="relative overflow-hidden rounded-2xl bg-[#0f172a] border border-white/[0.07] p-6 text-center">
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent" />
-        <p className="relative text-[11px] font-semibold uppercase tracking-widest text-primary/80 mb-3">Total debit</p>
-        <p className="relative text-5xl font-bold text-white tabular-nums">
-          {q ? totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
-          <span className="ml-2 text-2xl font-semibold text-white/50">{q?.from}</span>
-        </p>
-        {q && (
-          <p className="relative mt-3 text-sm text-white/50">
-            {stored.beneficiaryName} receives{' '}
-            <span className="font-semibold text-white/80 tabular-nums">
-              {parseFloat(q.toAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {q.to}
+      {/* Transfer direction hero */}
+      {q && (
+        <div className="overflow-hidden rounded-2xl bg-[#0d1117] border border-white/[0.07]">
+          <div className="grid grid-cols-[1fr_auto_1fr]">
+            {/* You send */}
+            <div className="flex flex-col items-center gap-1.5 p-5 text-center">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-white/35">You send</p>
+              <p className="text-3xl font-bold text-white tabular-nums leading-none">
+                {fmt(q.fromAmount)}
+              </p>
+              <span className="inline-flex items-center rounded-full bg-white/8 border border-white/10 px-2.5 py-0.5 text-[11px] font-bold text-white/50">
+                {q.from}
+              </span>
+            </div>
+
+            {/* Center arrow + rate */}
+            <div className="flex flex-col items-center justify-center gap-2 px-2 py-5 border-x border-white/[0.07]">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/20 border border-primary/30">
+                <svg className="h-4 w-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                </svg>
+              </div>
+              <div className="rounded-full bg-white/[0.04] border border-white/[0.07] px-2 py-1 text-center">
+                <span className="block text-[10px] font-mono text-white/30 leading-snug whitespace-nowrap">
+                  1 {q.from} = {parseFloat(q.rate).toFixed(4)} {q.to}
+                </span>
+              </div>
+            </div>
+
+            {/* They receive */}
+            <div className="flex flex-col items-center gap-1.5 p-5 text-center">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-emerald-400/50">They receive</p>
+              <p className="text-3xl font-bold text-emerald-400 tabular-nums leading-none">
+                {fmt(q.toAmount)}
+              </p>
+              <span className="inline-flex items-center rounded-full bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 text-[11px] font-bold text-emerald-400/70">
+                {q.to}
+              </span>
+            </div>
+          </div>
+
+          {/* Total debit footer — only shown when there's a fee */}
+          {hasFee && (
+            <div className="flex items-center justify-between border-t border-white/[0.07] bg-white/[0.02] px-5 py-3">
+              <span className="text-xs text-white/30">Total debit (incl. fee)</span>
+              <span className="text-sm font-bold text-white tabular-nums">
+                {fmt(totalDebit)} {q.from}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Recipient card */}
+      <div className="rounded-2xl border border-border bg-surface p-4">
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-fg mb-3">Recipient</p>
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-sm font-bold text-primary select-none">
+            {beneInitials}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-foreground truncate">{stored.beneficiaryName ?? '—'}</p>
+            <p className="text-xs text-muted-fg mt-0.5">{stored.beneficiaryCountry ?? ''}</p>
+          </div>
+          <div className="flex items-center gap-1 text-[11px] font-semibold text-success-fg shrink-0">
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Verified
+          </div>
+        </div>
+      </div>
+
+      {/* Transfer details with icon rows */}
+      {q && (
+        <div className="rounded-2xl border border-border bg-surface overflow-hidden divide-y divide-border">
+          {/* Fee */}
+          {stored.feeConfigured != null && (
+            <div className="flex items-center gap-3 px-4 py-3.5">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-surface-raised text-muted-fg">
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <span className="flex-1 text-sm text-muted-fg">Transfer fee</span>
+              {!feeConfigured ? (
+                <span className="text-[11px] font-semibold text-success-fg">No fee configured</span>
+              ) : feeAmount === 0 ? (
+                <span className="inline-flex items-center rounded-full bg-success/10 border border-success/25 px-2 py-0.5 text-[11px] font-semibold text-success-fg">Free</span>
+              ) : (
+                <span className="text-sm font-semibold text-foreground tabular-nums">
+                  {fmt(feeAmount, 8).replace(/\.?0+$/, '')} {q.from}
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Exchange rate */}
+          <div className="flex items-center gap-3 px-4 py-3.5">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-surface-raised text-muted-fg">
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+              </svg>
+            </div>
+            <span className="flex-1 text-sm text-muted-fg">Exchange rate</span>
+            <span className="font-mono text-xs text-foreground font-semibold tabular-nums">
+              1 {q.from} = {parseFloat(q.rate).toFixed(4)} {q.to}
             </span>
-          </p>
-        )}
-      </div>
+          </div>
 
-      {/* Summary rows */}
-      <div className="rounded-2xl border border-border bg-surface px-5">
-        {q && (
-          <>
-            <ConfirmRow label="Recipient" value={stored.beneficiaryName ?? '—'} />
-            <ConfirmRow
-              label="Transfer amount"
-              value={`${parseFloat(q.fromAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${q.from}`}
-            />
-            <ConfirmRow
-              label="Transfer fee"
-              value={
-                stored.feeConfigured == null
-                  ? '—'
-                  : !feeConfigured
-                  ? <span className="text-xs text-success-fg font-semibold">No fee configured</span>
-                  : feeAmount === 0
-                  ? <span className="text-xs text-success-fg font-semibold">Free</span>
-                  : `${feeAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 8 })} ${q.from}`
-              }
-            />
-            <ConfirmRow
-              label="Exchange rate"
-              value={`1 ${q.from} = ${parseFloat(q.rate).toFixed(4)} ${q.to}`}
-              mono
-            />
-            <ConfirmRow label="Purpose" value={stored.purposeCode ?? '—'} />
-            {stored.note && <ConfirmRow label="Note" value={stored.note} />}
-          </>
-        )}
-      </div>
+          {/* Purpose */}
+          <div className="flex items-center gap-3 px-4 py-3.5">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-surface-raised text-muted-fg">
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 00.75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 00-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0112 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 01-.673-.38m0 0A2.18 2.18 0 013 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 013.413-.387m7.5 0V5.25A2.25 2.25 0 0013.5 3h-3a2.25 2.25 0 00-2.25 2.25v.894m7.5 0a48.667 48.667 0 00-7.5 0M12 12.75h.008v.008H12v-.008z" />
+              </svg>
+            </div>
+            <span className="flex-1 text-sm text-muted-fg">Purpose</span>
+            <span className="text-sm font-semibold text-foreground">{stored.purposeCode ?? '—'}</span>
+          </div>
+
+          {/* Note */}
+          {stored.note && (
+            <div className="flex items-start gap-3 px-4 py-3.5">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-surface-raised text-muted-fg mt-0.5">
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                </svg>
+              </div>
+              <span className="flex-1 text-sm text-muted-fg pt-0.5">Note</span>
+              <span className="text-sm font-semibold text-foreground text-right max-w-[55%] leading-snug">{stored.note}</span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* KYC warning */}
       {kycPending && (
@@ -797,15 +923,16 @@ function Step4({ onBack }: { onBack: () => void }) {
         </div>
       )}
 
-      {/* Disclaimer */}
+      {/* Authorization disclaimer */}
       <div className="flex items-start gap-3 rounded-xl border border-border bg-surface-raised px-4 py-3.5">
         <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
           </svg>
         </div>
         <p className="text-xs text-muted-fg leading-relaxed">
-          By confirming, you authorise this payment. It will be reviewed before processing and <strong className="text-foreground font-medium">cannot be reversed</strong> once approved.
+          By confirming, you authorise this payment. It will be reviewed before processing and{' '}
+          <strong className="text-foreground font-medium">cannot be reversed</strong> once approved.
         </p>
       </div>
 
@@ -819,9 +946,13 @@ function Step4({ onBack }: { onBack: () => void }) {
         </div>
       )}
 
-      <div className="flex justify-between pt-1">
+      {/* Actions */}
+      <div className="flex items-center gap-3 pt-1">
         <Button type="button" variant="outline" onClick={onBack} disabled={isPending}>Back</Button>
-        <Button onClick={() => mutate()} loading={isPending} variant="gradient" className="px-8">
+        <Button onClick={() => mutate()} loading={isPending} variant="gradient" className="flex-1 gap-2">
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+          </svg>
           Confirm & send
         </Button>
       </div>
