@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useThemeStore } from '@/stores/themeStore'
 import { useFeatureFlagStore } from '@/stores/featureFlagStore'
 import { useFeatureFlag } from '@/hooks/useFeatureFlag'
+import { usePermissions } from '@/hooks/usePermissions'
 import { useApprovalQueue } from '@/hooks/usePayments'
 import tenantsApi from '@/api/tenants'
 
@@ -104,9 +105,8 @@ export function AppShell() {
     navigate('/login')
   }
 
+  const { has } = usePermissions()
   const pendingApprovals = approvalData?.data?.length ?? 0
-  const isAdmin = user?.role === 'admin' || user?.role === 'super_admin'
-  const isSuperAdmin = user?.role === 'super_admin'
 
   const flagPayments = useFeatureFlag('payments')
   const flagAccounts = useFeatureFlag('accounts')
@@ -115,19 +115,22 @@ export function AppShell() {
   const flagKyc = useFeatureFlag('kyc')
   const flagReports = useFeatureFlag('reports')
 
+  // A user should see Payments if they can do anything payments-related
+  const canSeePayments = has('payments:view') || has('payments:view_all') || has('payments:create') || has('payments:approve')
+
   const navItems = [
     { label: 'Dashboard', href: '/dashboard', icon: NAV_ICONS.dashboard },
-    ...(isSuperAdmin ? [{ label: 'Tenants', href: '/admin/tenants', icon: NAV_ICONS.tenants }] : []),
-    ...(flagPayments ? [{ label: 'Payments', href: '/payments', icon: NAV_ICONS.payments, badge: pendingApprovals }] : []),
-    ...(flagAccounts ? [{ label: 'Accounts', href: '/accounts', icon: NAV_ICONS.accounts }] : []),
-    ...(flagBeneficiaries ? [{ label: 'Beneficiaries', href: '/beneficiaries', icon: NAV_ICONS.beneficiaries }] : []),
+    ...(has('admin:config') ? [{ label: 'Tenants', href: '/admin/tenants', icon: NAV_ICONS.tenants }] : []),
+    ...(flagPayments && canSeePayments ? [{ label: 'Payments', href: '/payments', icon: NAV_ICONS.payments, badge: pendingApprovals }] : []),
+    ...(flagAccounts && has('accounts:view') ? [{ label: 'Accounts', href: '/accounts', icon: NAV_ICONS.accounts }] : []),
+    ...(flagBeneficiaries && has('beneficiaries:view') ? [{ label: 'Beneficiaries', href: '/beneficiaries', icon: NAV_ICONS.beneficiaries }] : []),
     ...(flagFxRates ? [{ label: 'FX Rates', href: '/fx-rates', icon: NAV_ICONS.fxRates }] : []),
     { label: 'Network', href: '/network', icon: NAV_ICONS.network },
     ...(flagKyc ? [{ label: 'KYC', href: '/kyc', icon: NAV_ICONS.kyc }] : []),
-    ...(flagReports ? [{ label: 'Reports', href: '/reports/transactions', icon: NAV_ICONS.reports }] : []),
+    ...(flagReports && has('reports:view') ? [{ label: 'Reports', href: '/reports/transactions', icon: NAV_ICONS.reports }] : []),
     { label: 'Assistant', href: '/assistant', icon: NAV_ICONS.assistant },
     { label: 'Settings', href: '/settings', icon: NAV_ICONS.settings },
-    ...(isAdmin ? [{ label: 'Admin', href: '/admin/kyc-queue', icon: NAV_ICONS.admin }] : []),
+    ...(has('admin:config') ? [{ label: 'Admin', href: '/admin/kyc-queue', icon: NAV_ICONS.admin }] : []),
   ]
 
   return (

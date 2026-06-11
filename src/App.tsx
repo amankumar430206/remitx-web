@@ -2,11 +2,13 @@ import { lazy, Suspense, type ReactNode } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
+import { RequirePermission } from '@/components/RequirePermission'
 import { AppShell } from '@/components/AppShell'
 import { SettingsLayout } from '@/layouts/SettingsLayout'
 import { AdminLayout } from '@/layouts/AdminLayout'
 import { PageSkeleton } from '@/components/PageSkeleton'
 import { PageErrorBoundary } from '@/components/PageErrorBoundary'
+import { Toaster } from '@/components/ui/organisms/Toaster'
 
 // Public pages — eager (needed immediately on first load)
 import { Login } from '@/pages/Login'
@@ -76,6 +78,7 @@ const queryClient = new QueryClient({
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
+      <Toaster />
       <BrowserRouter>
         <Routes>
           {/* Public — no lazy needed */}
@@ -131,31 +134,44 @@ function App() {
                 <Route path="profile" element={page(<Profile />)} />
                 <Route path="mfa" element={page(<Mfa />)} />
                 <Route path="notifications" element={page(<Notifications />)} />
-                <Route path="users" element={page(<Users />)} />
-                <Route path="permissions" element={page(<Permissions />)} />
-                <Route path="permissions/new" element={page(<RoleEditor />)} />
-                <Route path="permissions/compare" element={page(<RoleComparison />)} />
-                <Route path="permissions/:key" element={page(<RoleEditor />)} />
-                <Route path="sub-clients" element={page(<SubClients />)} />
                 <Route path="theme" element={page(<Theme />)} />
-                <Route path="features" element={page(<FeatureFlags />)} />
+
+                {/* Permission-gated settings */}
+                <Route element={<RequirePermission permission="users:manage" />}>
+                  <Route path="users" element={page(<Users />)} />
+                </Route>
+                <Route element={<RequirePermission permission="admin:config" />}>
+                  <Route path="permissions" element={page(<Permissions />)} />
+                  <Route path="permissions/new" element={page(<RoleEditor />)} />
+                  <Route path="permissions/compare" element={page(<RoleComparison />)} />
+                  <Route path="permissions/:key" element={page(<RoleEditor />)} />
+                </Route>
+                <Route element={<RequirePermission permission="subclients:view" />}>
+                  <Route path="sub-clients" element={page(<SubClients />)} />
+                </Route>
+                <Route element={<RequirePermission permission="admin:features" />}>
+                  <Route path="features" element={page(<FeatureFlags />)} />
+                </Route>
               </Route>
 
               {/* Tenants — standalone, no admin tab bar */}
-              <Route path="/admin/tenants" element={page(<TenantList />)} />
-              <Route path="/admin/tenants/:id" element={page(<TenantDetail />)} />
-
-              {/* Admin section — tab bar via AdminLayout (KYC, payments, providers) */}
-              <Route path="/admin" element={<AdminLayout />}>
-                <Route index element={<Navigate to="/admin/kyc-queue" replace />} />
-                <Route path="kyc-queue" element={page(<KycQueue />)} />
-                <Route path="manual-payments" element={page(<ManualPaymentQueue />)} />
-                <Route path="payments" element={page(<AllPayments />)} />
-                <Route path="providers" element={page(<ProviderConfig />)} />
-                <Route path="global-fees" element={page(<GlobalFeeRules />)} />
+              <Route element={<RequirePermission permission="admin:config" />}>
+                <Route path="/admin/tenants" element={page(<TenantList />)} />
+                <Route path="/admin/tenants/:id" element={page(<TenantDetail />)} />
               </Route>
 
-              <Route path="/admin/payments/on-behalf" element={page(<OnBehalfPayment />)} />
+              {/* Admin section — tab bar via AdminLayout (KYC, payments, providers) */}
+              <Route element={<RequirePermission permission="admin:config" />}>
+                <Route path="/admin" element={<AdminLayout />}>
+                  <Route index element={<Navigate to="/admin/kyc-queue" replace />} />
+                  <Route path="kyc-queue" element={page(<KycQueue />)} />
+                  <Route path="manual-payments" element={page(<ManualPaymentQueue />)} />
+                  <Route path="payments" element={page(<AllPayments />)} />
+                  <Route path="providers" element={page(<ProviderConfig />)} />
+                  <Route path="global-fees" element={page(<GlobalFeeRules />)} />
+                </Route>
+                <Route path="/admin/payments/on-behalf" element={page(<OnBehalfPayment />)} />
+              </Route>
             </Route>
           </Route>
 

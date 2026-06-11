@@ -1,5 +1,6 @@
 import axios, { type AxiosRequestConfig } from 'axios'
 import { useAuthStore } from '@/stores/authStore'
+import { toast } from '@/stores/toastStore'
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api/v1'
 
@@ -46,6 +47,10 @@ apiClient.interceptors.response.use(
         window.location.href = '/login'
         return Promise.reject(error)
       }
+    }
+    if (error.response?.status === 403) {
+      const msg = error.response?.data?.error?.message
+      toast.error(msg ?? "You don't have permission to perform this action.")
     }
     return Promise.reject(error)
   }
