@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/atoms/Button'
 import { Input } from '@/components/ui/atoms/Input'
 import { Textarea } from '@/components/ui/atoms/Textarea'
 import { Checkbox } from '@/components/ui/atoms/Checkbox'
+import { Toggle } from '@/components/ui/atoms/Toggle'
 import { Badge } from '@/components/ui/atoms/Badge'
 import { ContentCard } from '@/layouts/ContentCard'
 import { useRoles, usePermissionCatalog, useRoleTemplates, useCreateRole, useUpdateRole } from '@/hooks/useRoles'
@@ -199,49 +200,51 @@ export function RoleEditor() {
       <div>
         <h2 className="mb-3 text-sm font-semibold text-foreground">Permissions</h2>
         <div className="grid gap-4 md:grid-cols-2">
-          {(catalog ?? []).map(group => {
-            const groupKeys = group.permissions.map(p => p.key)
-            const granted = groupKeys.filter(k => perms.has(k)).length
-            const all = granted === groupKeys.length
-            const some = granted > 0 && !all
-            return (
-              <div key={group.domain} className="rounded-lg border border-border bg-surface">
-                <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
-                  <span className="flex items-center gap-2 text-sm font-medium text-foreground">
-                    {group.label}
-                    {some && <span className="text-[11px] font-normal text-muted-fg">{granted}/{groupKeys.length}</span>}
-                  </span>
-                  {!isSystemRole && (
-                    <button
-                      type="button"
-                      onClick={() => toggleGroup(groupKeys, !all)}
-                      className="text-xs font-medium text-primary hover:underline"
-                    >
-                      {all ? 'Clear all' : 'Select all'}
-                    </button>
-                  )}
-                </div>
-                <div className="flex flex-col divide-y divide-border">
-                  {group.permissions.map(p => (
-                    <label
-                      key={p.key}
-                      className={isSystemRole
-                        ? 'flex items-center gap-2.5 px-4 py-2.5'
-                        : 'flex cursor-pointer items-center gap-2.5 px-4 py-2.5 hover:bg-surface-raised'}
-                    >
-                      <Checkbox
-                        checked={perms.has(p.key)}
-                        onCheckedChange={c => !isSystemRole && togglePerm(p.key, c === true)}
-                        disabled={isSystemRole}
-                      />
-                      <span className="text-sm text-foreground">{p.label}</span>
-                      {p.wildcard && <Badge variant="outline" className="ml-auto">Full domain</Badge>}
-                    </label>
-                  ))}
-                </div>
-              </div>
+          {(catalog ?? [])
+            .filter(group =>
+              // In read-only mode hide domains where nothing is granted — no point showing them
+              isSystemRole ? group.permissions.some(p => perms.has(p.key)) : true
             )
-          })}
+            .map(group => {
+              const groupKeys = group.permissions.map(p => p.key)
+              const granted = groupKeys.filter(k => perms.has(k)).length
+              const some = granted > 0
+              return (
+                <div key={group.domain} className="rounded-lg border border-border bg-surface">
+                  <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
+                    <span className="flex items-center gap-2 text-sm font-medium text-foreground">
+                      {group.label}
+                      {granted > 0 && granted < groupKeys.length && (
+                        <span className="text-[11px] font-normal text-muted-fg">{granted}/{groupKeys.length}</span>
+                      )}
+                    </span>
+                    <Toggle
+                      checked={some}
+                      onCheckedChange={on => toggleGroup(groupKeys, on)}
+                      disabled={isSystemRole}
+                    />
+                  </div>
+                  <div className="flex flex-col divide-y divide-border">
+                    {group.permissions.map(p => (
+                      <label
+                        key={p.key}
+                        className={isSystemRole
+                          ? 'flex items-center gap-2.5 px-4 py-2.5'
+                          : 'flex cursor-pointer items-center gap-2.5 px-4 py-2.5 hover:bg-surface-raised'}
+                      >
+                        <Checkbox
+                          checked={perms.has(p.key)}
+                          onCheckedChange={c => !isSystemRole && togglePerm(p.key, c === true)}
+                          disabled={isSystemRole}
+                        />
+                        <span className="text-sm text-foreground">{p.label}</span>
+                        {p.wildcard && <Badge variant="outline" className="ml-auto">Full domain</Badge>}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
         </div>
       </div>
 
