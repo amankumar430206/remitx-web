@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { PageHeader } from '@/components/ui/organisms/PageHeader'
 import { LoadingState } from '@/components/ui/molecules/LoadingState'
@@ -115,21 +115,21 @@ export function RoleEditor() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title={isSystemRole ? ((role?.name ?? ‘Role’) + ‘ (System)’) : isEdit ? ‘Edit role’ : ‘New role’}
-        breadcrumbs={[{ label: ‘Settings’ }, { label: ‘Roles’, href: ROLES_PATH }, { label: isEdit ? (role?.name ?? ‘Edit’) : ‘New role’ }]}
+        title={isSystemRole ? ((role?.name ?? 'Role') + ' (System)') : isEdit ? 'Edit role' : 'New role'}
+        breadcrumbs={[{ label: 'Settings' }, { label: 'Roles', href: ROLES_PATH }, { label: isEdit ? (role?.name ?? 'Edit') : 'New role' }]}
         description={isSystemRole
-          ? ‘System roles are built into the platform and cannot be modified. Create a custom role to define your own permissions.’
+          ? 'System roles are built into the platform and cannot be modified. Create a custom role to define your own permissions.'
           : isEdit
-            ? "Update this role’s details and the permissions it grants."
-            : ‘Define a new role and choose the permissions it grants. It can then be assigned to users.’}
+            ? "Update this role's details and the permissions it grants."
+            : 'Define a new role and choose the permissions it grants. It can then be assigned to users.'}
         actions={
           <div className="flex items-center gap-3">
             <Button variant="outline" onClick={() => navigate(ROLES_PATH)} disabled={pending}>
-              {isSystemRole ? ‘Back’ : ‘Cancel’}
+              {isSystemRole ? 'Back' : 'Cancel'}
             </Button>
             {!isSystemRole && (
               <Button onClick={handleSave} loading={pending} disabled={!canSave}>
-                {isEdit ? ‘Save changes’ : ‘Create role’}
+                {isEdit ? 'Save changes' : 'Create role'}
               </Button>
             )}
           </div>
