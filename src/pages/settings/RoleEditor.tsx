@@ -115,12 +115,12 @@ export function RoleEditor() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title={isSystemRole ? `${role?.name ?? ‘Role’} (System)` : isEdit ? ‘Edit role’ : ‘New role’}
+        title={isSystemRole ? ((role?.name ?? ‘Role’) + ‘ (System)’) : isEdit ? ‘Edit role’ : ‘New role’}
         breadcrumbs={[{ label: ‘Settings’ }, { label: ‘Roles’, href: ROLES_PATH }, { label: isEdit ? (role?.name ?? ‘Edit’) : ‘New role’ }]}
         description={isSystemRole
           ? ‘System roles are built into the platform and cannot be modified. Create a custom role to define your own permissions.’
           : isEdit
-            ? ‘Update this role’s details and the permissions it grants.’
+            ? "Update this role’s details and the permissions it grants."
             : ‘Define a new role and choose the permissions it grants. It can then be assigned to users.’}
         actions={
           <div className="flex items-center gap-3">
