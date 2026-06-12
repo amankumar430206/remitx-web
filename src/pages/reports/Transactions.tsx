@@ -46,6 +46,8 @@ const DIRECTION_CHIPS: StatusChipOption[] = [
   { label: 'Credit', value: 'credit', variant: 'success'},
 ]
 
+const CURRENCIES = ['USD', 'EUR', 'GBP', 'AED', 'INR', 'SGD', 'CAD', 'AUD', 'CHF', 'HKD', 'NGN', 'KES']
+
 function presetToRange(preset: Preset): DateRange {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -305,64 +307,81 @@ export function Transactions() {
         statusChips={STATUS_CHIPS}
         activeStatus={status}
         onStatusChange={v => { setStatus(v); setPage(1) }}
-        advancedFilters={
-          <div className="flex flex-col gap-3">
-            {isSuperAdmin && (
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-muted-fg">Client</label>
-                <select
-                  value={selectedTenantId}
-                  onChange={e => { setSelectedTenantId(e.target.value); setPage(1) }}
-                  className="rounded-md border border-border bg-surface px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                >
-                  <option value="">All clients</option>
-                  {tenants.map(t => (
-                    <option key={t.id} value={t.id}>{t.name}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-muted-fg">Type</label>
-              <div className="flex gap-1.5">
-                {DIRECTION_CHIPS.map(chip => (
-                  <button
-                    key={chip.value}
-                    type="button"
-                    onClick={() => { setDirection(chip.value); setPage(1) }}
-                    className={[
-                      'px-3 py-1.5 rounded-md text-xs font-medium border transition-colors',
-                      direction === chip.value
-                        ? chip.value === 'debit'
-                          ? 'bg-danger/10 border-danger/30 text-danger-fg'
-                          : chip.value === 'credit'
-                          ? 'bg-success/10 border-success/30 text-success-fg'
-                          : 'bg-primary text-primary-fg border-primary'
-                        : 'bg-surface border-border text-muted-fg hover:text-foreground hover:border-border-strong',
-                    ].join(' ')}
-                  >
-                    {chip.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-muted-fg">Currency</label>
-              <input
-                type="text"
-                maxLength={3}
-                value={currency}
-                onChange={e => { setCurrency(e.target.value.toUpperCase()); setPage(1) }}
-                placeholder="e.g. USD, GBP"
-                className="rounded-md border border-border bg-surface px-3 py-1.5 text-xs text-foreground uppercase placeholder:normal-case placeholder:text-muted-fg focus:outline-none focus:ring-1 focus:ring-primary w-32"
-              />
-            </div>
-          </div>
-        }
-        activeAdvancedCount={(direction ? 1 : 0) + (currency ? 1 : 0) + (selectedTenantId ? 1 : 0)}
         activeChips={activeChips}
         onClearAll={activeChips.length > 0 ? clearAll : undefined}
       />
+
+      {/* ── Inline filter row ── */}
+      <div className="rounded-lg border border-border bg-surface overflow-hidden">
+        <div className="flex flex-wrap items-center divide-y divide-border sm:divide-y-0">
+
+          {/* Type */}
+          <div className="flex items-center gap-2 px-3 py-2.5 border-r border-border shrink-0">
+            <span className="text-[10px] font-bold text-muted-fg uppercase tracking-widest whitespace-nowrap">Type</span>
+            <div className="flex gap-1">
+              {DIRECTION_CHIPS.map(chip => (
+                <button
+                  key={chip.value}
+                  type="button"
+                  onClick={() => { setDirection(chip.value); setPage(1) }}
+                  className={[
+                    'h-6 px-2.5 rounded-full text-[11px] font-semibold border transition-all',
+                    direction === chip.value
+                      ? chip.value === 'debit'
+                        ? 'bg-danger/10 border-danger/30 text-danger-fg'
+                        : chip.value === 'credit'
+                        ? 'bg-success/10 border-success/30 text-success-fg'
+                        : 'bg-primary text-primary-fg border-primary'
+                      : 'bg-transparent border-border text-muted-fg hover:border-border-strong hover:text-foreground',
+                  ].join(' ')}
+                >
+                  {chip.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Currency pills */}
+          <div className="flex items-center gap-2 px-3 py-2.5 flex-1 min-w-0">
+            <span className="text-[10px] font-bold text-muted-fg uppercase tracking-widest whitespace-nowrap shrink-0">Currency</span>
+            <div className="flex flex-wrap gap-1">
+              {CURRENCIES.map(c => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => { setCurrency(prev => prev === c ? '' : c); setPage(1) }}
+                  className={[
+                    'h-6 px-2.5 rounded-full text-[11px] font-semibold border transition-all font-mono',
+                    currency === c
+                      ? 'bg-primary text-primary-fg border-primary'
+                      : 'bg-transparent border-border text-muted-fg hover:border-border-strong hover:text-foreground',
+                  ].join(' ')}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Client dropdown — super_admin only */}
+          {isSuperAdmin && (
+            <div className="flex items-center gap-2 px-3 py-2.5 border-l border-border shrink-0">
+              <span className="text-[10px] font-bold text-muted-fg uppercase tracking-widest whitespace-nowrap">Client</span>
+              <select
+                value={selectedTenantId}
+                onChange={e => { setSelectedTenantId(e.target.value); setPage(1) }}
+                className="h-6 rounded-full border border-border bg-transparent pl-2.5 pr-6 text-[11px] font-semibold text-foreground appearance-none focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+                style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M19 9l-7 7-7-7'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 8px center' }}
+              >
+                <option value="">All clients</option>
+                {tenants.map(t => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+      </div>
 
       <ContentCard padding="none">
         <DataTable
