@@ -138,25 +138,29 @@ function ScheduledPaymentsInner() {
     {
       key: 'id',
       header: '',
-      render: row =>
-        row.status === 'active' ? (
-          <div className="flex items-center gap-1">
-            {row.balance_insufficient && (
-              <button
-                onClick={() => navigate(`/accounts/${row.account_id}`)}
-                className="rounded px-2 py-1 text-xs text-primary hover:bg-primary-subtle transition-colors"
-              >
-                Fund
-              </button>
-            )}
+      render: row => (
+        <div className="flex items-center justify-end gap-1">
+          {row.status === 'active' && row.balance_insufficient && (
             <button
-              onClick={() => setCancelId(row.id)}
+              onClick={e => { e.stopPropagation(); navigate(`/accounts/${row.account_id}`) }}
+              className="rounded px-2 py-1 text-xs text-primary hover:bg-primary-subtle transition-colors"
+            >
+              Fund
+            </button>
+          )}
+          {row.status === 'active' && (
+            <button
+              onClick={e => { e.stopPropagation(); setCancelId(row.id) }}
               className="rounded px-2 py-1 text-xs text-danger-fg hover:bg-danger/10 transition-colors"
             >
               Cancel
             </button>
-          </div>
-        ) : null,
+          )}
+          <svg className="h-4 w-4 text-muted-fg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+          </svg>
+        </div>
+      ),
     },
   ]
 
@@ -286,6 +290,7 @@ function ScheduledPaymentsInner() {
             columns={columns}
             data={rows}
             getRowId={r => r.id}
+            onRowClick={r => navigate(`/payments/scheduled/${r.id}`)}
             emptyTitle="No matching scheduled payments"
             emptyDescription="Try a different status filter."
           />
