@@ -18,7 +18,7 @@ import {
   useGlobalFeeConfigs,
 } from '@/hooks/useAdmin'
 import {
-  FEE_CATEGORY_LABELS, FEE_CATEGORY_OPTIONS,
+  FEE_CATEGORY_LABELS,
   CORRIDOR_CATEGORIES, SINGLE_CURRENCY_CATEGORIES, NO_CURRENCY_CATEGORIES,
   type FeeCategory, type FeeConfig, type GlobalFeeConfig,
 } from '@/api/admin'
@@ -28,69 +28,29 @@ const CURRENCIES = [
   'USD', 'GBP', 'EUR', 'AED', 'INR', 'SGD', 'AUD', 'CAD', 'JPY', 'SAR',
   'PKR', 'NGN', 'CNY', 'PHP', 'BRL', 'IDR', 'EGP', 'TRY', 'VND',
 ] as const
-const CURRENCY_OPTIONS = CURRENCIES.map(c => ({ value: c, label: c }))
-const DEST_CURRENCY_OPTIONS = [{ value: '', label: 'Any (wildcard)' }, ...CURRENCY_OPTIONS]
+const CURRENCY_OPTIONS      = CURRENCIES.map(c => ({ value: c, label: c }))
+const DEST_CURRENCY_OPTIONS  = [{ value: '', label: 'Any (wildcard)' }, ...CURRENCY_OPTIONS]
+const SRC_WILDCARD_OPTIONS   = [{ value: '', label: 'Any currency (wildcard)' }, ...CURRENCY_OPTIONS]
 
-const ALL_CATEGORIES = Object.keys(FEE_CATEGORY_LABELS) as FeeCategory[]
-
-const feeSchema = z.object({
-  feeCategory:    z.enum(ALL_CATEGORIES as [FeeCategory, ...FeeCategory[]]),
-  sourceCurrency: z.string().optional().nullable(),
-  destCurrency:   z.string().optional().nullable(),
-  inheritGlobal:  z.boolean().optional().default(false),
-  feeType:        z.enum(['flat', 'percent']).optional(),
-  feeValue:       z.coerce.number().positive().optional(),
-  minFee:         z.coerce.number().min(0).optional().nullable(),
-  maxFee:         z.coerce.number().positive().optional().nullable(),
-})
-type FeeFormValues = z.infer<typeof feeSchema>
-
-function CategoryBadge({ category }: { category: FeeCategory }) {
-  const colors: Record<FeeCategory, string> = {
-    account_activation:  'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
-    iban_creation:       'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300',
-    transaction_send:    'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
-    transaction_receive: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300',
-    monthly_maintenance: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
-    amc:                 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300',
-  }
-  return (
-    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${colors[category]}`}>
-      {FEE_CATEGORY_LABELS[category]}
-    </span>
-  )
+const SECTION_META: Record<FeeCategory, { description: string }> = {
+  account_activation:  { description: 'One-time fee charged when a new user account is activated.' },
+  iban_creation:       { description: 'Fee charged each time a currency IBAN / wallet account is created.' },
+  transaction_send:    { description: 'Fee applied to outbound payments, per source → destination corridor.' },
+  transaction_receive: { description: 'Fee applied to inbound payments, per source → destination corridor.' },
+  monthly_maintenance: { description: 'Recurring monthly charge per currency account.' },
+  amc:                 { description: 'Annual maintenance charge — applies at the tenant level, no currency required.' },
 }
 
-function CorridorCell({ row }: { row: FeeConfig }) {
-  if (NO_CURRENCY_CATEGORIES.includes(row.fee_category)) {
-    return <span className="text-xs text-muted-fg italic">Tenant-wide</span>
-  }
-  if (SINGLE_CURRENCY_CATEGORIES.includes(row.fee_category)) {
-    return (
-      <span className="font-mono text-xs font-bold text-foreground">
-        {row.source_currency ?? <span className="font-normal text-muted-fg">Any</span>}
-      </span>
-    )
-  }
-  return (
-    <div className="flex items-center gap-1.5">
-      <span className="font-mono text-xs font-bold text-foreground">
-        {row.source_currency ?? <span className="font-normal text-muted-fg">Any</span>}
-      </span>
-      <svg className="h-3 w-3 text-muted-fg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
-      </svg>
-      <span className="font-mono text-xs font-bold text-foreground">
-        {row.dest_currency ?? <span className="font-normal text-muted-fg">Any</span>}
-      </span>
-    </div>
-  )
-}
+const SECTION_ORDER: FeeCategory[] = [
+  'account_activation', 'iban_creation',
+  'transaction_send', 'transaction_receive',
+  'monthly_maintenance', 'amc',
+]
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function formatRate(feeType: 'flat' | 'percent', feeValue: string) {
-  return feeType === 'flat'
-    ? parseFloat(feeValue).toFixed(2)
-    : `${parseFloat(feeValue)}%`
+  return feeType === 'flat' ? parseFloat(feeValue).toFixed(2) : `${parseFloat(feeValue)}%`
 }
 
 function findGlobalRule(
@@ -101,370 +61,338 @@ function findGlobalRule(
 ): GlobalFeeConfig | undefined {
   if (!globalConfigs) return undefined
   return (
-    globalConfigs.find(g =>
-      g.fee_category === category &&
-      g.source_currency === sourceCurrency &&
-      g.dest_currency === destCurrency,
-    ) ??
-    globalConfigs.find(g =>
-      g.fee_category === category &&
-      g.source_currency === sourceCurrency &&
-      g.dest_currency === null,
-    ) ??
-    globalConfigs.find(g =>
-      g.fee_category === category &&
-      g.source_currency === null &&
-      g.dest_currency === null,
-    )
+    globalConfigs.find(g => g.fee_category === category && g.source_currency === sourceCurrency && g.dest_currency === destCurrency) ??
+    globalConfigs.find(g => g.fee_category === category && g.source_currency === sourceCurrency && g.dest_currency === null) ??
+    globalConfigs.find(g => g.fee_category === category && g.source_currency === null && g.dest_currency === null)
   )
 }
 
-function GlobalRateChip({ rule }: { rule: GlobalFeeConfig | undefined }) {
-  if (!rule) return <span className="text-xs text-muted-fg italic">No global rule</span>
-  return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-primary-subtle px-2 py-0.5 text-xs font-medium text-primary">
-      Global: {formatRate(rule.fee_type, rule.fee_value)}
-      {rule.fee_type === 'percent' && (rule.min_fee || rule.max_fee) && (
-        <span className="text-primary/70">
-          ({rule.min_fee ? parseFloat(rule.min_fee).toFixed(2) : '0'}–{rule.max_fee ? parseFloat(rule.max_fee).toFixed(2) : '∞'})
-        </span>
-      )}
-    </span>
-  )
+// ─── Add-form schema ──────────────────────────────────────────────────────────
+
+const makeSchema = (category: FeeCategory) =>
+  z.object({
+    sourceCurrency: CORRIDOR_CATEGORIES.includes(category)
+      ? z.string().min(1, 'Required')
+      : z.string().optional().nullable(),
+    destCurrency:   z.string().optional().nullable(),
+    inheritGlobal:  z.boolean().default(false),
+    feeType:        z.enum(['flat', 'percent']).optional(),
+    feeValue:       z.coerce.number().positive().optional(),
+    minFee:         z.coerce.number().min(0).optional().nullable(),
+    maxFee:         z.coerce.number().positive().optional().nullable(),
+  })
+
+type FormValues = {
+  sourceCurrency?: string | null
+  destCurrency?: string | null
+  inheritGlobal: boolean
+  feeType?: 'flat' | 'percent'
+  feeValue?: number
+  minFee?: number | null
+  maxFee?: number | null
 }
 
-const buildColumns = (
+// ─── Table columns ────────────────────────────────────────────────────────────
+
+function buildColumns(
+  category: FeeCategory,
   globalConfigs: GlobalFeeConfig[] | undefined,
   onDelete: (id: string) => void,
   onCustomize: (row: FeeConfig) => void,
   deleting: boolean,
   customizing: boolean,
-): Column<FeeConfig>[] => [
-  {
-    key: 'fee_category',
-    header: 'Category',
-    render: row => <CategoryBadge category={row.fee_category} />,
-  },
-  {
-    key: 'source_currency',
-    header: 'Applies to',
-    render: row => <CorridorCell row={row} />,
-  },
-  {
-    key: 'fee_type',
-    header: 'Type',
-    render: row => row.inherit_global ? (
-      <span className="inline-flex items-center gap-1 rounded-full bg-primary-subtle px-2 py-0.5 text-xs font-semibold text-primary">
-        <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
-        </svg>
-        Same as Global
-      </span>
-    ) : (
-      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${
-        row.fee_type === 'flat' ? 'bg-info text-info-fg' : 'bg-primary-subtle text-primary'
-      }`}>
-        {row.fee_type === 'flat' ? 'Flat' : 'Percent'}
-      </span>
-    ),
-  },
-  {
-    key: 'fee_value',
-    header: 'Rate',
-    render: row => row.inherit_global ? (
-      <GlobalRateChip rule={findGlobalRule(globalConfigs, row.fee_category, row.source_currency, row.dest_currency)} />
-    ) : (
-      <span className="font-mono text-sm font-semibold text-foreground">
-        {row.fee_type && row.fee_value ? formatRate(row.fee_type, row.fee_value) : '—'}
-      </span>
-    ),
-  },
-  {
-    key: 'min_fee',
-    header: 'Min / Max',
-    render: row =>
-      !row.inherit_global && row.fee_type === 'percent' && (row.min_fee || row.max_fee) ? (
-        <span className="text-xs text-muted-fg tabular-nums">
-          {row.min_fee ? parseFloat(row.min_fee).toFixed(2) : '—'}
-          {' / '}
-          {row.max_fee ? parseFloat(row.max_fee).toFixed(2) : '—'}
+): Column<FeeConfig>[] {
+  const applyCol: Column<FeeConfig> = NO_CURRENCY_CATEGORIES.includes(category)
+    ? { key: 'source_currency', header: 'Scope', render: () => <span className="text-xs text-muted-fg italic">Tenant-wide</span> }
+    : SINGLE_CURRENCY_CATEGORIES.includes(category)
+    ? {
+        key: 'source_currency', header: 'Currency',
+        render: row => (
+          <span className="font-mono text-xs font-bold text-foreground">
+            {row.source_currency ?? <span className="font-normal text-muted-fg">Any</span>}
+          </span>
+        ),
+      }
+    : {
+        key: 'source_currency', header: 'Corridor',
+        render: row => (
+          <div className="flex items-center gap-1.5">
+            <span className="font-mono text-xs font-bold text-foreground">
+              {row.source_currency ?? <span className="font-normal text-muted-fg">Any</span>}
+            </span>
+            <svg className="h-3 w-3 text-muted-fg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+            </svg>
+            <span className="font-mono text-xs font-bold text-foreground">
+              {row.dest_currency ?? <span className="font-normal text-muted-fg">Any</span>}
+            </span>
+          </div>
+        ),
+      }
+
+  return [
+    applyCol,
+    {
+      key: 'fee_type', header: 'Type',
+      render: row => row.inherit_global ? (
+        <span className="inline-flex items-center gap-1 rounded-full bg-primary-subtle px-2 py-0.5 text-xs font-semibold text-primary">
+          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
+          </svg>
+          Same as Global
         </span>
       ) : (
-        <span className="text-xs text-muted-fg">—</span>
+        <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${
+          row.fee_type === 'flat' ? 'bg-info text-info-fg' : 'bg-primary-subtle text-primary'
+        }`}>
+          {row.fee_type === 'flat' ? 'Flat' : 'Percent'}
+        </span>
       ),
-  },
-  {
-    key: 'is_active',
-    header: 'Active',
-    render: row => (
-      <Badge variant={row.is_active ? 'success' : 'default'}>{row.is_active ? 'Yes' : 'No'}</Badge>
-    ),
-  },
-  {
-    key: 'id',
-    header: '',
-    render: row => (
-      <div className="flex items-center gap-1">
-        {row.inherit_global && (
+    },
+    {
+      key: 'fee_value', header: 'Rate',
+      render: row => row.inherit_global ? (
+        (() => {
+          const g = findGlobalRule(globalConfigs, category, row.source_currency, row.dest_currency)
+          return g
+            ? <span className="text-xs font-medium text-primary">{formatRate(g.fee_type, g.fee_value)}</span>
+            : <span className="text-xs text-muted-fg italic">No global rule</span>
+        })()
+      ) : (
+        <span className="font-mono text-sm font-semibold text-foreground">
+          {row.fee_type && row.fee_value ? formatRate(row.fee_type, row.fee_value) : '—'}
+        </span>
+      ),
+    },
+    {
+      key: 'min_fee', header: 'Min / Max',
+      render: row => !row.inherit_global && row.fee_type === 'percent' && (row.min_fee || row.max_fee) ? (
+        <span className="text-xs text-muted-fg tabular-nums">
+          {row.min_fee ? parseFloat(row.min_fee).toFixed(2) : '—'} / {row.max_fee ? parseFloat(row.max_fee).toFixed(2) : '—'}
+        </span>
+      ) : <span className="text-xs text-muted-fg">—</span>,
+    },
+    { key: 'is_active', header: 'Active', render: row => <Badge variant={row.is_active ? 'success' : 'default'}>{row.is_active ? 'Yes' : 'No'}</Badge> },
+    {
+      key: 'id', header: '',
+      render: row => (
+        <div className="flex items-center gap-1">
+          {row.inherit_global && (
+            <button
+              onClick={() => onCustomize(row)}
+              disabled={customizing}
+              className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-fg hover:bg-muted transition-colors disabled:opacity-40"
+            >
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" />
+              </svg>
+              Customize
+            </button>
+          )}
           <button
-            onClick={() => onCustomize(row)}
-            disabled={customizing}
-            className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-fg hover:bg-muted transition-colors disabled:opacity-40"
+            onClick={() => onDelete(row.id)}
+            disabled={deleting}
+            className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-danger-fg hover:bg-danger transition-colors disabled:opacity-40"
           >
             <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
             </svg>
-            Customize
+            Delete
           </button>
-        )}
-        <button
-          onClick={() => onDelete(row.id)}
-          disabled={deleting}
-          className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-danger-fg hover:bg-danger transition-colors disabled:opacity-40"
-        >
-          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-          </svg>
-          Delete
-        </button>
-      </div>
-    ),
-  },
-]
-
-interface Props {
-  tenantId: string
-  tenantName?: string
+        </div>
+      ),
+    },
+  ]
 }
 
-export function TenantFeeRules({ tenantId, tenantName }: Props) {
-  const navigate = useNavigate()
-  const [addingFee, setAddingFee] = useState(false)
-  const [deleteDialog, setDeleteDialog] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<FeeCategory | 'all'>('all')
+// ─── Per-category section ─────────────────────────────────────────────────────
 
-  const { data: feeConfigs, isLoading } = useFeeConfigs(tenantId)
-  const { data: globalFeeConfigs } = useGlobalFeeConfigs()
+interface SectionProps {
+  category: FeeCategory
+  tenantId: string
+  rules: FeeConfig[]
+  globalConfigs: GlobalFeeConfig[] | undefined
+  isLoading: boolean
+}
+
+function CategorySection({ category, tenantId, rules, globalConfigs, isLoading }: SectionProps) {
+  const [adding, setAdding]             = useState(false)
+  const [deleteDialog, setDeleteDialog] = useState<string | null>(null)
+
   const createMutation = useCreateFeeConfig()
   const updateMutation = useUpdateFeeConfig()
   const deleteMutation = useDeleteFeeConfig()
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    watch,
-    setValue,
-    formState: { errors },
-  } = useForm<FeeFormValues>({
-    resolver: zodResolver(feeSchema),
-    defaultValues: {
-      feeCategory: 'transaction_send',
-      feeType: 'flat',
-      sourceCurrency: '',
-      destCurrency: '',
-      inheritGlobal: false,
-    },
+  const isCorridor = CORRIDOR_CATEGORIES.includes(category)
+  const isSingle   = SINGLE_CURRENCY_CATEGORIES.includes(category)
+  const isNone     = NO_CURRENCY_CATEGORIES.includes(category)
+
+  const schema = makeSchema(category)
+  const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: { feeType: 'flat', sourceCurrency: '', destCurrency: '', inheritGlobal: false },
   })
 
   const feeType      = watch('feeType', 'flat')
-  const feeCategory  = watch('feeCategory', 'transaction_send')
-  const sourceCurrency = watch('sourceCurrency') ?? ''
-  const destCurrency   = watch('destCurrency') ?? ''
-  const inheritGlobal  = watch('inheritGlobal', false)
+  const srcCurrency  = watch('sourceCurrency') ?? ''
+  const destCurrency = watch('destCurrency')   ?? ''
+  const inheritGlobal = watch('inheritGlobal', false)
 
-  const filteredConfigs = activeTab === 'all'
-    ? (feeConfigs ?? [])
-    : (feeConfigs ?? []).filter(r => r.fee_category === activeTab)
+  const previewGlobal = inheritGlobal
+    ? findGlobalRule(globalConfigs, category, srcCurrency || null, destCurrency || null)
+    : undefined
 
-  const countByCategory = (cat: FeeCategory) =>
-    (feeConfigs ?? []).filter(r => r.fee_category === cat).length
-
-  const onAdd = (values: FeeFormValues) => {
+  const onAdd = (values: FormValues) => {
     if (!values.inheritGlobal && (!values.feeType || !values.feeValue)) return
-    const isNoCurrency = NO_CURRENCY_CATEGORIES.includes(values.feeCategory)
-    const isSingle     = SINGLE_CURRENCY_CATEGORIES.includes(values.feeCategory)
-
     createMutation.mutate(
       {
         tenantId,
-        feeCategory:    values.feeCategory,
-        sourceCurrency: isNoCurrency ? null : (values.sourceCurrency || null),
-        destCurrency:   (isNoCurrency || isSingle) ? null : (values.destCurrency || null),
-        inheritGlobal:  values.inheritGlobal ?? false,
+        feeCategory:    category,
+        sourceCurrency: isNone ? null : (values.sourceCurrency || null),
+        destCurrency:   (isNone || isSingle) ? null : (values.destCurrency || null),
+        inheritGlobal:  values.inheritGlobal,
         feeType:        values.inheritGlobal ? undefined : values.feeType,
         feeValue:       values.inheritGlobal ? undefined : values.feeValue,
         minFee:         values.inheritGlobal ? undefined : (values.minFee ?? null),
         maxFee:         values.inheritGlobal ? undefined : (values.maxFee ?? null),
       },
-      { onSuccess: () => { setAddingFee(false); reset() } },
+      { onSuccess: () => { setAdding(false); reset() } },
     )
+  }
+
+  const onCustomize = (row: FeeConfig) => {
+    const g = findGlobalRule(globalConfigs, category, row.source_currency, row.dest_currency)
+    if (!g) return
+    updateMutation.mutate({
+      tenantId, feeId: row.id,
+      inheritGlobal: false,
+      feeType: g.fee_type,
+      feeValue: parseFloat(g.fee_value),
+      minFee: g.min_fee ? parseFloat(g.min_fee) : null,
+      maxFee: g.max_fee ? parseFloat(g.max_fee) : null,
+    })
   }
 
   const confirmDelete = () => {
     if (!deleteDialog) return
-    deleteMutation.mutate(
-      { tenantId, feeId: deleteDialog },
-      { onSuccess: () => setDeleteDialog(null) },
-    )
+    deleteMutation.mutate({ tenantId, feeId: deleteDialog }, { onSuccess: () => setDeleteDialog(null) })
   }
 
-  // "Customize" converts an inherit_global row into a custom rule using the current global values
-  const onCustomize = (row: FeeConfig) => {
-    const globalRule = findGlobalRule(globalFeeConfigs, row.fee_category, row.source_currency, row.dest_currency)
-    if (!globalRule) return
-    updateMutation.mutate({
-      tenantId,
-      feeId: row.id,
-      inheritGlobal: false,
-      feeType: globalRule.fee_type,
-      feeValue: parseFloat(globalRule.fee_value),
-      minFee: globalRule.min_fee ? parseFloat(globalRule.min_fee) : null,
-      maxFee: globalRule.max_fee ? parseFloat(globalRule.max_fee) : null,
-    })
-  }
-
-  // Preview the global rate for the currently selected category + corridor in the add form
-  const previewGlobal = inheritGlobal
-    ? findGlobalRule(globalFeeConfigs, feeCategory, sourceCurrency || null, destCurrency || null)
-    : undefined
+  const columns = buildColumns(
+    category, globalConfigs,
+    setDeleteDialog, onCustomize,
+    deleteMutation.isPending, updateMutation.isPending,
+  )
 
   return (
     <>
       <ContentCard padding="none">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-border px-5 py-4">
+        {/* Section header */}
+        <div className="flex items-start justify-between border-b border-border px-5 py-4">
           <div>
-            <h3 className="text-sm font-semibold text-foreground">Fee rules</h3>
-            <p className="text-xs text-muted-fg">
-              Rules apply only to{' '}
-              <span className="font-medium text-foreground">{tenantName ?? 'this tenant'}</span>
-              {' · '}no custom rule = falls back to{' '}
-              <Link to="/admin/global-fees" className="text-primary underline-offset-2 hover:underline">
-                global fee
-              </Link>
-            </p>
+            <h3 className="text-sm font-semibold text-foreground">{FEE_CATEGORY_LABELS[category]}</h3>
+            <p className="mt-0.5 text-xs text-muted-fg">{SECTION_META[category].description}</p>
           </div>
-          {!addingFee && (
-            <div className="flex items-center gap-2">
-              <Button size="sm" variant="ghost" onClick={() => navigate('/admin/global-fees')}>
-                Global rules
-              </Button>
-              <Button size="sm" onClick={() => setAddingFee(true)}>
+          <div className="flex items-center gap-2 shrink-0 ml-4">
+            {rules.length > 0 && (
+              <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-fg tabular-nums">
+                {rules.length}
+              </span>
+            )}
+            {!adding && (
+              <Button size="sm" variant="outline" onClick={() => setAdding(true)}>
                 <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
                 </svg>
                 Add rule
               </Button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
-        {/* Add form */}
-        {addingFee && (
+        {/* Inline add form */}
+        {adding && (
           <form onSubmit={handleSubmit(onAdd)} className="border-b border-border bg-muted/40 px-5 py-4">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-fg">New fee rule</p>
-
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
-              {/* Category */}
-              <FormField label="Fee category" error={errors.feeCategory?.message} htmlFor="fc-cat" className="col-span-2 sm:col-span-1">
-                <Select
-                  value={feeCategory}
-                  onValueChange={(v) => {
-                    setValue('feeCategory', v as FeeCategory, { shouldValidate: true })
-                    setValue('sourceCurrency', '')
-                    setValue('destCurrency', '')
-                  }}
-                  options={FEE_CATEGORY_OPTIONS}
-                />
-              </FormField>
-
-              {/* Currency fields — hidden when inheriting global AND for no-currency categories */}
-              {!inheritGlobal && (
-                <>
-                  {NO_CURRENCY_CATEGORIES.includes(feeCategory) ? (
-                    <div className="col-span-2 flex items-end pb-1">
-                      <span className="text-xs text-muted-fg italic">AMC is a tenant-wide annual charge — no currency needed.</span>
-                    </div>
-                  ) : SINGLE_CURRENCY_CATEGORIES.includes(feeCategory) ? (
-                    <FormField label="Currency" htmlFor="fc-src">
+            {!inheritGlobal && (
+              <div className="flex flex-wrap items-end gap-3">
+                {isNone && (
+                  <p className="text-xs text-muted-fg italic self-center">No currency needed — applies tenant-wide.</p>
+                )}
+                {isSingle && (
+                  <FormField label="Currency" htmlFor={`${category}-src`}>
+                    <Select
+                      value={srcCurrency}
+                      onValueChange={v => setValue('sourceCurrency', v || null)}
+                      options={SRC_WILDCARD_OPTIONS}
+                    />
+                  </FormField>
+                )}
+                {isCorridor && (
+                  <>
+                    <FormField label="Source currency" error={(errors as any).sourceCurrency?.message} htmlFor={`${category}-src`}>
                       <Select
-                        value={sourceCurrency}
-                        onValueChange={(v) => setValue('sourceCurrency', v || null, { shouldValidate: true })}
-                        options={[{ value: '', label: 'Any currency (wildcard)' }, ...CURRENCY_OPTIONS]}
+                        value={srcCurrency}
+                        onValueChange={v => setValue('sourceCurrency', v, { shouldValidate: true })}
+                        options={CURRENCY_OPTIONS}
                       />
                     </FormField>
-                  ) : (
-                    <>
-                      <FormField label="Source currency" error={errors.sourceCurrency?.message} htmlFor="fc-src">
-                        <Select
-                          value={sourceCurrency}
-                          onValueChange={(v) => setValue('sourceCurrency', v, { shouldValidate: true })}
-                          options={CURRENCY_OPTIONS}
-                        />
-                      </FormField>
-                      <FormField label="Destination" htmlFor="fc-dst">
-                        <Select
-                          value={destCurrency ?? ''}
-                          onValueChange={(v) => setValue('destCurrency', v || null, { shouldValidate: true })}
-                          options={DEST_CURRENCY_OPTIONS}
-                        />
-                      </FormField>
-                    </>
-                  )}
+                    <FormField label="Destination" htmlFor={`${category}-dst`}>
+                      <Select
+                        value={destCurrency}
+                        onValueChange={v => setValue('destCurrency', v || null)}
+                        options={DEST_CURRENCY_OPTIONS}
+                      />
+                    </FormField>
+                  </>
+                )}
 
-                  {/* Fee fields */}
-                  <FormField label="Type" error={errors.feeType?.message} htmlFor="fc-type">
-                    <Select
-                      value={feeType ?? 'flat'}
-                      onValueChange={(v) => setValue('feeType', v as 'flat' | 'percent', { shouldValidate: true })}
-                      options={[
-                        { value: 'flat', label: 'Flat' },
-                        { value: 'percent', label: 'Percent' },
-                      ]}
-                    />
-                  </FormField>
-                  <FormField
-                    label={feeType === 'flat' ? 'Amount' : 'Rate (%)'}
-                    error={errors.feeValue?.message}
-                    htmlFor="fc-val"
-                  >
-                    <Input
-                      id="fc-val"
-                      type="number"
-                      step="0.00000001"
-                      placeholder={feeType === 'flat' ? '10.00' : '0.5'}
-                      {...register('feeValue')}
-                      error={!!errors.feeValue}
-                    />
-                  </FormField>
-                  {feeType === 'percent' && (
-                    <>
-                      <FormField label="Min fee" htmlFor="fc-min">
-                        <Input id="fc-min" type="number" step="0.01" placeholder="0.00" {...register('minFee')} />
-                      </FormField>
-                      <FormField label="Max fee" htmlFor="fc-max">
-                        <Input id="fc-max" type="number" step="0.01" placeholder="500.00" {...register('maxFee')} />
-                      </FormField>
-                    </>
-                  )}
-                </>
-              )}
-            </div>
+                <FormField label="Type" htmlFor={`${category}-type`}>
+                  <Select
+                    value={feeType ?? 'flat'}
+                    onValueChange={v => setValue('feeType', v as 'flat' | 'percent')}
+                    options={[{ value: 'flat', label: 'Flat' }, { value: 'percent', label: 'Percent' }]}
+                  />
+                </FormField>
+                <FormField
+                  label={feeType === 'flat' ? 'Amount' : 'Rate (%)'}
+                  error={(errors as any).feeValue?.message}
+                  htmlFor={`${category}-val`}
+                >
+                  <Input
+                    id={`${category}-val`}
+                    type="number"
+                    step="0.00000001"
+                    placeholder={feeType === 'flat' ? '10.00' : '0.5'}
+                    {...register('feeValue')}
+                    error={!!(errors as any).feeValue}
+                    className="w-28"
+                  />
+                </FormField>
+                {feeType === 'percent' && (
+                  <>
+                    <FormField label="Min fee" htmlFor={`${category}-min`}>
+                      <Input id={`${category}-min`} type="number" step="0.01" placeholder="0.00" {...register('minFee')} className="w-24" />
+                    </FormField>
+                    <FormField label="Max fee" htmlFor={`${category}-max`}>
+                      <Input id={`${category}-max`} type="number" step="0.01" placeholder="500.00" {...register('maxFee')} className="w-24" />
+                    </FormField>
+                  </>
+                )}
+              </div>
+            )}
 
-            {/* Same as Global checkbox */}
+            {/* Same as Global */}
             <label className="mt-3 flex cursor-pointer items-center gap-2 text-sm">
               <input
                 type="checkbox"
-                checked={!!inheritGlobal}
-                onChange={(e) => setValue('inheritGlobal', e.target.checked)}
+                checked={inheritGlobal}
+                onChange={e => setValue('inheritGlobal', e.target.checked)}
                 className="h-4 w-4 rounded border-border accent-primary"
               />
               <span className="font-medium text-foreground">Same as Global</span>
-              <span className="text-muted-fg">— inherit the platform-wide fee for this category</span>
+              <span className="text-muted-fg">— inherit the platform-wide fee</span>
             </label>
 
-            {/* Preview of global rate when checkbox is checked */}
             {inheritGlobal && (
               <div className="mt-2 flex items-center gap-2 rounded-md border border-primary/20 bg-primary-subtle/30 px-3 py-2 text-sm">
                 <svg className="h-4 w-4 shrink-0 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -472,8 +400,7 @@ export function TenantFeeRules({ tenantId, tenantName }: Props) {
                 </svg>
                 {previewGlobal ? (
                   <span className="text-foreground">
-                    Effective fee:{' '}
-                    <strong>{formatRate(previewGlobal.fee_type, previewGlobal.fee_value)}</strong>
+                    Effective fee: <strong>{formatRate(previewGlobal.fee_type, previewGlobal.fee_value)}</strong>
                     {previewGlobal.fee_type === 'percent' && (previewGlobal.min_fee || previewGlobal.max_fee) && (
                       <span className="ml-1 text-muted-fg">
                         (min {previewGlobal.min_fee ? parseFloat(previewGlobal.min_fee).toFixed(2) : '0'} /
@@ -482,88 +409,47 @@ export function TenantFeeRules({ tenantId, tenantName }: Props) {
                     )}
                   </span>
                 ) : (
-                  <span className="text-muted-fg italic">
-                    No global rule configured for this category — fee will be zero until one is set.
-                  </span>
+                  <span className="text-muted-fg italic">No global rule for this category — fee will be zero until one is set.</span>
                 )}
               </div>
             )}
 
             {createMutation.isError && (
               <p className="mt-2 text-xs text-danger-fg">
-                {getApiError(createMutation.error, 'Could not create fee rule.')}
+                {getApiError(createMutation.error, 'Could not save fee rule.')}
               </p>
             )}
             <div className="mt-3 flex gap-2">
-              <Button type="submit" size="sm" loading={createMutation.isPending}>Save rule</Button>
-              <Button
-                type="button" size="sm" variant="ghost"
-                onClick={() => { setAddingFee(false); reset(); createMutation.reset() }}
-              >
+              <Button type="submit" size="sm" loading={createMutation.isPending}>Save</Button>
+              <Button type="button" size="sm" variant="ghost"
+                onClick={() => { setAdding(false); reset(); createMutation.reset() }}>
                 Cancel
               </Button>
             </div>
           </form>
         )}
 
-        {/* Category tabs */}
-        <div className="flex gap-0.5 overflow-x-auto border-b border-border bg-muted/30 px-4 pt-3 pb-0">
-          {(['all', ...ALL_CATEGORIES] as Array<'all' | FeeCategory>).map(tab => {
-            const count = tab === 'all' ? (feeConfigs?.length ?? 0) : countByCategory(tab)
-            return (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`flex shrink-0 items-center gap-1.5 rounded-t-md border border-b-0 px-3 py-2 text-xs font-medium transition-colors ${
-                  activeTab === tab
-                    ? 'border-border bg-surface text-foreground'
-                    : 'border-transparent text-muted-fg hover:text-foreground'
-                }`}
-              >
-                {tab === 'all' ? 'All' : FEE_CATEGORY_LABELS[tab]}
-                {count > 0 && (
-                  <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums ${
-                    activeTab === tab ? 'bg-primary text-white' : 'bg-muted text-muted-fg'
-                  }`}>
-                    {count}
-                  </span>
-                )}
-              </button>
-            )
-          })}
-        </div>
-
-        {/* Table */}
+        {/* Rules table */}
         {isLoading ? (
-          <LoadingState message="Loading fee rules…" />
-        ) : !filteredConfigs.length && !addingFee ? (
-          <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-surface">
-              <svg className="h-4 w-4 text-muted-fg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33" />
-              </svg>
-            </div>
-            <p className="text-sm text-muted-fg">
-              {activeTab === 'all'
-                ? 'No fee rules — all charges use global fee (or free if none set)'
-                : `No fee rules for "${FEE_CATEGORY_LABELS[activeTab]}"`}
-            </p>
-          </div>
+          <LoadingState message="Loading…" />
+        ) : rules.length === 0 && !adding ? (
+          <p className="px-5 py-6 text-sm text-muted-fg italic">
+            No rules configured — falls back to{' '}
+            <Link to="/admin/global-fees" className="text-primary underline-offset-2 hover:underline">
+              global fee
+            </Link>{' '}
+            (or zero if none set).
+          </p>
         ) : (
-          <DataTable
-            columns={buildColumns(globalFeeConfigs, onDelete, onCustomize, deleteMutation.isPending, updateMutation.isPending)}
-            data={filteredConfigs}
-            getRowId={row => row.id}
-            emptyTitle="No fee rules"
-          />
+          <DataTable columns={columns} data={rules} getRowId={r => r.id} emptyTitle="No rules" />
         )}
       </ContentCard>
 
       <ConfirmDialog
         open={!!deleteDialog}
-        onOpenChange={(open) => { if (!open) setDeleteDialog(null) }}
+        onOpenChange={open => { if (!open) setDeleteDialog(null) }}
         title="Delete fee rule"
-        description="This rule will be permanently removed. Charges will revert to the global fee (or zero if none) for this category."
+        description="This rule will be removed. Charges will revert to the global fee (or zero) for this category."
         confirmLabel="Delete"
         variant="danger"
         onConfirm={confirmDelete}
@@ -571,6 +457,49 @@ export function TenantFeeRules({ tenantId, tenantName }: Props) {
       />
     </>
   )
+}
 
-  function onDelete(feeId: string) { setDeleteDialog(feeId) }
+// ─── Page component ───────────────────────────────────────────────────────────
+
+interface Props {
+  tenantId: string
+  tenantName?: string
+}
+
+export function TenantFeeRules({ tenantId, tenantName }: Props) {
+  const navigate = useNavigate()
+  const { data: feeConfigs, isLoading } = useFeeConfigs(tenantId)
+  const { data: globalFeeConfigs }       = useGlobalFeeConfigs()
+
+  const byCategory = (cat: FeeCategory) =>
+    (feeConfigs ?? []).filter(r => r.fee_category === cat)
+
+  return (
+    <div className="flex flex-col gap-4">
+      {/* Sub-header */}
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-muted-fg">
+          Rules for <span className="font-medium text-foreground">{tenantName ?? 'this tenant'}</span>.
+          No custom rule = falls back to{' '}
+          <Link to="/admin/global-fees" className="text-primary underline-offset-2 hover:underline">
+            global fee
+          </Link>.
+        </p>
+        <Button size="sm" variant="ghost" onClick={() => navigate('/admin/global-fees')}>
+          Manage global rules
+        </Button>
+      </div>
+
+      {SECTION_ORDER.map(category => (
+        <CategorySection
+          key={category}
+          category={category}
+          tenantId={tenantId}
+          rules={byCategory(category)}
+          globalConfigs={globalFeeConfigs}
+          isLoading={isLoading}
+        />
+      ))}
+    </div>
+  )
 }
