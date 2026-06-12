@@ -12,7 +12,6 @@ import { useTransactions } from '@/hooks/useReports'
 import { useAdminTenants } from '@/hooks/useAdmin'
 import { useAuthStore } from '@/stores/authStore'
 import { useDebounce } from '@/hooks/useDebounce'
-import { ReportBrandHeader } from '@/components/ui/organisms/ReportBrandHeader'
 import reportsApi from '@/api/reports'
 import { toLocalDateStr } from '@/lib/utils'
 import type { DateRange } from '@/components/ui/molecules/DateRangePicker'
@@ -238,22 +237,6 @@ export function Transactions() {
   const total = data?.meta?.total ?? 0
   const totalPages = Math.ceil(total / 20)
 
-  const periodStr = useMemo(() => {
-    if (!dateRange.startDate || !dateRange.endDate) return undefined
-    return `${fmtDate(dateRange.startDate)} — ${fmtDate(dateRange.endDate)}`
-  }, [dateRange])
-
-  const reportStats = useMemo(() => {
-    const rows = data?.data ?? []
-    const completed  = rows.filter(r => r.status === 'completed').length
-    const currencies = [...new Set(rows.map(r => r.source_currency))].slice(0, 3).join(', ')
-    return [
-      { label: 'Total transactions', value: total.toLocaleString(), accent: 'primary' as const },
-      ...(completed > 0 ? [{ label: 'Completed (this page)', value: completed, accent: 'success' as const }] : []),
-      ...(currencies ? [{ label: 'Currencies', value: currencies }] : []),
-      ...(status ? [{ label: 'Status filter', value: STATUS_CHIPS.find(c => c.value === status)?.label ?? status, accent: 'warning' as const }] : []),
-    ]
-  }, [data, total, status])
 
   const handleExport = async (format: 'csv' | 'pdf') => {
     setExporting(true)
@@ -286,13 +269,6 @@ export function Transactions() {
             </Button>
           </div>
         }
-      />
-
-      <ReportBrandHeader
-        title="Transaction Report"
-        subtitle={selectedTenantId ? (tenants.find(t => t.id === selectedTenantId)?.name ?? undefined) : undefined}
-        period={periodStr}
-        stats={reportStats}
       />
 
       <SmartFilterBar
