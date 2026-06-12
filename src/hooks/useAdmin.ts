@@ -148,8 +148,17 @@ export function useFeeConfigs(tenantId: string) {
 export function useCreateFeeConfig() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ tenantId, ...payload }: { tenantId: string; sourceCurrency: string; destCurrency?: string | null; inheritGlobal?: boolean; feeType?: 'flat' | 'percent'; feeValue?: number; minFee?: number | null; maxFee?: number | null }) =>
-      adminApi.fees.create(tenantId, payload).then(r => r.data.data),
+    mutationFn: ({ tenantId, ...payload }: {
+      tenantId: string
+      feeCategory: import('@/api/admin').FeeCategory
+      sourceCurrency?: string | null
+      destCurrency?: string | null
+      inheritGlobal?: boolean
+      feeType?: 'flat' | 'percent'
+      feeValue?: number
+      minFee?: number | null
+      maxFee?: number | null
+    }) => adminApi.fees.create(tenantId, payload).then(r => r.data.data),
     onSuccess: (_, { tenantId }) => qc.invalidateQueries({ queryKey: ['admin-fee-configs', tenantId] }),
   })
 }
@@ -182,8 +191,15 @@ export function useGlobalFeeConfigs() {
 export function useCreateGlobalFeeConfig() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (payload: { sourceCurrency: string; destCurrency?: string | null; feeType: 'flat' | 'percent'; feeValue: number; minFee?: number | null; maxFee?: number | null }) =>
-      adminApi.globalFees.create(payload).then(r => r.data.data),
+    mutationFn: (payload: {
+      feeCategory: import('@/api/admin').FeeCategory
+      sourceCurrency?: string | null
+      destCurrency?: string | null
+      feeType: 'flat' | 'percent'
+      feeValue: number
+      minFee?: number | null
+      maxFee?: number | null
+    }) => adminApi.globalFees.create(payload).then(r => r.data.data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-global-fee-configs'] }),
   })
 }

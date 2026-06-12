@@ -68,10 +68,40 @@ export interface CorridorConfig {
   is_active: boolean
 }
 
+export type FeeCategory =
+  | 'account_activation'
+  | 'iban_creation'
+  | 'transaction_send'
+  | 'transaction_receive'
+  | 'monthly_maintenance'
+  | 'amc'
+
+export const FEE_CATEGORY_LABELS: Record<FeeCategory, string> = {
+  account_activation:  'Account Activation',
+  iban_creation:       'IBAN Creation',
+  transaction_send:    'Transaction (Send)',
+  transaction_receive: 'Transaction (Receive)',
+  monthly_maintenance: 'Monthly Maintenance',
+  amc:                 'Annual Maintenance (AMC)',
+}
+
+export const FEE_CATEGORY_OPTIONS = (Object.keys(FEE_CATEGORY_LABELS) as FeeCategory[]).map(k => ({
+  value: k,
+  label: FEE_CATEGORY_LABELS[k],
+}))
+
+/** Categories that require source + optional dest currency (corridor-based) */
+export const CORRIDOR_CATEGORIES: FeeCategory[] = ['transaction_send', 'transaction_receive']
+/** Categories that take a single currency (the account currency) */
+export const SINGLE_CURRENCY_CATEGORIES: FeeCategory[] = ['account_activation', 'iban_creation', 'monthly_maintenance']
+/** Categories with no currency (tenant-wide) */
+export const NO_CURRENCY_CATEGORIES: FeeCategory[] = ['amc']
+
 export interface FeeConfig {
   id: string
   tenant_id: string
-  source_currency: string
+  fee_category: FeeCategory
+  source_currency: string | null
   dest_currency: string | null
   inherit_global: boolean
   fee_type: 'flat' | 'percent' | null
@@ -85,7 +115,8 @@ export interface FeeConfig {
 
 export interface GlobalFeeConfig {
   id: string
-  source_currency: string
+  fee_category: FeeCategory
+  source_currency: string | null
   dest_currency: string | null
   fee_type: 'flat' | 'percent'
   fee_value: string
@@ -215,11 +246,15 @@ const admin = {
   },
 
   fees: {
-    list: (tenantId: string) =>
-      apiClient.get<{ success: boolean; data: FeeConfig[] }>(`/admin/tenants/${tenantId}/fee-config`),
+    list: (tenantId: string, category?: FeeCategory) =>
+      apiClient.get<{ success: boolean; data: FeeConfig[] }>(
+        `/admin/tenants/${tenantId}/fee-config`,
+        { params: category ? { category } : undefined },
+      ),
 
     create: (tenantId: string, payload: {
-      sourceCurrency: string
+      feeCategory: FeeCategory
+      sourceCurrency?: string | null
       destCurrency?: string | null
       inheritGlobal?: boolean
       feeType?: 'flat' | 'percent'
@@ -244,11 +279,15 @@ const admin = {
   },
 
   globalFees: {
-    list: () =>
-      apiClient.get<{ success: boolean; data: GlobalFeeConfig[] }>('/admin/fee-config'),
+    list: (category?: FeeCategory) =>
+      apiClient.get<{ success: boolean; data: GlobalFeeConfig[] }>(
+        '/admin/fee-config',
+        { params: category ? { category } : undefined },
+      ),
 
     create: (payload: {
-      sourceCurrency: string
+      feeCategory: FeeCategory
+      sourceCurrency?: string | null
       destCurrency?: string | null
       feeType: 'flat' | 'percent'
       feeValue: number
