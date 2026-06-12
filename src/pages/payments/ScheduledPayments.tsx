@@ -377,21 +377,97 @@ function ScheduledPaymentsInner() {
         ))}
       </div>
 
-      <ContentCard padding="none">
-        {isLoading ? (
+      {isLoading ? (
+        <ContentCard padding="none">
           <LoadingState message="Loading scheduled payments…" />
-        ) : isError ? (
+        </ContentCard>
+      ) : isError ? (
+        <ContentCard padding="none">
           <ErrorState message="Could not load scheduled payments." />
-        ) : (
+        </ContentCard>
+      ) : rows.length === 0 && !statusFilter ? (
+        /* ── First-time / empty state guide ── */
+        <div className="rounded-2xl border border-border bg-surface overflow-hidden">
+          <div className="flex flex-col items-center gap-2 border-b border-border bg-surface-raised/40 px-6 py-10 text-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-subtle text-primary">
+              <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 9v7.5" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-base font-semibold text-foreground">No scheduled payments yet</p>
+              <p className="mt-1 max-w-sm text-sm text-muted-fg">
+                Automate recurring transfers — pay suppliers, salaries, or regular remittances without logging in each time.
+              </p>
+            </div>
+            <Button className="mt-2" onClick={() => setDrawerOpen(true)}>
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+              Schedule your first payment
+            </Button>
+          </div>
+
+          {/* How it works steps */}
+          <div className="grid divide-y divide-border sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+            {[
+              {
+                step: '1',
+                title: 'Choose a beneficiary & amount',
+                body: 'Pick a saved beneficiary, select your source account and currencies, and enter the amount.',
+                icon: (
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                  </svg>
+                ),
+              },
+              {
+                step: '2',
+                title: 'Set frequency & date',
+                body: 'Pick one-time, weekly, or monthly. Set the first run date and an optional end date for recurring.',
+                icon: (
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                ),
+              },
+              {
+                step: '3',
+                title: 'We handle the rest',
+                body: 'The payment executes automatically at the scheduled time using a live FX rate. You\'ll be notified if your balance is low.',
+                icon: (
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                ),
+              },
+            ].map(item => (
+              <div key={item.step} className="flex flex-col gap-3 px-6 py-5">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-subtle text-primary">
+                    {item.icon}
+                  </div>
+                  <span className="text-xs font-bold uppercase tracking-widest text-muted-fg">Step {item.step}</span>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">{item.title}</p>
+                  <p className="mt-0.5 text-xs text-muted-fg leading-relaxed">{item.body}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <ContentCard padding="none">
           <DataTable
             columns={columns}
             data={rows}
             getRowId={r => r.id}
-            emptyTitle="No scheduled payments"
-            emptyDescription="Click 'Schedule payment' to set one up."
+            emptyTitle="No matching scheduled payments"
+            emptyDescription="Try a different status filter."
           />
-        )}
-      </ContentCard>
+        </ContentCard>
+      )}
 
       {/* Create drawer */}
       <Drawer
