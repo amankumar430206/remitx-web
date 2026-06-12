@@ -46,3 +46,27 @@ export function useCancelScheduledPayment() {
     onSuccess: () => qc.invalidateQueries({ queryKey: [QK] }),
   })
 }
+
+export function useSkipScheduledPayment() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => scheduledPaymentsApi.skip(id).then(r => r.data.data),
+    onSuccess: (_, id) => {
+      qc.invalidateQueries({ queryKey: [QK] })
+      qc.invalidateQueries({ queryKey: [QK, id] })
+    },
+  })
+}
+
+export function useExecuteScheduledPayment() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => scheduledPaymentsApi.executeNow(id).then(r => r.data.data),
+    onSuccess: (_, id) => {
+      qc.invalidateQueries({ queryKey: [QK] })
+      qc.invalidateQueries({ queryKey: [QK, id] })
+      qc.invalidateQueries({ queryKey: ['payments'] })
+      qc.invalidateQueries({ queryKey: ['accounts'] })
+    },
+  })
+}

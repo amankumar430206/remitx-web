@@ -28,6 +28,7 @@ const NewPayment          = lazy(() => import('@/pages/payments/NewPayment').the
 const ApprovalQueue       = lazy(() => import('@/pages/payments/ApprovalQueue').then(m => ({ default: m.ApprovalQueue })))
 const ScheduledPayments      = lazy(() => import('@/pages/payments/ScheduledPayments').then(m => ({ default: m.ScheduledPayments })))
 const NewScheduledPayment    = lazy(() => import('@/pages/payments/NewScheduledPayment').then(m => ({ default: m.NewScheduledPayment })))
+const ScheduledPaymentDetail = lazy(() => import('@/pages/payments/ScheduledPaymentDetail').then(m => ({ default: m.ScheduledPaymentDetail })))
 const BeneficiaryList     = lazy(() => import('@/pages/BeneficiaryList').then(m => ({ default: m.BeneficiaryList })))
 const BeneficiaryNew      = lazy(() => import('@/pages/BeneficiaryNew').then(m => ({ default: m.BeneficiaryNew })))
 const BeneficiaryDetail   = lazy(() => import('@/pages/BeneficiaryDetail').then(m => ({ default: m.BeneficiaryDetail })))
@@ -107,6 +108,7 @@ function App() {
               <Route path="/payments/approval-queue" element={page(<ApprovalQueue />)} />
               <Route path="/payments/scheduled" element={page(<ScheduledPayments />)} />
               <Route path="/payments/scheduled/new" element={page(<NewScheduledPayment />)} />
+              <Route path="/payments/scheduled/:id" element={page(<ScheduledPaymentDetail />)} />
               <Route path="/payments/:id" element={page(<PaymentDetail />)} />
 
               {/* Beneficiaries */}

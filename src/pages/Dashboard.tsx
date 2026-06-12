@@ -56,6 +56,11 @@ function InsufficientFundsAlert({ schedule }: { schedule: ScheduledPayment }) {
 
       {/* Actions */}
       <div className="flex shrink-0 items-center gap-2">
+        <Link to={`/payments/scheduled/${schedule.id}`}>
+          <Button size="sm" variant="ghost" className="text-danger-fg hover:bg-danger/10">
+            View details
+          </Button>
+        </Link>
         <Button
           size="sm"
           variant="outline"
@@ -71,7 +76,7 @@ function InsufficientFundsAlert({ schedule }: { schedule: ScheduledPayment }) {
           onClick={() => cancelMut.mutate(schedule.id)}
           className="text-danger-fg hover:bg-danger/10"
         >
-          Cancel payment
+          Cancel
         </Button>
       </div>
     </div>
@@ -84,7 +89,7 @@ function NextScheduledWidget({ schedule }: { schedule: ScheduledPayment }) {
   const daysLeft = differenceInDays(parseISO(schedule.scheduled_for), new Date())
 
   return (
-    <Link to="/payments/scheduled" className="block group">
+    <Link to={`/payments/scheduled/${schedule.id}`} className="block group">
       <div className="flex items-center gap-4 rounded-xl border border-border bg-surface p-4 transition-colors hover:border-primary/40 hover:bg-primary-subtle">
         {/* Calendar icon */}
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-subtle text-primary">
@@ -165,9 +170,16 @@ export function Dashboard() {
   const insufficientAlerts = schedulingEnabled
     ? activeSchedules.filter(s => s.balance_insufficient)
     : []
+  // Payments due today or overdue (excluding already-flagged balance alerts)
+  const dueToday = schedulingEnabled
+    ? activeSchedules.filter(s => {
+        const days = differenceInDays(parseISO(s.scheduled_for), new Date())
+        return days <= 0
+      })
+    : []
   const nextScheduled = schedulingEnabled
     ? activeSchedules
-        .filter(s => !s.balance_insufficient)
+        .filter(s => !s.balance_insufficient && differenceInDays(parseISO(s.scheduled_for), new Date()) > 0)
         .sort((a, b) => new Date(a.scheduled_for).getTime() - new Date(b.scheduled_for).getTime())[0]
     : null
 
@@ -232,6 +244,55 @@ export function Dashboard() {
           {insufficientAlerts.map(s => (
             <InsufficientFundsAlert key={s.id} schedule={s} />
           ))}
+        </div>
+      )}
+
+      {/* ── Due today / overdue scheduled payments ── */}
+      {dueToday.length > 0 && (
+        <div className="rounded-xl border border-warning-fg/30 bg-warning/10 overflow-hidden">
+          <div className="flex items-center gap-2 border-b border-warning-fg/20 px-4 py-3">
+            <svg className="h-4 w-4 text-warning-fg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p className="text-sm font-semibold text-warning-fg">
+              {dueToday.length === 1 ? '1 payment due today' : `${dueToday.length} payments due today`}
+            </p>
+          </div>
+          <div className="flex flex-col divide-y divide-warning-fg/10">
+            {dueToday.map(s => {
+              const days = differenceInDays(parseISO(s.scheduled_for), new Date())
+              return (
+                <Link
+                  key={s.id}
+                  to={`/payments/scheduled/${s.id}`}
+                  className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-warning/15 transition-colors group"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-warning/20 text-warning-fg">
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 9v7.5" />
+                      </svg>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-foreground tabular-nums">
+                        {parseFloat(s.source_amount).toFixed(2)} {s.source_currency}
+                        <span className="font-normal text-muted-fg mx-1">→</span>
+                        {s.dest_currency}
+                      </p>
+                      <p className="text-xs text-muted-fg">
+                        {days < 0 ? `Overdue by ${Math.abs(days)}d` : 'Due today'}
+                        {' · '}
+                        {format(parseISO(s.scheduled_for), 'dd MMM yyyy, HH:mm')}
+                      </p>
+                    </div>
+                  </div>
+                  <svg className="h-4 w-4 shrink-0 text-muted-fg opacity-0 transition-opacity group-hover:opacity-100" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                  </svg>
+                </Link>
+              )
+            })}
+          </div>
         </div>
       )}
 
