@@ -27,22 +27,66 @@ function InfoRow({
   label,
   value,
   mono,
+  copyable,
+  copyValue,
 }: {
   label: string
   value: React.ReactNode
   mono?: boolean
+  copyable?: boolean
+  copyValue?: string
 }) {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = () => {
+    if (!copyValue) return
+    navigator.clipboard.writeText(copyValue).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1800)
+    })
+  }
+
   return (
-    <div className="flex items-start justify-between gap-4 py-3 border-b border-border last:border-0">
+    <div className="flex items-start justify-between gap-4 py-3 border-b border-border last:border-0 group">
       <span className="text-xs text-muted-fg shrink-0">{label}</span>
-      <span
-        className={cn(
-          'text-sm font-medium text-foreground text-right flex-1',
-          mono && 'font-mono text-xs',
+      <div className="flex flex-col items-end gap-1 min-w-0 flex-1">
+        <span
+          className={cn(
+            'text-sm font-medium text-foreground text-right',
+            mono && 'font-mono text-xs',
+          )}
+        >
+          {value}
+        </span>
+        {copyable && copyValue && (
+          <button
+            type="button"
+            onClick={handleCopy}
+            className={cn(
+              'shrink-0 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold transition-all',
+              copied
+                ? 'border-success/40 bg-success/10 text-success-fg'
+                : 'border-border bg-surface text-muted-fg hover:border-primary/40 hover:bg-primary/5 hover:text-primary',
+            )}
+          >
+            {copied ? (
+              <>
+                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                Copied
+              </>
+            ) : (
+              <>
+                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3" />
+                </svg>
+                Copy
+              </>
+            )}
+          </button>
         )}
-      >
-        {value}
-      </span>
+      </div>
     </div>
   )
 }
@@ -696,8 +740,8 @@ export function PaymentDetail() {
           <InfoRow label="Fee" value={<AmountDisplay amount={payment.fee_amount} currency={payment.source_currency} />} />
           <InfoRow label="Purpose" value={payment.purpose_code} />
           {payment.note && <InfoRow label="Submitter note" value={payment.note} />}
-          {payment.reference && <InfoRow label="Reference" value={payment.reference} mono />}
-          <InfoRow label="Payment ID" value={payment.id} mono />
+          {payment.reference && <InfoRow label="Reference" value={payment.reference} mono copyable copyValue={payment.reference} />}
+          <InfoRow label="Payment ID" value={payment.id} mono copyable copyValue={payment.id} />
           <InfoRow label="Submitted" value={new Date(payment.created_at).toLocaleString()} />
           {payment.completed_at && (
             <InfoRow label="Completed" value={new Date(payment.completed_at).toLocaleString()} />
@@ -716,13 +760,13 @@ export function PaymentDetail() {
             <InfoRow label="Bank" value={payment.beneficiary_bank_name} />
           )}
           {payment.beneficiary_account_number && (
-            <InfoRow label="Account no." value={payment.beneficiary_account_number} mono />
+            <InfoRow label="Account no." value={payment.beneficiary_account_number} mono copyable copyValue={payment.beneficiary_account_number} />
           )}
           {payment.beneficiary_iban && (
-            <InfoRow label="IBAN" value={payment.beneficiary_iban} mono />
+            <InfoRow label="IBAN" value={payment.beneficiary_iban} mono copyable copyValue={payment.beneficiary_iban} />
           )}
           {payment.beneficiary_swift_bic && (
-            <InfoRow label="SWIFT / BIC" value={payment.beneficiary_swift_bic} mono />
+            <InfoRow label="SWIFT / BIC" value={payment.beneficiary_swift_bic} mono copyable copyValue={payment.beneficiary_swift_bic} />
           )}
         </ContentCard></div>
       </div>
@@ -735,7 +779,7 @@ export function PaymentDetail() {
             <InfoRow label="Account currency" value={payment.account_currency} />
           )}
           {payment.account_number_ref && (
-            <InfoRow label="Account number" value={payment.account_number_ref} mono />
+            <InfoRow label="Account number" value={payment.account_number_ref} mono copyable copyValue={payment.account_number_ref} />
           )}
         </ContentCard></div>
       )}
@@ -786,7 +830,7 @@ export function PaymentDetail() {
             }
           />
           {payment.provider_payment_id && (
-            <InfoRow label="Provider payment ID" value={payment.provider_payment_id} mono />
+            <InfoRow label="Provider payment ID" value={payment.provider_payment_id} mono copyable copyValue={payment.provider_payment_id} />
           )}
           {!payment.provider_payment_id && (
             <InfoRow label="Provider payment ID" value="—" />
