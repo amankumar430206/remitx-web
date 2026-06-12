@@ -138,6 +138,8 @@ export function PaymentList() {
   const [page, setPage] = useState(1)
   const [status, setStatus] = useState('')
   const [direction, setDirection] = useState('')
+  const [currency, setCurrency] = useState('')
+  const [scheduled, setScheduled] = useState(false)
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounce(search)
   const [preset, setPreset] = useState<Preset>('30d')
@@ -164,6 +166,8 @@ export function PaymentList() {
     from: dateRange.startDate ? toLocalDateStr(dateRange.startDate) : undefined,
     to: dateRange.endDate ? toLocalDateStr(dateRange.endDate) : undefined,
     tenantId: isSuperAdmin ? (selectedTenantId || undefined) : undefined,
+    currency: currency || undefined,
+    scheduled: scheduled || undefined,
   })
 
   const payments = data?.data ?? []
@@ -182,7 +186,19 @@ export function PaymentList() {
     }] : [{
       key: 'direction',
       header: 'Type',
-      render: (_p: Payment) => <DirectionBadge direction="debit" />,
+      render: (p: Payment) => (
+        <div className="flex flex-col gap-0.5">
+          <DirectionBadge direction="debit" />
+          {p.scheduled_payment_id && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 border border-primary/20 px-2 py-0.5 text-[10px] font-semibold text-primary">
+              <svg className="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              Scheduled
+            </span>
+          )}
+        </div>
+      ),
     }]),
     {
       key: 'beneficiary',
@@ -218,7 +234,7 @@ export function PaymentList() {
     },
   ]
 
-  const clearAll = () => { setStatus(''); setDirection(''); setSearch(''); setSelectedTenantId(''); handlePreset('30d'); setPage(1) }
+  const clearAll = () => { setStatus(''); setDirection(''); setSearch(''); setSelectedTenantId(''); setCurrency(''); setScheduled(false); handlePreset('30d'); setPage(1) }
 
   const activeChips = useMemo<ActiveFilterChip[]>(() => [
     ...(status ? [{
@@ -243,12 +259,22 @@ export function PaymentList() {
         : PRESETS.find(p => p.value === preset)?.label ?? preset,
       onRemove: () => { handlePreset('30d') },
     }] : []),
+    ...(currency ? [{
+      key: 'currency',
+      label: currency.toUpperCase(),
+      onRemove: () => { setCurrency(''); setPage(1) },
+    }] : []),
+    ...(scheduled ? [{
+      key: 'scheduled',
+      label: 'Scheduled only',
+      onRemove: () => { setScheduled(false); setPage(1) },
+    }] : []),
     ...(search ? [{
       key: 'search',
       label: `"${search}"`,
       onRemove: () => { setSearch(''); setPage(1) },
     }] : []),
-  ], [status, direction, selectedTenantId, tenants, preset, dateRange, search])
+  ], [status, direction, selectedTenantId, tenants, preset, dateRange, currency, scheduled, search])
 
   const list = (
     <div className="flex flex-col gap-3">
@@ -307,9 +333,40 @@ export function PaymentList() {
                 </div>
               </div>
             )}
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-muted-fg">Currency</label>
+              <input
+                type="text"
+                maxLength={3}
+                value={currency}
+                onChange={e => { setCurrency(e.target.value.toUpperCase()); setPage(1) }}
+                placeholder="e.g. USD, GBP"
+                className="rounded-md border border-border bg-surface px-3 py-1.5 text-xs text-foreground uppercase placeholder:normal-case placeholder:text-muted-fg focus:outline-none focus:ring-1 focus:ring-primary w-32"
+              />
+            </div>
+            {schedulingEnabled && (
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-muted-fg">Origin</label>
+                <button
+                  type="button"
+                  onClick={() => { setScheduled(v => !v); setPage(1) }}
+                  className={[
+                    'inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium border transition-colors w-fit',
+                    scheduled
+                      ? 'bg-primary/10 border-primary/30 text-primary'
+                      : 'bg-surface border-border text-muted-fg hover:text-foreground hover:border-border-strong',
+                  ].join(' ')}
+                >
+                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Scheduled payments only
+                </button>
+              </div>
+            )}
           </div>
         }
-        activeAdvancedCount={(direction ? 1 : 0) + (selectedTenantId ? 1 : 0)}
+        activeAdvancedCount={(direction ? 1 : 0) + (selectedTenantId ? 1 : 0) + (currency ? 1 : 0) + (scheduled ? 1 : 0)}
         activeChips={activeChips}
         onClearAll={activeChips.length > 0 ? clearAll : undefined}
       />

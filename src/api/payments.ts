@@ -46,6 +46,7 @@ export interface Payment {
   provider_payment_id?: string | null
   ops_notes?: string | null
   note?: string | null
+  scheduled_payment_id?: string | null
   status_history?: Array<{
     id: string
     status: string
@@ -70,7 +71,7 @@ export interface FeePreview {
 }
 
 const payments = {
-  list: (params?: { page?: number; limit?: number; status?: string; direction?: string; from?: string; to?: string; search?: string; tenantId?: string }, signal?: AbortSignal) =>
+  list: (params?: { page?: number; limit?: number; status?: string; direction?: string; from?: string; to?: string; search?: string; tenantId?: string; currency?: string; scheduled?: boolean }, signal?: AbortSignal) =>
     apiClient.get<{ success: boolean; data: Payment[]; meta: { page: number; limit: number; total: number } }>('/payments', { params, signal }),
 
   get: (id: string) =>

@@ -157,6 +157,7 @@ export function Transactions() {
   const [dateRange, setDateRange]           = useState<DateRange>(() => presetToRange('30d'))
   const [status, setStatus]                 = useState('')
   const [direction, setDirection]           = useState('')
+  const [currency, setCurrency]             = useState('')
   const [selectedTenantId, setSelectedTenantId] = useState('')
   const [search, setSearch]                 = useState('')
   const debouncedSearch                     = useDebounce(search)
@@ -179,6 +180,7 @@ export function Transactions() {
     setSearch('')
     setStatus('')
     setDirection('')
+    setCurrency('')
     setSelectedTenantId('')
     handlePreset('30d')
   }
@@ -206,12 +208,17 @@ export function Transactions() {
         : PRESETS.find(p => p.value === preset)?.label ?? preset,
       onRemove: () => handlePreset('30d'),
     }] : []),
+    ...(currency ? [{
+      key: 'currency',
+      label: currency.toUpperCase(),
+      onRemove: () => { setCurrency(''); setPage(1) },
+    }] : []),
     ...(search ? [{
       key: 'search',
       label: `"${search}"`,
       onRemove: () => setSearch(''),
     }] : []),
-  ], [status, direction, selectedTenantId, tenants, preset, dateRange, search])
+  ], [status, direction, currency, selectedTenantId, tenants, preset, dateRange, search])
 
   const params = {
     page,
@@ -219,6 +226,7 @@ export function Transactions() {
     search: debouncedSearch || undefined,
     status: status || undefined,
     direction: (direction as 'debit' | 'credit') || undefined,
+    currency: currency || undefined,
     tenantId: isSuperAdmin ? (selectedTenantId || undefined) : undefined,
     from: dateRange.startDate ? toLocalDateStr(dateRange.startDate) : undefined,
     to: dateRange.endDate ? toLocalDateStr(dateRange.endDate) : undefined,
@@ -338,9 +346,20 @@ export function Transactions() {
                 ))}
               </div>
             </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-muted-fg">Currency</label>
+              <input
+                type="text"
+                maxLength={3}
+                value={currency}
+                onChange={e => { setCurrency(e.target.value.toUpperCase()); setPage(1) }}
+                placeholder="e.g. USD, GBP"
+                className="rounded-md border border-border bg-surface px-3 py-1.5 text-xs text-foreground uppercase placeholder:normal-case placeholder:text-muted-fg focus:outline-none focus:ring-1 focus:ring-primary w-32"
+              />
+            </div>
           </div>
         }
-        activeAdvancedCount={(direction ? 1 : 0) + (selectedTenantId ? 1 : 0)}
+        activeAdvancedCount={(direction ? 1 : 0) + (currency ? 1 : 0) + (selectedTenantId ? 1 : 0)}
         activeChips={activeChips}
         onClearAll={activeChips.length > 0 ? clearAll : undefined}
       />
