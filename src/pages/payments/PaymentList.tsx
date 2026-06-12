@@ -294,47 +294,49 @@ export function PaymentList() {
         onStatusChange={v => { setStatus(v); setPage(1) }}
         advancedFilters={
           <div className="flex flex-col gap-4">
-            {isSuperAdmin && (
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-muted-fg">Client</label>
-                <select
-                  value={selectedTenantId}
-                  onChange={e => { setSelectedTenantId(e.target.value); setPage(1) }}
-                  className="rounded-md border border-border bg-surface px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                >
-                  <option value="">All clients</option>
-                  {tenants.map(t => (
-                    <option key={t.id} value={t.id}>{t.name}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-            {!isSuperAdmin && (
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-muted-fg">Type</label>
-                <div className="flex gap-1.5">
-                  {DIRECTION_CHIPS.map(chip => (
-                    <button
-                      key={chip.value}
-                      type="button"
-                      onClick={() => { setDirection(chip.value); setPage(1) }}
-                      className={[
-                        'h-7 px-3 rounded-full text-xs font-semibold border transition-all',
-                        direction === chip.value
-                          ? chip.value === 'debit'
-                            ? 'bg-danger/10 border-danger/30 text-danger-fg'
-                            : chip.value === 'credit'
-                            ? 'bg-success/10 border-success/30 text-success-fg'
-                            : 'bg-primary text-primary-fg border-primary'
-                          : 'bg-transparent border-border text-muted-fg hover:border-border-strong hover:text-foreground',
-                      ].join(' ')}
-                    >
-                      {chip.label}
-                    </button>
-                  ))}
+            <div className="flex items-end gap-6 flex-wrap">
+              {!isSuperAdmin && (
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-medium text-muted-fg">Type</label>
+                  <div className="flex gap-1.5">
+                    {DIRECTION_CHIPS.map(chip => (
+                      <button
+                        key={chip.value}
+                        type="button"
+                        onClick={() => { setDirection(chip.value); setPage(1) }}
+                        className={[
+                          'h-7 px-3 rounded-full text-xs font-semibold border transition-all',
+                          direction === chip.value
+                            ? chip.value === 'debit'
+                              ? 'bg-danger/10 border-danger/30 text-danger-fg'
+                              : chip.value === 'credit'
+                              ? 'bg-success/10 border-success/30 text-success-fg'
+                              : 'bg-primary text-primary-fg border-primary'
+                            : 'bg-transparent border-border text-muted-fg hover:border-border-strong hover:text-foreground',
+                        ].join(' ')}
+                      >
+                        {chip.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+              {isSuperAdmin && (
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-medium text-muted-fg">Client</label>
+                  <select
+                    value={selectedTenantId}
+                    onChange={e => { setSelectedTenantId(e.target.value); setPage(1) }}
+                    className="rounded-md border border-border bg-surface px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  >
+                    <option value="">All clients</option>
+                    {tenants.map(t => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-muted-fg">Currency</label>
               <div className="flex flex-wrap gap-1.5">
