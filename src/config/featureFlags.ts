@@ -88,6 +88,49 @@ export const FEATURE_FLAGS: FeatureFlagDef[] = [
     group: 'Analytics',
     defaultEnabled: true,
   },
+  // ── Fees & Billing ────────────────────────────────────────────────────────
+  {
+    key: 'account_activation_fee',
+    label: 'Account Activation Fee',
+    description: 'Charge a one-time fee when a new user account is activated',
+    group: 'Fees & Billing',
+    defaultEnabled: false,
+  },
+  {
+    key: 'iban_creation_fee',
+    label: 'IBAN Creation Fee',
+    description: 'Charge a fee each time a currency IBAN / wallet account is created',
+    group: 'Fees & Billing',
+    defaultEnabled: false,
+  },
+  {
+    key: 'transaction_send_fee',
+    label: 'Transaction Send Fees',
+    description: 'Apply per-transaction fees on outbound payments',
+    group: 'Fees & Billing',
+    defaultEnabled: true,
+  },
+  {
+    key: 'transaction_receive_fee',
+    label: 'Transaction Receive Fees',
+    description: 'Apply per-transaction fees on inbound payments',
+    group: 'Fees & Billing',
+    defaultEnabled: false,
+  },
+  {
+    key: 'monthly_maintenance_fee',
+    label: 'Monthly Maintenance Fee',
+    description: 'Apply a recurring monthly charge per currency account',
+    group: 'Fees & Billing',
+    defaultEnabled: false,
+  },
+  {
+    key: 'amc_fee',
+    label: 'Annual Maintenance Charge (AMC)',
+    description: 'Apply an annual maintenance charge at the tenant level',
+    group: 'Fees & Billing',
+    defaultEnabled: false,
+  },
   // ── UX & Personalisation ──────────────────────────────────────────────────
   {
     key: 'notifications',
