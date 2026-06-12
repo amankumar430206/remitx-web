@@ -292,104 +292,95 @@ export function PaymentList() {
         statusChips={STATUS_CHIPS}
         activeStatus={status}
         onStatusChange={v => { setStatus(v); setPage(1) }}
-        activeChips={activeChips}
-        onClearAll={activeChips.length > 0 ? clearAll : undefined}
-      />
-
-      {/* ── Inline filter row ── */}
-      <div className="rounded-lg border border-border bg-surface overflow-hidden">
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-0 divide-y divide-border sm:divide-y-0">
-
-          {/* Type — non-super-admin only */}
-          {!isSuperAdmin && (
-            <div className="flex items-center gap-2 px-3 py-2.5 border-r border-border shrink-0">
-              <span className="text-[10px] font-bold text-muted-fg uppercase tracking-widest whitespace-nowrap">Type</span>
-              <div className="flex gap-1">
-                {DIRECTION_CHIPS.map(chip => (
+        advancedFilters={
+          <div className="flex flex-col gap-4">
+            {isSuperAdmin && (
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-muted-fg">Client</label>
+                <select
+                  value={selectedTenantId}
+                  onChange={e => { setSelectedTenantId(e.target.value); setPage(1) }}
+                  className="rounded-md border border-border bg-surface px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                >
+                  <option value="">All clients</option>
+                  {tenants.map(t => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {!isSuperAdmin && (
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-muted-fg">Type</label>
+                <div className="flex gap-1.5">
+                  {DIRECTION_CHIPS.map(chip => (
+                    <button
+                      key={chip.value}
+                      type="button"
+                      onClick={() => { setDirection(chip.value); setPage(1) }}
+                      className={[
+                        'h-7 px-3 rounded-full text-xs font-semibold border transition-all',
+                        direction === chip.value
+                          ? chip.value === 'debit'
+                            ? 'bg-danger/10 border-danger/30 text-danger-fg'
+                            : chip.value === 'credit'
+                            ? 'bg-success/10 border-success/30 text-success-fg'
+                            : 'bg-primary text-primary-fg border-primary'
+                          : 'bg-transparent border-border text-muted-fg hover:border-border-strong hover:text-foreground',
+                      ].join(' ')}
+                    >
+                      {chip.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-muted-fg">Currency</label>
+              <div className="flex flex-wrap gap-1.5">
+                {CURRENCIES.map(c => (
                   <button
-                    key={chip.value}
+                    key={c}
                     type="button"
-                    onClick={() => { setDirection(chip.value); setPage(1) }}
+                    onClick={() => { setCurrency(prev => prev === c ? '' : c); setPage(1) }}
                     className={[
-                      'h-6 px-2.5 rounded-full text-[11px] font-semibold border transition-all',
-                      direction === chip.value
-                        ? chip.value === 'debit'
-                          ? 'bg-danger/10 border-danger/30 text-danger-fg'
-                          : chip.value === 'credit'
-                          ? 'bg-success/10 border-success/30 text-success-fg'
-                          : 'bg-primary text-primary-fg border-primary'
+                      'h-7 px-3 rounded-full text-xs font-semibold border transition-all font-mono',
+                      currency === c
+                        ? 'bg-primary text-primary-fg border-primary'
                         : 'bg-transparent border-border text-muted-fg hover:border-border-strong hover:text-foreground',
                     ].join(' ')}
                   >
-                    {chip.label}
+                    {c}
                   </button>
                 ))}
               </div>
             </div>
-          )}
-
-          {/* Currency pills */}
-          <div className="flex items-center gap-2 px-3 py-2.5 flex-1 min-w-0">
-            <span className="text-[10px] font-bold text-muted-fg uppercase tracking-widest whitespace-nowrap shrink-0">Currency</span>
-            <div className="flex flex-wrap gap-1">
-              {CURRENCIES.map(c => (
+            {schedulingEnabled && (
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-muted-fg">Origin</label>
                 <button
-                  key={c}
                   type="button"
-                  onClick={() => { setCurrency(prev => prev === c ? '' : c); setPage(1) }}
+                  onClick={() => { setScheduled(v => !v); setPage(1) }}
                   className={[
-                    'h-6 px-2.5 rounded-full text-[11px] font-semibold border transition-all font-mono',
-                    currency === c
+                    'inline-flex items-center gap-2 h-7 px-3 rounded-full text-xs font-semibold border transition-all w-fit',
+                    scheduled
                       ? 'bg-primary text-primary-fg border-primary'
                       : 'bg-transparent border-border text-muted-fg hover:border-border-strong hover:text-foreground',
                   ].join(' ')}
                 >
-                  {c}
+                  <svg className="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Scheduled payments only
                 </button>
-              ))}
-            </div>
+              </div>
+            )}
           </div>
-
-          {/* Scheduled toggle */}
-          {schedulingEnabled && (
-            <div className="flex items-center gap-2 px-3 py-2.5 border-l border-border shrink-0">
-              <button
-                type="button"
-                onClick={() => { setScheduled(v => !v); setPage(1) }}
-                className={[
-                  'inline-flex items-center gap-1.5 h-6 px-2.5 rounded-full text-[11px] font-semibold border transition-all',
-                  scheduled
-                    ? 'bg-primary text-primary-fg border-primary'
-                    : 'bg-transparent border-border text-muted-fg hover:border-border-strong hover:text-foreground',
-                ].join(' ')}
-              >
-                <svg className="h-3 w-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                Scheduled
-              </button>
-            </div>
-          )}
-
-          {/* Client dropdown — super_admin only */}
-          {isSuperAdmin && (
-            <div className="flex items-center gap-2 px-3 py-2.5 border-l border-border shrink-0">
-              <span className="text-[10px] font-bold text-muted-fg uppercase tracking-widest whitespace-nowrap">Client</span>
-              <select
-                value={selectedTenantId}
-                onChange={e => { setSelectedTenantId(e.target.value); setPage(1) }}
-                className="h-6 rounded-full border border-border bg-transparent pl-2.5 pr-6 text-[11px] font-semibold text-foreground appearance-none focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
-                style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M19 9l-7 7-7-7'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 8px center' }}
-              >
-                <option value="">All clients</option>
-                {tenants.map(t => (
-                  <option key={t.id} value={t.id}>{t.name}</option>
-                ))}
-              </select>
-            </div>
-          )}
-        </div>
-      </div>
+        }
+        activeAdvancedCount={(direction ? 1 : 0) + (selectedTenantId ? 1 : 0) + (currency ? 1 : 0) + (scheduled ? 1 : 0)}
+        activeChips={activeChips}
+        onClearAll={activeChips.length > 0 ? clearAll : undefined}
+      />
 
       <ContentCard padding="none">
         {isLoading ? (
