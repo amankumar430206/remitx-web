@@ -295,32 +295,30 @@ export function PaymentList() {
         advancedFilters={
           <div className="flex flex-col gap-4">
             <div className="flex items-end gap-6 flex-wrap">
-              {!isSuperAdmin && (
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-medium text-muted-fg">Type</label>
-                  <div className="flex gap-1.5">
-                    {DIRECTION_CHIPS.map(chip => (
-                      <button
-                        key={chip.value}
-                        type="button"
-                        onClick={() => { setDirection(chip.value); setPage(1) }}
-                        className={[
-                          'h-7 px-3 rounded-full text-xs font-semibold border transition-all',
-                          direction === chip.value
-                            ? chip.value === 'debit'
-                              ? 'bg-danger/10 border-danger/30 text-danger-fg'
-                              : chip.value === 'credit'
-                              ? 'bg-success/10 border-success/30 text-success-fg'
-                              : 'bg-primary text-primary-fg border-primary'
-                            : 'bg-transparent border-border text-muted-fg hover:border-border-strong hover:text-foreground',
-                        ].join(' ')}
-                      >
-                        {chip.label}
-                      </button>
-                    ))}
-                  </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-muted-fg">Type</label>
+                <div className="flex gap-1.5">
+                  {DIRECTION_CHIPS.map(chip => (
+                    <button
+                      key={chip.value}
+                      type="button"
+                      onClick={() => { setDirection(chip.value); setPage(1) }}
+                      className={[
+                        'h-7 px-3 rounded-full text-xs font-semibold border transition-all',
+                        direction === chip.value
+                          ? chip.value === 'debit'
+                            ? 'bg-danger/10 border-danger/30 text-danger-fg'
+                            : chip.value === 'credit'
+                            ? 'bg-success/10 border-success/30 text-success-fg'
+                            : 'bg-primary text-primary-fg border-primary'
+                          : 'bg-transparent border-border text-muted-fg hover:border-border-strong hover:text-foreground',
+                      ].join(' ')}
+                    >
+                      {chip.label}
+                    </button>
+                  ))}
                 </div>
-              )}
+              </div>
               {isSuperAdmin && (
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-medium text-muted-fg">Client</label>
