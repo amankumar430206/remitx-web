@@ -1,37 +1,23 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { format, parseISO } from 'date-fns'
+import { useNavigate, Link } from 'react-router-dom'
+import { format, parseISO, differenceInDays } from 'date-fns'
 import { PageHeader } from '@/components/ui/organisms/PageHeader'
 import { DataTable } from '@/components/ui/organisms/DataTable'
 import { Button } from '@/components/ui/atoms/Button'
 import { Badge } from '@/components/ui/atoms/Badge'
-import { Input } from '@/components/ui/atoms/Input'
-import { Select } from '@/components/ui/atoms/Select'
-import { FormField } from '@/components/ui/molecules/FormField'
 import { LoadingState } from '@/components/ui/molecules/LoadingState'
 import { ErrorState } from '@/components/ui/molecules/ErrorState'
 import { ConfirmDialog } from '@/components/ui/molecules/ConfirmDialog'
-import { Drawer } from '@/components/ui/molecules/Drawer'
 import { ContentCard } from '@/layouts/ContentCard'
-import { getApiError } from '@/lib/apiError'
 import { useFeatureFlag } from '@/hooks/useFeatureFlag'
 import {
   useScheduledPayments,
-  useCreateScheduledPayment,
   useCancelScheduledPayment,
 } from '@/hooks/useScheduledPayments'
-import { useBeneficiaries } from '@/hooks/useBeneficiaries'
-import { useAccounts } from '@/hooks/useAccounts'
 import type { ScheduledPayment, ScheduleStatus } from '@/api/scheduledPayments'
 import type { Column } from '@/components/ui/organisms/DataTable'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-
-const CURRENCIES = ['USD', 'GBP', 'EUR', 'AED', 'INR', 'SGD', 'AUD', 'CAD', 'NGN', 'PKR']
-const PURPOSE_CODES = ['TRADE', 'SUPPLIER', 'SALARY', 'SERVICES', 'CONTRACTOR', 'OTHER']
 
 const STATUS_VARIANT: Record<ScheduleStatus, 'success' | 'warning' | 'default' | 'danger'> = {
   active:    'success',
@@ -52,195 +38,12 @@ const STATUS_CHIPS = [
   { value: 'cancelled',  label: 'Cancelled' },
 ]
 
-// ─── Form schema ──────────────────────────────────────────────────────────────
-
-const tomorrow = () => {
-  const d = new Date()
-  d.setDate(d.getDate() + 1)
-  d.setSeconds(0, 0)
-  return d.toISOString().slice(0, 16)
-}
-
-const schema = z.object({
-  beneficiaryId:  z.string().uuid('Select a beneficiary'),
-  accountId:      z.string().uuid('Select a source account'),
-  sourceCurrency: z.string().length(3),
-  destCurrency:   z.string().length(3),
-  sourceAmount:   z.coerce.number().positive('Enter a positive amount'),
-  purposeCode:    z.string().min(1, 'Select a purpose'),
-  note:           z.string().max(1024).optional().nullable(),
-  frequency:      z.enum(['once', 'weekly', 'monthly']),
-  scheduledFor:   z.string().min(1, 'Pick a date and time'),
-  endDate:        z.string().optional().nullable(),
-})
-
-type FormValues = z.infer<typeof schema>
-
-// ─── Create form ──────────────────────────────────────────────────────────────
-
-function CreateForm({ onClose }: { onClose: () => void }) {
-  const createMutation = useCreateScheduledPayment()
-  const { data: beneficiariesData } = useBeneficiaries({ limit: 200 })
-  const { data: accounts } = useAccounts()
-
-  const beneficiaries = beneficiariesData?.data ?? []
-
-  const beneficiaryOptions = beneficiaries.map(b => ({
-    value: b.id,
-    label: `${b.name} (${b.currency ?? b.dest_country_code ?? ''})`,
-  }))
-  const accountOptions = (accounts ?? []).map(a => ({
-    value: a.id,
-    label: `${a.currency} — ${a.account_number_ref ?? a.id.slice(0, 8)}`,
-  }))
-
-  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormValues>({
-    resolver: zodResolver(schema),
-    defaultValues: {
-      frequency:      'once',
-      sourceCurrency: 'USD',
-      destCurrency:   'USD',
-      scheduledFor:   tomorrow(),
-    },
-  })
-
-  const frequency = watch('frequency')
-
-  const onSubmit = (values: FormValues) => {
-    createMutation.mutate(
-      {
-        beneficiaryId:  values.beneficiaryId,
-        accountId:      values.accountId,
-        sourceCurrency: values.sourceCurrency,
-        destCurrency:   values.destCurrency,
-        sourceAmount:   values.sourceAmount,
-        purposeCode:    values.purposeCode,
-        note:           values.note || null,
-        frequency:      values.frequency,
-        scheduledFor:   new Date(values.scheduledFor).toISOString(),
-        endDate:        values.endDate ? new Date(values.endDate).toISOString() : null,
-      },
-      { onSuccess: onClose },
-    )
-  }
-
-  return (
-    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5 p-1">
-      <FormField label="Beneficiary" error={errors.beneficiaryId?.message} htmlFor="sp-ben">
-        <Select
-          value={watch('beneficiaryId') ?? ''}
-          onValueChange={v => setValue('beneficiaryId', v, { shouldValidate: true })}
-          options={[{ value: '', label: 'Select beneficiary…' }, ...beneficiaryOptions]}
-        />
-      </FormField>
-
-      <FormField label="Source account" error={errors.accountId?.message} htmlFor="sp-acc">
-        <Select
-          value={watch('accountId') ?? ''}
-          onValueChange={v => setValue('accountId', v, { shouldValidate: true })}
-          options={[{ value: '', label: 'Select account…' }, ...accountOptions]}
-        />
-      </FormField>
-
-      <div className="grid grid-cols-2 gap-3">
-        <FormField label="You send" error={errors.sourceCurrency?.message} htmlFor="sp-src-cur">
-          <Select
-            value={watch('sourceCurrency')}
-            onValueChange={v => setValue('sourceCurrency', v)}
-            options={CURRENCIES.map(c => ({ value: c, label: c }))}
-          />
-        </FormField>
-        <FormField label="They receive" error={errors.destCurrency?.message} htmlFor="sp-dst-cur">
-          <Select
-            value={watch('destCurrency')}
-            onValueChange={v => setValue('destCurrency', v)}
-            options={CURRENCIES.map(c => ({ value: c, label: c }))}
-          />
-        </FormField>
-      </div>
-
-      <FormField label="Amount" error={errors.sourceAmount?.message} htmlFor="sp-amount">
-        <Input
-          id="sp-amount"
-          type="number"
-          step="0.01"
-          placeholder="1000.00"
-          {...register('sourceAmount')}
-          error={!!errors.sourceAmount}
-        />
-      </FormField>
-
-      <FormField label="Purpose" error={errors.purposeCode?.message} htmlFor="sp-purpose">
-        <Select
-          value={watch('purposeCode') ?? ''}
-          onValueChange={v => setValue('purposeCode', v, { shouldValidate: true })}
-          options={[
-            { value: '', label: 'Select purpose…' },
-            ...PURPOSE_CODES.map(p => ({ value: p, label: p.charAt(0) + p.slice(1).toLowerCase() })),
-          ]}
-        />
-      </FormField>
-
-      <FormField label="Note (optional)" htmlFor="sp-note">
-        <Input id="sp-note" placeholder="Optional note to beneficiary" {...register('note')} />
-      </FormField>
-
-      <FormField label="Frequency" htmlFor="sp-freq">
-        <Select
-          value={watch('frequency')}
-          onValueChange={v => setValue('frequency', v as 'once' | 'weekly' | 'monthly')}
-          options={[
-            { value: 'once',    label: 'One-time' },
-            { value: 'weekly',  label: 'Weekly'   },
-            { value: 'monthly', label: 'Monthly'  },
-          ]}
-        />
-      </FormField>
-
-      <FormField label="Scheduled for" error={errors.scheduledFor?.message} htmlFor="sp-date">
-        <Input
-          id="sp-date"
-          type="datetime-local"
-          {...register('scheduledFor')}
-          error={!!errors.scheduledFor}
-        />
-      </FormField>
-
-      {frequency !== 'once' && (
-        <FormField label="End date (optional)" htmlFor="sp-end">
-          <Input
-            id="sp-end"
-            type="datetime-local"
-            {...register('endDate')}
-          />
-        </FormField>
-      )}
-
-      {createMutation.isError && (
-        <p className="text-sm text-danger-fg">
-          {getApiError(createMutation.error, 'Could not create scheduled payment.')}
-        </p>
-      )}
-
-      <div className="flex gap-2 pt-1">
-        <Button type="submit" loading={createMutation.isPending}>
-          Schedule payment
-        </Button>
-        <Button type="button" variant="ghost" onClick={onClose}>
-          Cancel
-        </Button>
-      </div>
-    </form>
-  )
-}
-
-// ─── Page ─────────────────────────────────────────────────────────────────────
+// ─── Page (inner) ─────────────────────────────────────────────────────────────
 
 function ScheduledPaymentsInner() {
-  const navigate                         = useNavigate()
-  const [statusFilter, setStatusFilter]  = useState('')
-  const [drawerOpen, setDrawerOpen]      = useState(false)
-  const [cancelId, setCancelId]          = useState<string | null>(null)
+  const navigate                        = useNavigate()
+  const [statusFilter, setStatusFilter] = useState('')
+  const [cancelId, setCancelId]         = useState<string | null>(null)
 
   const { data, isLoading, isError } = useScheduledPayments(
     statusFilter ? { status: statusFilter } : undefined
@@ -253,22 +56,34 @@ function ScheduledPaymentsInner() {
     {
       key: 'scheduled_for',
       header: 'Next run',
-      render: row => (
-        <div className="flex items-center gap-2">
-          {row.balance_insufficient && row.status === 'active' && (
-            <span title="Insufficient balance" className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-danger/15 text-danger-fg">
-              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
-              </svg>
-            </span>
-          )}
-          <span className="text-sm tabular-nums">
-            {row.status === 'active'
-              ? format(parseISO(row.scheduled_for), 'dd MMM yyyy, HH:mm')
-              : <span className="text-muted-fg italic">—</span>}
-          </span>
-        </div>
-      ),
+      render: row => {
+        const daysLeft = row.status === 'active'
+          ? differenceInDays(parseISO(row.scheduled_for), new Date())
+          : null
+        return (
+          <div className="flex items-center gap-2">
+            {row.balance_insufficient && row.status === 'active' && (
+              <span title="Insufficient balance" className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-danger/15 text-danger-fg">
+                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                </svg>
+              </span>
+            )}
+            <div>
+              <span className="block text-sm tabular-nums">
+                {row.status === 'active'
+                  ? format(parseISO(row.scheduled_for), 'dd MMM yyyy, HH:mm')
+                  : <span className="text-muted-fg italic">—</span>}
+              </span>
+              {daysLeft !== null && (
+                <span className={`block text-xs tabular-nums ${daysLeft <= 1 ? 'text-danger-fg' : daysLeft <= 3 ? 'text-warning-fg' : 'text-muted-fg'}`}>
+                  {daysLeft <= 0 ? 'Due today' : `${daysLeft}d away`}
+                </span>
+              )}
+            </div>
+          </div>
+        )
+      },
     },
     {
       key: 'source_currency',
@@ -350,13 +165,19 @@ function ScheduledPaymentsInner() {
       <PageHeader
         title="Scheduled payments"
         description="One-time and recurring payments that execute automatically at the scheduled time."
-        action={
-          <Button onClick={() => setDrawerOpen(true)}>
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-            </svg>
-            Schedule payment
-          </Button>
+        breadcrumbs={[
+          { label: 'Payments', href: '/payments' },
+          { label: 'Scheduled payments' },
+        ]}
+        actions={
+          <Link to="/payments/scheduled/new">
+            <Button>
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+              Schedule payment
+            </Button>
+          </Link>
         }
       />
 
@@ -400,12 +221,14 @@ function ScheduledPaymentsInner() {
                 Automate recurring transfers — pay suppliers, salaries, or regular remittances without logging in each time.
               </p>
             </div>
-            <Button className="mt-2" onClick={() => setDrawerOpen(true)}>
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-              </svg>
-              Schedule your first payment
-            </Button>
+            <Link to="/payments/scheduled/new" className="mt-2">
+              <Button>
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+                Schedule your first payment
+              </Button>
+            </Link>
           </div>
 
           {/* How it works steps */}
@@ -434,7 +257,7 @@ function ScheduledPaymentsInner() {
               {
                 step: '3',
                 title: 'We handle the rest',
-                body: 'The payment executes automatically at the scheduled time using a live FX rate. You\'ll be notified if your balance is low.',
+                body: "The payment executes automatically at the scheduled time using a live FX rate. You'll be notified if your balance is low.",
                 icon: (
                   <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -469,16 +292,6 @@ function ScheduledPaymentsInner() {
         </ContentCard>
       )}
 
-      {/* Create drawer */}
-      <Drawer
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        title="Schedule a payment"
-        width="w-[480px]"
-      >
-        <CreateForm onClose={() => setDrawerOpen(false)} />
-      </Drawer>
-
       {/* Cancel confirm */}
       <ConfirmDialog
         open={!!cancelId}
@@ -508,6 +321,10 @@ export function ScheduledPayments() {
         <PageHeader
           title="Scheduled payments"
           description="One-time and recurring payments that execute automatically at the scheduled time."
+          breadcrumbs={[
+            { label: 'Payments', href: '/payments' },
+            { label: 'Scheduled payments' },
+          ]}
         />
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-surface py-20 text-center">
           <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-surface-raised text-muted-fg">
