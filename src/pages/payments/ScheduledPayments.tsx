@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -16,6 +17,7 @@ import { ConfirmDialog } from '@/components/ui/molecules/ConfirmDialog'
 import { Drawer } from '@/components/ui/molecules/Drawer'
 import { ContentCard } from '@/layouts/ContentCard'
 import { getApiError } from '@/lib/apiError'
+import { useFeatureFlag } from '@/hooks/useFeatureFlag'
 import {
   useScheduledPayments,
   useCreateScheduledPayment,
@@ -234,10 +236,11 @@ function CreateForm({ onClose }: { onClose: () => void }) {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export function ScheduledPayments() {
-  const [statusFilter, setStatusFilter] = useState('')
-  const [drawerOpen, setDrawerOpen]     = useState(false)
-  const [cancelId, setCancelId]         = useState<string | null>(null)
+function ScheduledPaymentsInner() {
+  const navigate                         = useNavigate()
+  const [statusFilter, setStatusFilter]  = useState('')
+  const [drawerOpen, setDrawerOpen]      = useState(false)
+  const [cancelId, setCancelId]          = useState<string | null>(null)
 
   const { data, isLoading, isError } = useScheduledPayments(
     statusFilter ? { status: statusFilter } : undefined
@@ -251,11 +254,20 @@ export function ScheduledPayments() {
       key: 'scheduled_for',
       header: 'Next run',
       render: row => (
-        <span className="text-sm tabular-nums">
-          {row.status === 'active'
-            ? format(parseISO(row.scheduled_for), 'dd MMM yyyy, HH:mm')
-            : <span className="text-muted-fg italic">—</span>}
-        </span>
+        <div className="flex items-center gap-2">
+          {row.balance_insufficient && row.status === 'active' && (
+            <span title="Insufficient balance" className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-danger/15 text-danger-fg">
+              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+              </svg>
+            </span>
+          )}
+          <span className="text-sm tabular-nums">
+            {row.status === 'active'
+              ? format(parseISO(row.scheduled_for), 'dd MMM yyyy, HH:mm')
+              : <span className="text-muted-fg italic">—</span>}
+          </span>
+        </div>
       ),
     },
     {
@@ -298,9 +310,14 @@ export function ScheduledPayments() {
       key: 'status',
       header: 'Status',
       render: row => (
-        <Badge variant={STATUS_VARIANT[row.status] ?? 'default'}>
-          {row.status.charAt(0).toUpperCase() + row.status.slice(1)}
-        </Badge>
+        <div className="flex items-center gap-1.5">
+          <Badge variant={STATUS_VARIANT[row.status] ?? 'default'}>
+            {row.status.charAt(0).toUpperCase() + row.status.slice(1)}
+          </Badge>
+          {row.balance_insufficient && row.status === 'active' && (
+            <Badge variant="danger">Low balance</Badge>
+          )}
+        </div>
       ),
     },
     {
@@ -308,12 +325,22 @@ export function ScheduledPayments() {
       header: '',
       render: row =>
         row.status === 'active' ? (
-          <button
-            onClick={() => setCancelId(row.id)}
-            className="rounded px-2 py-1 text-xs text-danger-fg hover:bg-danger/10 transition-colors"
-          >
-            Cancel
-          </button>
+          <div className="flex items-center gap-1">
+            {row.balance_insufficient && (
+              <button
+                onClick={() => navigate(`/accounts/${row.account_id}`)}
+                className="rounded px-2 py-1 text-xs text-primary hover:bg-primary-subtle transition-colors"
+              >
+                Fund
+              </button>
+            )}
+            <button
+              onClick={() => setCancelId(row.id)}
+              className="rounded px-2 py-1 text-xs text-danger-fg hover:bg-danger/10 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
         ) : null,
     },
   ]
@@ -392,4 +419,32 @@ export function ScheduledPayments() {
       />
     </div>
   )
+}
+
+// ─── Feature-gated export ─────────────────────────────────────────────────────
+
+export function ScheduledPayments() {
+  const enabled = useFeatureFlag('payment_scheduling')
+
+  if (!enabled) {
+    return (
+      <div className="flex flex-col gap-6">
+        <PageHeader
+          title="Scheduled payments"
+          description="One-time and recurring payments that execute automatically at the scheduled time."
+        />
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-surface py-20 text-center">
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-surface-raised text-muted-fg">
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 9v7.5" />
+            </svg>
+          </div>
+          <p className="text-sm font-semibold text-foreground">Scheduled payments is disabled</p>
+          <p className="mt-1 text-xs text-muted-fg">Enable it in Settings → Features to use this feature.</p>
+        </div>
+      </div>
+    )
+  }
+
+  return <ScheduledPaymentsInner />
 }

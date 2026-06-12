@@ -19,6 +19,7 @@ import { usePayments, usePayment, useApprovalQueue } from '@/hooks/usePayments'
 import { useAdminTenants } from '@/hooks/useAdmin'
 import { useDebounce } from '@/hooks/useDebounce'
 import { toLocalDateStr } from '@/lib/utils'
+import { useFeatureFlag } from '@/hooks/useFeatureFlag'
 import type { Payment } from '@/api/payments'
 import type { DateRange } from '@/components/ui/molecules/DateRangePicker'
 
@@ -132,6 +133,7 @@ export function PaymentList() {
   const isSuperAdmin = user?.role === 'super_admin'
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin'
   const canApprove = user?.role === 'super_admin' || user?.role === 'client_admin' || user?.role === 'checker'
+  const schedulingEnabled = useFeatureFlag('payment_scheduling')
 
   const [page, setPage] = useState(1)
   const [status, setStatus] = useState('')
@@ -342,14 +344,16 @@ export function PaymentList() {
         title="Payments"
         actions={
           <div className="flex items-center gap-2">
-            <Link to="/payments/scheduled">
-              <Button variant="outline">
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                Scheduled
-              </Button>
-            </Link>
+            {schedulingEnabled && (
+              <Link to="/payments/scheduled">
+                <Button variant="outline">
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Scheduled
+                </Button>
+              </Link>
+            )}
             {canApprove && (
               <Link to="/payments/approval-queue">
                 <Button variant="outline" className="relative">
