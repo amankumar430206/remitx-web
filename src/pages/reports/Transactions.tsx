@@ -2,13 +2,17 @@ import { useState, useMemo } from 'react'
 import { PageHeader } from '@/components/ui/organisms/PageHeader'
 import { DataTable } from '@/components/ui/organisms/DataTable'
 import { SmartFilterBar } from '@/components/ui/organisms/SmartFilterBar'
-import type { ActiveFilterChip } from '@/components/ui/organisms/SmartFilterBar'
+import type { StatusChipOption, ActiveFilterChip } from '@/components/ui/organisms/SmartFilterBar'
 import { StatusBadge } from '@/components/ui/molecules/StatusBadge'
 import { AmountDisplay } from '@/components/ui/molecules/AmountDisplay'
 import { Button } from '@/components/ui/atoms/Button'
 import { Pagination } from '@/components/ui/atoms/Pagination'
 import { ContentCard } from '@/layouts/ContentCard'
 import { useTransactions } from '@/hooks/useReports'
+import { useAdminTenants } from '@/hooks/useAdmin'
+import { useAuthStore } from '@/stores/authStore'
+import { useDebounce } from '@/hooks/useDebounce'
+import { ReportBrandHeader } from '@/components/ui/organisms/ReportBrandHeader'
 import reportsApi from '@/api/reports'
 import { toLocalDateStr } from '@/lib/utils'
 import type { DateRange } from '@/components/ui/molecules/DateRangePicker'
@@ -18,11 +22,28 @@ import type { TransactionRow } from '@/api/reports'
 type Preset = '7d' | '30d' | '3m' | '6m' | 'ytd' | 'custom'
 
 const PRESETS: { label: string; value: Preset }[] = [
-  { label: '7 days', value: '7d' },
-  { label: '30 days', value: '30d' },
-  { label: '3 months', value: '3m' },
-  { label: '6 months', value: '6m' },
+  { label: '7 days',      value: '7d'  },
+  { label: '30 days',     value: '30d' },
+  { label: '3 months',    value: '3m'  },
+  { label: '6 months',    value: '6m'  },
   { label: 'Year to date', value: 'ytd' },
+]
+
+const STATUS_CHIPS: StatusChipOption[] = [
+  { label: 'All',        value: '',                 variant: 'none'    },
+  { label: 'Pending',    value: 'pending_approval', variant: 'warning' },
+  { label: 'Processing', value: 'processing',       variant: 'primary' },
+  { label: 'Approved',   value: 'approved',         variant: 'success' },
+  { label: 'Completed',  value: 'completed',        variant: 'success' },
+  { label: 'Rejected',   value: 'rejected',         variant: 'danger'  },
+  { label: 'Failed',     value: 'failed',           variant: 'danger'  },
+  { label: 'Cancelled',  value: 'cancelled',        variant: 'default' },
+]
+
+const DIRECTION_CHIPS: StatusChipOption[] = [
+  { label: 'All',    value: '',       variant: 'none'   },
+  { label: 'Debit',  value: 'debit',  variant: 'danger' },
+  { label: 'Credit', value: 'credit', variant: 'success'},
 ]
 
 function presetToRange(preset: Preset): DateRange {
@@ -30,10 +51,10 @@ function presetToRange(preset: Preset): DateRange {
   today.setHours(0, 0, 0, 0)
   const startDate = new Date(today)
 
-  if (preset === '7d') startDate.setDate(today.getDate() - 6)
+  if (preset === '7d')  startDate.setDate(today.getDate() - 6)
   else if (preset === '30d') startDate.setDate(today.getDate() - 29)
-  else if (preset === '3m') startDate.setMonth(today.getMonth() - 3)
-  else if (preset === '6m') startDate.setMonth(today.getMonth() - 6)
+  else if (preset === '3m')  startDate.setMonth(today.getMonth() - 3)
+  else if (preset === '6m')  startDate.setMonth(today.getMonth() - 6)
   else if (preset === 'ytd') startDate.setMonth(0, 1)
 
   return { startDate, endDate: today }
@@ -42,7 +63,6 @@ function presetToRange(preset: Preset): DateRange {
 function fmtDate(d: Date) {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
-
 
 const columns: Column<TransactionRow>[] = [
   {
@@ -129,11 +149,21 @@ const columns: Column<TransactionRow>[] = [
 ]
 
 export function Transactions() {
-  const [page, setPage] = useState(1)
-  const [preset, setPreset] = useState<Preset>('30d')
-  const [dateRange, setDateRange] = useState<DateRange>(() => presetToRange('30d'))
-  const [search, setSearch] = useState('')
-  const [exporting, setExporting] = useState(false)
+  const user = useAuthStore(s => s.user)
+  const isSuperAdmin = user?.role === 'super_admin'
+
+  const [page, setPage]                     = useState(1)
+  const [preset, setPreset]                 = useState<Preset>('30d')
+  const [dateRange, setDateRange]           = useState<DateRange>(() => presetToRange('30d'))
+  const [status, setStatus]                 = useState('')
+  const [direction, setDirection]           = useState('')
+  const [selectedTenantId, setSelectedTenantId] = useState('')
+  const [search, setSearch]                 = useState('')
+  const debouncedSearch                     = useDebounce(search)
+  const [exporting, setExporting]           = useState(false)
+
+  const { data: tenantsList } = useAdminTenants()
+  const tenants = isSuperAdmin ? (tenantsList ?? []) : []
 
   const handlePreset = (p: Preset) => {
     setPreset(p)
@@ -145,9 +175,30 @@ export function Transactions() {
     if (range.startDate) { setPreset('custom'); setDateRange(range); setPage(1) }
   }
 
-  const clearAll = () => { setSearch(''); handlePreset('30d') }
+  const clearAll = () => {
+    setSearch('')
+    setStatus('')
+    setDirection('')
+    setSelectedTenantId('')
+    handlePreset('30d')
+  }
 
   const activeChips = useMemo<ActiveFilterChip[]>(() => [
+    ...(status ? [{
+      key: 'status',
+      label: STATUS_CHIPS.find(c => c.value === status)?.label ?? status,
+      onRemove: () => { setStatus(''); setPage(1) },
+    }] : []),
+    ...(direction ? [{
+      key: 'direction',
+      label: direction.charAt(0).toUpperCase() + direction.slice(1),
+      onRemove: () => { setDirection(''); setPage(1) },
+    }] : []),
+    ...(selectedTenantId ? [{
+      key: 'tenant',
+      label: tenants.find(t => t.id === selectedTenantId)?.name ?? selectedTenantId,
+      onRemove: () => { setSelectedTenantId(''); setPage(1) },
+    }] : []),
     ...(preset !== '30d' ? [{
       key: 'date',
       label: preset === 'custom' && dateRange.startDate && dateRange.endDate
@@ -160,12 +211,15 @@ export function Transactions() {
       label: `"${search}"`,
       onRemove: () => setSearch(''),
     }] : []),
-  ], [preset, dateRange, search])
+  ], [status, direction, selectedTenantId, tenants, preset, dateRange, search])
 
   const params = {
     page,
     limit: 20,
-    search: search || undefined,
+    search: debouncedSearch || undefined,
+    status: status || undefined,
+    direction: (direction as 'debit' | 'credit') || undefined,
+    tenantId: isSuperAdmin ? (selectedTenantId || undefined) : undefined,
     from: dateRange.startDate ? toLocalDateStr(dateRange.startDate) : undefined,
     to: dateRange.endDate ? toLocalDateStr(dateRange.endDate) : undefined,
   }
@@ -174,10 +228,28 @@ export function Transactions() {
   const total = data?.meta?.total ?? 0
   const totalPages = Math.ceil(total / 20)
 
+  const periodStr = useMemo(() => {
+    if (!dateRange.startDate || !dateRange.endDate) return undefined
+    return `${fmtDate(dateRange.startDate)} — ${fmtDate(dateRange.endDate)}`
+  }, [dateRange])
+
+  const reportStats = useMemo(() => {
+    const rows = data?.data ?? []
+    const completed  = rows.filter(r => r.status === 'completed').length
+    const currencies = [...new Set(rows.map(r => r.source_currency))].slice(0, 3).join(', ')
+    return [
+      { label: 'Total transactions', value: total.toLocaleString(), accent: 'primary' as const },
+      ...(completed > 0 ? [{ label: 'Completed (this page)', value: completed, accent: 'success' as const }] : []),
+      ...(currencies ? [{ label: 'Currencies', value: currencies }] : []),
+      ...(status ? [{ label: 'Status filter', value: STATUS_CHIPS.find(c => c.value === status)?.label ?? status, accent: 'warning' as const }] : []),
+    ]
+  }, [data, total, status])
+
   const handleExport = async (format: 'csv' | 'pdf') => {
     setExporting(true)
     try {
-      const res = await reportsApi.transactionsExport({ ...params, format })
+      const { page: _page, limit: _limit, ...exportParams } = params
+      const res = await reportsApi.transactionsExport({ ...exportParams, format })
       const url = window.URL.createObjectURL(new Blob([res.data as BlobPart]))
       const a = document.createElement('a')
       a.href = url
@@ -206,6 +278,13 @@ export function Transactions() {
         }
       />
 
+      <ReportBrandHeader
+        title="Transaction Report"
+        subtitle={selectedTenantId ? (tenants.find(t => t.id === selectedTenantId)?.name ?? undefined) : undefined}
+        period={periodStr}
+        stats={reportStats}
+      />
+
       <SmartFilterBar
         search={search}
         onSearchChange={v => { setSearch(v); setPage(1) }}
@@ -215,6 +294,53 @@ export function Transactions() {
         onPresetChange={p => handlePreset(p as Preset)}
         dateRange={preset === 'custom' ? dateRange : undefined}
         onCustomRange={handleCustomRange}
+        statusChips={STATUS_CHIPS}
+        activeStatus={status}
+        onStatusChange={v => { setStatus(v); setPage(1) }}
+        advancedFilters={
+          <div className="flex flex-col gap-3">
+            {isSuperAdmin && (
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-muted-fg">Client</label>
+                <select
+                  value={selectedTenantId}
+                  onChange={e => { setSelectedTenantId(e.target.value); setPage(1) }}
+                  className="rounded-md border border-border bg-surface px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                >
+                  <option value="">All clients</option>
+                  {tenants.map(t => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-muted-fg">Type</label>
+              <div className="flex gap-1.5">
+                {DIRECTION_CHIPS.map(chip => (
+                  <button
+                    key={chip.value}
+                    type="button"
+                    onClick={() => { setDirection(chip.value); setPage(1) }}
+                    className={[
+                      'px-3 py-1.5 rounded-md text-xs font-medium border transition-colors',
+                      direction === chip.value
+                        ? chip.value === 'debit'
+                          ? 'bg-danger/10 border-danger/30 text-danger-fg'
+                          : chip.value === 'credit'
+                          ? 'bg-success/10 border-success/30 text-success-fg'
+                          : 'bg-primary text-primary-fg border-primary'
+                        : 'bg-surface border-border text-muted-fg hover:text-foreground hover:border-border-strong',
+                    ].join(' ')}
+                  >
+                    {chip.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        }
+        activeAdvancedCount={(direction ? 1 : 0) + (selectedTenantId ? 1 : 0)}
         activeChips={activeChips}
         onClearAll={activeChips.length > 0 ? clearAll : undefined}
       />

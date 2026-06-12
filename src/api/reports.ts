@@ -44,6 +44,7 @@ export interface TransactionFilter {
   currency?: string
   direction?: 'debit' | 'credit'
   search?: string
+  tenantId?: string
   format?: 'json' | 'csv' | 'pdf'
 }
 
