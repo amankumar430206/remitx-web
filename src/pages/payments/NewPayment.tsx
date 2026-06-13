@@ -565,13 +565,9 @@ function Step2({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
               <Spinner size="sm" />
             ) : feePreview == null ? (
               <span className="text-muted-fg italic">—</span>
-            ) : !feePreview.configured ? (
-              <span className="inline-flex items-center gap-1 rounded-full border border-success/30 bg-success/10 px-2 py-0.5 text-[11px] font-semibold text-success-fg">
-                No fee configured
-              </span>
-            ) : parseFloat(feePreview.feeAmount) === 0 ? (
-              <span className="inline-flex items-center gap-1 rounded-full border border-success/30 bg-success/10 px-2 py-0.5 text-[11px] font-semibold text-success-fg">
-                Free
+            ) : !feePreview.configured || parseFloat(feePreview.feeAmount) === 0 ? (
+              <span className="font-semibold text-foreground tabular-nums">
+                0.00 {sourceCurrency}
               </span>
             ) : (
               <span className="font-semibold text-foreground tabular-nums">
@@ -870,10 +866,8 @@ function Step4({ onBack }: { onBack: () => void }) {
                 </svg>
               </div>
               <span className="flex-1 text-sm text-muted-fg">Transfer fee</span>
-              {!feeConfigured ? (
-                <span className="text-[11px] font-semibold text-success-fg">No fee configured</span>
-              ) : feeAmount === 0 ? (
-                <span className="inline-flex items-center rounded-full bg-success/10 border border-success/25 px-2 py-0.5 text-[11px] font-semibold text-success-fg">Free</span>
+              {!feeConfigured || feeAmount === 0 ? (
+                <span className="text-sm font-semibold text-foreground tabular-nums">0.00 {q.from}</span>
               ) : (
                 <span className="text-sm font-semibold text-foreground tabular-nums">
                   {fmt(feeAmount, 8).replace(/\.?0+$/, '')} {q.from}
