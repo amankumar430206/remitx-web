@@ -11,19 +11,23 @@ interface TopBarProps {
 }
 
 const ROLE_LABELS: Record<string, string> = {
-  super_admin: 'Super Admin',
-  admin: 'Admin',
-  maker: 'Maker',
-  checker: 'Checker',
-  viewer: 'Viewer',
+  super_admin:  'Super Admin',
+  client_admin: 'Client Admin',
+  admin:        'Admin',
+  user:         'User',
+  maker:        'Maker',
+  checker:      'Checker',
+  viewer:       'Viewer',
 }
 
 const ROLE_COLORS: Record<string, string> = {
-  super_admin: 'bg-violet-500/15 text-violet-400 border-violet-500/20',
-  admin:       'bg-blue-500/15 text-blue-400 border-blue-500/20',
-  maker:       'bg-emerald-500/15 text-emerald-500 border-emerald-500/20',
-  checker:     'bg-amber-500/15 text-amber-500 border-amber-500/20',
-  viewer:      'bg-slate-500/15 text-slate-400 border-slate-500/20',
+  super_admin:  'bg-violet-500/15 text-violet-400 border-violet-500/20',
+  client_admin: 'bg-blue-500/15 text-blue-400 border-blue-500/20',
+  admin:        'bg-blue-500/15 text-blue-400 border-blue-500/20',
+  user:         'bg-slate-500/15 text-slate-400 border-slate-500/20',
+  maker:        'bg-emerald-500/15 text-emerald-500 border-emerald-500/20',
+  checker:      'bg-amber-500/15 text-amber-500 border-amber-500/20',
+  viewer:       'bg-slate-500/15 text-slate-400 border-slate-500/20',
 }
 
 export function TopBar({ user, tenantName, onLogout }: TopBarProps) {
