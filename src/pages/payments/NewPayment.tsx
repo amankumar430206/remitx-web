@@ -1017,7 +1017,7 @@ export function NewPayment() {
   const back = () => { if (step > 1) setStep(step - 1) }
   const cancel = () => { reset(); navigate('/payments') }
 
-  const kycOk = user?.kyc_status === 'approved'
+  const kycOk = user?.kyc_status === 'approved' || user?.kyc_status === 'completed'
   const hasAccounts = (prefetchAccounts?.length ?? 0) > 0
   const hasBeneficiaries = (prefetchBenes?.data?.length ?? 0) > 0
   const accountsResolved = prefetchAccounts !== undefined
