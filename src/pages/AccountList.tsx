@@ -177,6 +177,14 @@ export function AccountList() {
   const [currency, setCurrency] = useState('')
   const [label, setLabel]       = useState('')
 
+  const existingCurrencies = new Set(accounts.map(a => a.currency))
+  const duplicateAccount   = currency ? accounts.find(a => a.currency === currency) ?? null : null
+
+  const currencyOptions = CURRENCIES.map(c => ({
+    value: c.value,
+    label: existingCurrencies.has(c.value) ? `${c.label} — already exists` : c.label,
+  }))
+
   const defaultLabel = currency ? `My ${currency} Account` : ''
 
   const closeCreate = () => { setCreateOpen(false); setCurrency(''); setLabel('') }
@@ -257,33 +265,55 @@ export function AccountList() {
         confirmLabel="Open account"
         onConfirm={() => currency && createMutation.mutate()}
         loading={createMutation.isPending}
-        disabled={!currency}
+        disabled={!currency || !!duplicateAccount}
       >
         <div className="flex flex-col gap-4">
-          {/* Currency + label */}
+          {/* Currency */}
           <FormField label="Currency" htmlFor="new-currency" required>
             <Select
               id="new-currency"
-              options={CURRENCIES}
+              options={currencyOptions}
               value={currency}
               onValueChange={v => { setCurrency(v); setLabel('') }}
               placeholder="Select currency…"
             />
           </FormField>
 
-          <FormField
-            label="Account label"
-            htmlFor="new-label"
-            hint={currency ? `Default: "${defaultLabel}"` : undefined}
-          >
-            <Input
-              id="new-label"
-              value={label}
-              onChange={e => setLabel(e.target.value)}
-              placeholder={defaultLabel || 'e.g. Operations USD'}
-              maxLength={128}
-            />
-          </FormField>
+          {/* Duplicate warning */}
+          {duplicateAccount && (
+            <div className="flex items-start gap-2.5 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2.5 text-sm text-warning-fg">
+              <svg className="mt-0.5 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <div>
+                <p className="font-medium">You already have a {currency} account.</p>
+                <button
+                  type="button"
+                  className="mt-0.5 text-xs underline underline-offset-2 hover:opacity-80"
+                  onClick={() => { closeCreate(); navigate(`/accounts/${duplicateAccount.id}`) }}
+                >
+                  View existing account →
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Label — only shown when no duplicate */}
+          {!duplicateAccount && (
+            <FormField
+              label="Account label"
+              htmlFor="new-label"
+              hint={currency ? `Default: "${defaultLabel}"` : undefined}
+            >
+              <Input
+                id="new-label"
+                value={label}
+                onChange={e => setLabel(e.target.value)}
+                placeholder={defaultLabel || 'e.g. Operations USD'}
+                maxLength={128}
+              />
+            </FormField>
+          )}
 
           {/* Fees breakdown */}
           <div className="rounded-lg border border-border bg-surface/60 overflow-hidden">
