@@ -5,6 +5,7 @@ import { PageHeader, AmountDisplay, LoadingState, ErrorState, ConfirmDialog, For
 import { Button } from '@/components/ui/atoms/Button'
 import { Badge } from '@/components/ui/atoms/Badge'
 import { Select } from '@/components/ui/atoms/Select'
+import { Input } from '@/components/ui/atoms/Input'
 import { useAccounts } from '@/hooks/useAccounts'
 import accountsApi, { type Account } from '@/api/accounts'
 
@@ -118,8 +119,8 @@ function AccountCard({ account, onClick }: { account: Account; onClick: () => vo
 
       {/* Footer */}
       <div className="relative flex items-center justify-between border-t border-white/[0.07] pt-3">
-        <span className="font-mono text-xs text-slate-500">
-          {account.provider_account_id ?? account.account_number ?? 'No ref'}
+        <span className="font-mono text-xs text-slate-500 truncate max-w-[60%]">
+          {account.label || account.provider_account_id || account.account_number || 'No ref'}
         </span>
         <div className="flex items-center gap-1 text-xs text-slate-400 opacity-0 transition-opacity group-hover:opacity-100">
           <span>View</span>
@@ -158,19 +159,31 @@ function SummaryBar({ accounts }: { accounts: Account[] }) {
   )
 }
 
+const FEES = [
+  { label: 'Account opening',     value: 'Free' },
+  { label: 'Monthly maintenance', value: 'Free' },
+  { label: 'Incoming transfers',  value: 'Free' },
+  { label: 'Outgoing transfers',  value: 'Platform rate' },
+  { label: 'FX conversion',       value: 'Spread applies' },
+]
+
 export function AccountList() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { data: accounts = [], isLoading, isError, isFetching } = useAccounts()
   const [createOpen, setCreateOpen] = useState(false)
   const [currency, setCurrency] = useState('')
+  const [label, setLabel]       = useState('')
+
+  const defaultLabel = currency ? `My ${currency} Account` : ''
+
+  const closeCreate = () => { setCreateOpen(false); setCurrency(''); setLabel('') }
 
   const createMutation = useMutation({
-    mutationFn: (c: string) => accountsApi.create(c),
+    mutationFn: () => accountsApi.create({ currency, label: label.trim() || null }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['accounts'] })
-      setCreateOpen(false)
-      setCurrency('')
+      closeCreate()
     },
   })
 
@@ -236,16 +249,60 @@ export function AccountList() {
 
       <ConfirmDialog
         open={createOpen}
-        onOpenChange={open => { setCreateOpen(open); if (!open) setCurrency('') }}
+        onOpenChange={open => { if (!open) closeCreate(); else setCreateOpen(true) }}
         title="Open a new account"
-        description="Choose the currency for your new ledger account. You can provision multiple currencies."
+        description="Provision a multi-currency ledger account. Funds are held in your RemitX wallet."
         confirmLabel="Open account"
-        onConfirm={() => currency && createMutation.mutate(currency)}
+        onConfirm={() => currency && createMutation.mutate()}
         loading={createMutation.isPending}
+        disabled={!currency}
       >
-        <FormField label="Currency" htmlFor="new-currency" required>
-          <Select id="new-currency" options={CURRENCIES} value={currency} onValueChange={setCurrency} placeholder="Select currency…" />
-        </FormField>
+        <div className="flex flex-col gap-4">
+          {/* Currency + label */}
+          <FormField label="Currency" htmlFor="new-currency" required>
+            <Select
+              id="new-currency"
+              options={CURRENCIES}
+              value={currency}
+              onValueChange={v => { setCurrency(v); setLabel('') }}
+              placeholder="Select currency…"
+            />
+          </FormField>
+
+          <FormField
+            label="Account label"
+            htmlFor="new-label"
+            hint={currency ? `Default: "${defaultLabel}"` : undefined}
+          >
+            <Input
+              id="new-label"
+              value={label}
+              onChange={e => setLabel(e.target.value)}
+              placeholder={defaultLabel || 'e.g. Operations USD'}
+              maxLength={128}
+            />
+          </FormField>
+
+          {/* Fees breakdown */}
+          <div className="rounded-lg border border-border bg-surface/60 overflow-hidden">
+            <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-surface">
+              <svg className="h-3.5 w-3.5 text-muted-fg shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
+              </svg>
+              <span className="text-xs font-semibold text-foreground">Fees &amp; charges</span>
+            </div>
+            <div className="divide-y divide-border">
+              {FEES.map(({ label: fl, value }) => (
+                <div key={fl} className="flex items-center justify-between px-3 py-2">
+                  <span className="text-xs text-muted-fg">{fl}</span>
+                  <span className={`text-xs font-semibold ${value === 'Free' ? 'text-success-fg' : 'text-foreground'}`}>
+                    {value}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </ConfirmDialog>
     </div>
   )

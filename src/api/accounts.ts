@@ -3,6 +3,7 @@ import { apiClient } from './client'
 export interface Account {
   id: string
   currency: string
+  label?: string | null
   balance: string
   account_number?: string
   provider_name?: string
@@ -38,8 +39,8 @@ const accounts = {
   ledger: (id: string, params?: { from?: string; to?: string; page?: number; limit?: number }) =>
     apiClient.get<PaginatedResponse<LedgerEntry>>(`/accounts/${id}/ledger`, { params }),
 
-  create: (currency: string) =>
-    apiClient.post<{ success: boolean; data: Account }>('/accounts', { currency }),
+  create: (payload: { currency: string; label?: string | null }) =>
+    apiClient.post<{ success: boolean; data: Account }>('/accounts', payload),
 
   adjust: (id: string, payload: { type: 'credit' | 'debit'; amount: string; description: string }) =>
     apiClient.post<{ success: boolean; data: { accountId: string; type: string; amount: string; description: string; balanceAfter: string } }>(
