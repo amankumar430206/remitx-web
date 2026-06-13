@@ -2,36 +2,60 @@ import { apiClient } from './client'
 
 export interface Beneficiary {
   id: string
+  entity_type: 'INDIVIDUAL' | 'COMPANY'
   name: string
+  first_name?: string | null
+  last_name?: string | null
   country_code: string
   currency: string
   bank_name?: string | null
+  bank_address?: string | null
+  account_name?: string | null
   account_number?: string | null
   routing_number?: string | null
   sort_code?: string | null
   ifsc_code?: string | null
   iban?: string | null
   swift_bic?: string | null
+  transfer_method?: string | null
+  address_line1?: string | null
+  address_line2?: string | null
+  city?: string | null
+  state?: string | null
+  postal_code?: string | null
   purpose_code?: string | null
-  screening_status: 'pending' | 'cleared' | 'flagged'
+  screening_status: 'pending' | 'cleared' | 'flagged' | 'blocked'
   is_active: boolean
   created_at: string
   updated_at: string
 }
 
 export interface CreateBeneficiaryPayload {
+  entityType: 'INDIVIDUAL' | 'COMPANY'
   name: string
+  firstName?: string | null
+  lastName?: string | null
   countryCode: string
   currency: string
-  bankName?: string
   purposeCode: string
-  accountNumber?: string
-  routingNumber?: string
-  sortCode?: string
-  ifscCode?: string
-  iban?: string
-  swiftBic?: string
+  transferMethod?: string | null
+  bankName?: string | null
+  bankAddress?: string | null
+  accountName?: string | null
+  accountNumber?: string | null
+  routingNumber?: string | null
+  sortCode?: string | null
+  ifscCode?: string | null
+  iban?: string | null
+  swiftBic?: string | null
+  addressLine1?: string | null
+  addressLine2?: string | null
+  city?: string | null
+  state?: string | null
+  postalCode?: string | null
 }
+
+export type UpdateBeneficiaryPayload = Partial<CreateBeneficiaryPayload>
 
 const beneficiaries = {
   list: (params?: { page?: number; limit?: number; search?: string }, signal?: AbortSignal) =>
@@ -46,7 +70,7 @@ const beneficiaries = {
   create: (payload: CreateBeneficiaryPayload) =>
     apiClient.post<{ success: boolean; data: Beneficiary }>('/beneficiaries', payload),
 
-  update: (id: string, payload: Partial<CreateBeneficiaryPayload>) =>
+  update: (id: string, payload: UpdateBeneficiaryPayload) =>
     apiClient.put<{ success: boolean; data: Beneficiary }>(`/beneficiaries/${id}`, payload),
 
   delete: (id: string) =>
