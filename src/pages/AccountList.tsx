@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useQueryClient, useMutation } from '@tanstack/react-query'
+import { useQueryClient, useMutation, useQuery } from '@tanstack/react-query'
 import { PageHeader, AmountDisplay, LoadingState, ErrorState, ConfirmDialog, FormField } from '@/components/ui/index'
 import { Button } from '@/components/ui/atoms/Button'
 import { Badge } from '@/components/ui/atoms/Badge'
@@ -159,18 +159,20 @@ function SummaryBar({ accounts }: { accounts: Account[] }) {
   )
 }
 
-const FEES = [
-  { label: 'Account opening',     value: 'Free' },
-  { label: 'Monthly maintenance', value: 'Free' },
-  { label: 'Incoming transfers',  value: 'Free' },
-  { label: 'Outgoing transfers',  value: 'Platform rate' },
-  { label: 'FX conversion',       value: 'Spread applies' },
-]
+function formatFeeValue(feeAmount: string, configured: boolean): string {
+  if (!configured) return 'Free'
+  const n = parseFloat(feeAmount)
+  return n === 0 ? 'Free' : n.toFixed(2)
+}
 
 export function AccountList() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { data: accounts = [], isLoading, isError, isFetching } = useAccounts()
+  const { data: feePreviewData } = useQuery({
+    queryKey: ['accounts', 'fee-preview'],
+    queryFn: () => accountsApi.feePreview().then(r => r.data.data),
+  })
   const [createOpen, setCreateOpen] = useState(false)
   const [currency, setCurrency] = useState('')
   const [label, setLabel]       = useState('')
@@ -292,10 +294,27 @@ export function AccountList() {
               <span className="text-xs font-semibold text-foreground">Fees &amp; charges</span>
             </div>
             <div className="divide-y divide-border">
-              {FEES.map(({ label: fl, value }) => (
+              {[
+                {
+                  label: 'Account opening',
+                  value: feePreviewData
+                    ? formatFeeValue(feePreviewData.account_activation.feeAmount, feePreviewData.account_activation.configured)
+                    : '—',
+                },
+                {
+                  label: 'IBAN / wallet creation',
+                  value: feePreviewData
+                    ? formatFeeValue(feePreviewData.iban_creation.feeAmount, feePreviewData.iban_creation.configured)
+                    : '—',
+                },
+                { label: 'Monthly maintenance', value: 'Free' },
+                { label: 'Incoming transfers',  value: 'Free' },
+                { label: 'Outgoing transfers',  value: 'Platform rate' },
+                { label: 'FX conversion',       value: 'Spread applies' },
+              ].map(({ label: fl, value }) => (
                 <div key={fl} className="flex items-center justify-between px-3 py-2">
                   <span className="text-xs text-muted-fg">{fl}</span>
-                  <span className={`text-xs font-semibold ${value === 'Free' ? 'text-success-fg' : 'text-foreground'}`}>
+                  <span className={`text-xs font-semibold ${value === 'Free' ? 'text-success-fg' : value === '—' ? 'text-muted-fg' : 'text-foreground'}`}>
                     {value}
                   </span>
                 </div>

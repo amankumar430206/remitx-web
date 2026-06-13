@@ -23,6 +23,11 @@ export interface LedgerEntry {
   payment_id?: string
 }
 
+export interface AccountFeePreview {
+  account_activation: { feeAmount: string; configured: boolean }
+  iban_creation:      { feeAmount: string; configured: boolean }
+}
+
 export interface PaginatedResponse<T> {
   success: boolean
   data: T[]
@@ -41,6 +46,9 @@ const accounts = {
 
   create: (payload: { currency: string; label?: string | null }) =>
     apiClient.post<{ success: boolean; data: Account }>('/accounts', payload),
+
+  feePreview: () =>
+    apiClient.get<{ success: boolean; data: AccountFeePreview }>('/accounts/fee-preview'),
 
   adjust: (id: string, payload: { type: 'credit' | 'debit'; amount: string; description: string }) =>
     apiClient.post<{ success: boolean; data: { accountId: string; type: string; amount: string; description: string; balanceAfter: string } }>(
