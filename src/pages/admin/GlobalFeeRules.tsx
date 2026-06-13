@@ -46,11 +46,9 @@ const SECTION_ORDER: FeeCategory[] = [
 
 // ─── Add-form schema ──────────────────────────────────────────────────────────
 
-const makeSchema = (category: FeeCategory) =>
+const makeSchema = (_category: FeeCategory) =>
   z.object({
-    sourceCurrency: CORRIDOR_CATEGORIES.includes(category)
-      ? z.string().min(1, 'Required')
-      : z.string().optional().nullable(),
+    sourceCurrency: z.string().optional().nullable(),
     destCurrency:   z.string().optional().nullable(),
     feeType:        z.enum(['flat', 'percent']),
     feeValue:       z.coerce.number().positive('Required'),
@@ -229,7 +227,7 @@ function CategorySection({ category, rules, isLoading }: SectionProps) {
         {/* Inline add form */}
         {adding && (
           <form onSubmit={handleSubmit(onAdd)} className="border-b border-border bg-muted/40 px-5 py-4">
-            <div className="flex flex-wrap items-end gap-3">
+            <div className="flex flex-wrap items-start gap-3">
               {/* Currency fields — context-aware */}
               {isNone && (
                 <p className="text-xs text-muted-fg italic self-center">No currency needed — applies tenant-wide.</p>
@@ -245,11 +243,11 @@ function CategorySection({ category, rules, isLoading }: SectionProps) {
               )}
               {isCorridor && (
                 <>
-                  <FormField label="Source currency" error={(errors as any).sourceCurrency?.message} htmlFor={`${category}-src`}>
+                  <FormField label="Source currency" htmlFor={`${category}-src`}>
                     <Select
                       value={srcCurrency}
-                      onValueChange={v => setValue('sourceCurrency', v, { shouldValidate: true })}
-                      options={CURRENCY_OPTIONS}
+                      onValueChange={v => setValue('sourceCurrency', v || null)}
+                      options={SRC_WILDCARD_OPTIONS}
                     />
                   </FormField>
                   <FormField label="Destination" htmlFor={`${category}-dst`}>
