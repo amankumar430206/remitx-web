@@ -201,7 +201,7 @@ export function BeneficiaryDetail() {
           </div>
 
           {/* Detail cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="flex flex-col gap-4">
             <ContentCard>
               <SectionHeader
                 title="Recipient info"
@@ -274,7 +274,7 @@ export function BeneficiaryDetail() {
             </ContentCard>
 
             {(beneficiary.address_line1 || beneficiary.city || beneficiary.postal_code) && (
-              <ContentCard className="md:col-span-2">
+              <ContentCard>
                 <SectionHeader
                   title="Address"
                   icon={
