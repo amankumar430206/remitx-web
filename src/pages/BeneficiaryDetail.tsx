@@ -57,6 +57,7 @@ export function BeneficiaryDetail() {
   const navigate = useNavigate()
   const [editing, setEditing] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [showAccount, setShowAccount] = useState(false)
 
   const { data: beneficiary, isLoading, isError, refetch } = useBeneficiary(id ?? '')
   const updateMutation = useUpdateBeneficiary()
@@ -164,7 +165,26 @@ export function BeneficiaryDetail() {
                 {accountDisplay && (
                   <div className="flex items-center gap-2 rounded-lg bg-surface border border-border px-3 py-1.5">
                     <span className="text-xs text-muted-fg">{accountLabel}</span>
-                    <span className="font-mono text-xs font-semibold text-foreground">••••{accountDisplay.slice(-4)}</span>
+                    <span className="font-mono text-xs font-semibold text-foreground">
+                      {showAccount ? accountDisplay : `••••${accountDisplay.slice(-4)}`}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowAccount(v => !v)}
+                      className="ml-1 text-muted-fg hover:text-foreground transition-colors"
+                      aria-label={showAccount ? 'Hide account number' : 'Show account number'}
+                    >
+                      {showAccount ? (
+                        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                        </svg>
+                      ) : (
+                        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      )}
+                    </button>
                   </div>
                 )}
                 {beneficiary.swift_bic && (
@@ -220,7 +240,32 @@ export function BeneficiaryDetail() {
               {beneficiary.bank_name    && <InfoRow label="Bank"          value={beneficiary.bank_name} />}
               {beneficiary.account_name && <InfoRow label="Account name"  value={beneficiary.account_name} />}
               {accountDisplay && (
-                <InfoRow label={accountLabel} value={<>••••{accountDisplay.slice(-4)}</>} mono />
+                <InfoRow
+                  label={accountLabel}
+                  mono
+                  value={
+                    <span className="flex items-center justify-end gap-2">
+                      <span>{showAccount ? accountDisplay : `••••${accountDisplay.slice(-4)}`}</span>
+                      <button
+                        type="button"
+                        onClick={() => setShowAccount(v => !v)}
+                        className="text-muted-fg hover:text-foreground transition-colors shrink-0"
+                        aria-label={showAccount ? 'Hide account number' : 'Show account number'}
+                      >
+                        {showAccount ? (
+                          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                          </svg>
+                        ) : (
+                          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                        )}
+                      </button>
+                    </span>
+                  }
+                />
               )}
               {routingDisplay && (
                 <InfoRow label={routingLabel} value={routingDisplay} mono />
