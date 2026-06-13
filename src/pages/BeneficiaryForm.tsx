@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/atoms/Button'
 import { Input } from '@/components/ui/atoms/Input'
 import { Select } from '@/components/ui/atoms/Select'
 import { ContentCard } from '@/layouts/ContentCard'
-import { getApiError } from '@/lib/apiError'
+import { getApiError, getApiErrorDetails } from '@/lib/apiError'
 import type { Beneficiary, CreateBeneficiaryPayload } from '@/api/beneficiaries'
 
 // ─── Country configs ──────────────────────────────────────────────────────────
@@ -344,14 +344,30 @@ export function BeneficiaryForm({ initial, submitLabel, onSubmit, onCancel, isPe
           </div>
 
           {/* ── Error ── */}
-          {error && (
-            <div className="flex items-start gap-2 rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger-fg">
-              <svg className="mt-0.5 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-              {getApiError(error, 'Could not save beneficiary. Please check the details and try again.')}
-            </div>
-          )}
+          {error && (() => {
+            const message = getApiError(error, 'Could not save beneficiary. Please check the details and try again.')
+            const details = getApiErrorDetails(error)
+            return (
+              <div className="rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger-fg">
+                <div className="flex items-start gap-2">
+                  <svg className="mt-0.5 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <span>{message}</span>
+                </div>
+                {details.length > 0 && (
+                  <ul className="mt-2 ml-6 flex flex-col gap-1">
+                    {details.map((d, i) => (
+                      <li key={i} className="flex items-baseline gap-1.5 text-xs">
+                        <span className="font-mono font-semibold shrink-0">{d.field}:</span>
+                        <span>{d.message}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )
+          })()}
 
           {/* ── Actions ── */}
           <div className="flex justify-end gap-3 pt-2">
