@@ -316,11 +316,14 @@ function Step2({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
   const sourceCurrency = watch('sourceCurrency')
   const destinationCurrency = watch('destinationCurrency')
 
+  const accountsLoaded = accountsData !== undefined
   const matchingAccount = accountsData?.find(a => a.currency === sourceCurrency && a.status === 'active')
   const accountBalance = matchingAccount ? parseFloat(matchingAccount.balance) : null
   const parsedAmount = parseFloat(sourceAmount) || 0
   const exceedsBalance = accountBalance !== null && parsedAmount > 0 && parsedAmount > accountBalance
-  const accountsLoaded = accountsData !== undefined
+  const noAccount = accountsLoaded && !matchingAccount
+  const zeroBalance = accountsLoaded && matchingAccount !== undefined && accountBalance !== null && accountBalance === 0
+  const balanceBlocked = exceedsBalance || noAccount || zeroBalance
 
   const handleLockChange = useCallback((mins: number) => {
     setLockMins(mins)
@@ -606,9 +609,24 @@ function Step2({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
         </div>
       )}
 
+      {balanceBlocked && (
+        <div className="flex items-start gap-2 rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger-fg">
+          <svg className="mt-0.5 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <span>
+            {noAccount
+              ? `You don't have an active ${sourceCurrency} account. Open one from Accounts before sending.`
+              : zeroBalance
+              ? `Your ${sourceCurrency} account has no funds. Please top up before proceeding.`
+              : `Amount exceeds your available ${sourceCurrency} balance. Reduce the amount or top up your account.`}
+          </span>
+        </div>
+      )}
+
       <div className="flex justify-between pt-1">
         <Button type="button" variant="outline" onClick={onBack}>Back</Button>
-        <Button type="submit" disabled={!quote || quoteLoading} className="px-8">Continue</Button>
+        <Button type="submit" disabled={!quote || quoteLoading || balanceBlocked} className="px-8">Continue</Button>
       </div>
     </form>
   )
