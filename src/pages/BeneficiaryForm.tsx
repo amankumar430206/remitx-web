@@ -233,13 +233,18 @@ function beneficiaryToDefaults(b: Beneficiary): FormValues {
   }
 }
 
-// ─── Section header ───────────────────────────────────────────────────────────
+// ─── Card header ─────────────────────────────────────────────────────────────
 
-function Section({ title }: { title: string }) {
+function CardHeader({ icon, title, description }: { icon: React.ReactNode; title: string; description?: string }) {
   return (
-    <div className="pt-2">
-      <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-fg">{title}</h3>
-      <hr className="mt-2 border-border" />
+    <div className="flex items-center gap-3 mb-5 pb-4 border-b border-border">
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+        {icon}
+      </div>
+      <div>
+        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+        {description && <p className="text-xs text-muted-fg mt-0.5">{description}</p>}
+      </div>
     </div>
   )
 }
@@ -294,180 +299,227 @@ export function BeneficiaryForm({ initial, submitLabel, onSubmit, onCancel, isPe
   }
 
   return (
-    <form onSubmit={handleSubmit(handleFormSubmit)}>
+    <form onSubmit={handleSubmit(handleFormSubmit)} className="flex flex-col gap-4">
+
+      {/* ── Card 1: Recipient ── */}
       <ContentCard>
-        <div className="flex flex-col gap-5">
+        <CardHeader
+          title="Recipient"
+          description="Who will be receiving the payment"
+          icon={
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+          }
+        />
 
-          {/* ── Entity type ── */}
-          <Section title="Entity" />
-          <div className="flex gap-2">
-            {(['INDIVIDUAL', 'COMPANY'] as const).map((type) => (
-              <button
-                key={type}
-                type="button"
-                onClick={() => setValue('entityType', type)}
-                className={[
-                  'flex-1 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors',
-                  entityType === type
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-border bg-surface text-muted-fg hover:border-border-strong hover:text-foreground',
-                ].join(' ')}
-              >
-                {type === 'INDIVIDUAL' ? 'Individual' : 'Company'}
-              </button>
-            ))}
-          </div>
+        <div className="flex gap-2 mb-5">
+          {(['INDIVIDUAL', 'COMPANY'] as const).map((type) => (
+            <button
+              key={type}
+              type="button"
+              onClick={() => setValue('entityType', type)}
+              className={[
+                'flex-1 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors',
+                entityType === type
+                  ? 'border-primary bg-primary/10 text-primary'
+                  : 'border-border bg-surface text-muted-fg hover:border-border-strong hover:text-foreground',
+              ].join(' ')}
+            >
+              {type === 'INDIVIDUAL' ? 'Individual' : 'Company'}
+            </button>
+          ))}
+        </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {entityType === 'INDIVIDUAL' ? (
-              <>
-                <FormField label="First name" htmlFor="firstName" error={errors.firstName?.message}>
-                  <Input id="firstName" {...register('firstName')} placeholder="Jane" error={!!errors.firstName} />
-                </FormField>
-                <FormField label="Last name" htmlFor="lastName" error={errors.lastName?.message}>
-                  <Input id="lastName" {...register('lastName')} placeholder="Smith" error={!!errors.lastName} />
-                </FormField>
-                <FormField label="Full name (display)" htmlFor="name" error={errors.name?.message} required className="sm:col-span-2">
-                  <Input id="name" {...register('name')} placeholder="Jane Smith" error={!!errors.name} />
-                </FormField>
-              </>
-            ) : (
-              <FormField label="Company name" htmlFor="name" error={errors.name?.message} required className="sm:col-span-2">
-                <Input id="name" {...register('name')} placeholder="Acme Ltd" error={!!errors.name} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {entityType === 'INDIVIDUAL' ? (
+            <>
+              <FormField label="First name" htmlFor="firstName" error={errors.firstName?.message}>
+                <Input id="firstName" {...register('firstName')} placeholder="Jane" error={!!errors.firstName} />
               </FormField>
-            )}
-          </div>
-
-          {/* ── Corridor ── */}
-          <Section title="Corridor" />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <FormField label="Country" htmlFor="countryCode" error={errors.countryCode?.message} required>
-              <Select
-                value={watch('countryCode')}
-                onValueChange={v => setValue('countryCode', v)}
-                options={COUNTRY_OPTIONS}
-                placeholder="Select country…"
-                error={!!errors.countryCode}
-              />
-            </FormField>
-
-            <FormField label="Currency" htmlFor="currency" error={errors.currency?.message} required>
-              <Input id="currency" {...register('currency')} placeholder="USD" className="uppercase" error={!!errors.currency} />
-            </FormField>
-
-            <FormField label="Purpose" htmlFor="purposeCode" error={errors.purposeCode?.message} required>
-              <Select
-                value={watch('purposeCode')}
-                onValueChange={v => setValue('purposeCode', v)}
-                options={PURPOSE_OPTIONS}
-                placeholder="Select purpose…"
-                error={!!errors.purposeCode}
-              />
-            </FormField>
-
-            <FormField label="Transfer method" htmlFor="transferMethod">
-              <Select
-                value={watch('transferMethod') ?? ''}
-                onValueChange={v => setValue('transferMethod', v)}
-                options={TRANSFER_METHOD_OPTIONS}
-              />
-            </FormField>
-          </div>
-
-          {/* ── Bank details ── */}
-          <Section title="Bank details" />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <FormField label="Bank name" htmlFor="bankName" error={errors.bankName?.message}>
-              <Input id="bankName" {...register('bankName')} placeholder="e.g. HSBC" error={!!errors.bankName} />
-            </FormField>
-
-            <FormField label="Account holder name" htmlFor="accountName" error={errors.accountName?.message}>
-              <Input id="accountName" {...register('accountName')} placeholder="Name on account" error={!!errors.accountName} />
-            </FormField>
-
-            {cfg && 'routingLabel' in cfg && (
-              <FormField label={cfg.routingLabel} htmlFor="routing" error={errors.routing?.message} required>
-                <Input id="routing" {...register('routing')} className="font-mono" error={!!errors.routing} />
+              <FormField label="Last name" htmlFor="lastName" error={errors.lastName?.message}>
+                <Input id="lastName" {...register('lastName')} placeholder="Smith" error={!!errors.lastName} />
               </FormField>
-            )}
-
-            {cfg && 'swiftLabel' in cfg && (
-              <FormField label={cfg.swiftLabel} htmlFor="swiftBic" error={errors.swiftBic?.message} required={swiftRequired}>
-                <Input id="swiftBic" {...register('swiftBic')} className="font-mono uppercase" error={!!errors.swiftBic} />
+              <FormField label="Full name (display)" htmlFor="name" error={errors.name?.message} required className="sm:col-span-2">
+                <Input id="name" {...register('name')} placeholder="Jane Smith" error={!!errors.name} />
               </FormField>
-            )}
-
-            {cfg && (
-              <FormField
-                label={cfg.accountLabel}
-                htmlFor="account"
-                error={errors.account?.message}
-                required
-                className={!('routingLabel' in cfg) && !('swiftLabel' in cfg) ? 'sm:col-span-2' : ''}
-              >
-                <Input id="account" {...register('account')} className="font-mono" error={!!errors.account} />
-              </FormField>
-            )}
-          </div>
-
-          {/* ── Address ── */}
-          <Section title="Address" />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <FormField label="Street address" htmlFor="addressLine1" error={errors.addressLine1?.message} className="sm:col-span-2">
-              <Input id="addressLine1" {...register('addressLine1')} placeholder="123 Main St" error={!!errors.addressLine1} />
+            </>
+          ) : (
+            <FormField label="Company name" htmlFor="name" error={errors.name?.message} required className="sm:col-span-2">
+              <Input id="name" {...register('name')} placeholder="Acme Ltd" error={!!errors.name} />
             </FormField>
-            <FormField label="Address line 2" htmlFor="addressLine2" error={errors.addressLine2?.message} className="sm:col-span-2">
-              <Input id="addressLine2" {...register('addressLine2')} placeholder="Suite, floor, etc. (optional)" error={!!errors.addressLine2} />
-            </FormField>
-            <FormField label="City" htmlFor="city" error={errors.city?.message}>
-              <Input id="city" {...register('city')} placeholder="New York" error={!!errors.city} />
-            </FormField>
-            <FormField label="State / Province" htmlFor="state" error={errors.state?.message}>
-              <Input id="state" {...register('state')} placeholder="NY" error={!!errors.state} />
-            </FormField>
-            <FormField label="Postal code" htmlFor="postalCode" error={errors.postalCode?.message}>
-              <Input id="postalCode" {...register('postalCode')} placeholder="10001" error={!!errors.postalCode} />
-            </FormField>
-          </div>
-
-          {/* ── Error ── */}
-          {error && (() => {
-            const message = getApiError(error, 'Could not save beneficiary. Please check the details and try again.')
-            const details = getApiErrorDetails(error)
-            return (
-              <div className="rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger-fg">
-                <div className="flex items-start gap-2">
-                  <svg className="mt-0.5 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
-                  <span>{message}</span>
-                </div>
-                {details.length > 0 && (
-                  <ul className="mt-2 ml-6 flex flex-col gap-1">
-                    {details.map((d, i) => {
-                      const { label, message } = humanizeDetail(d)
-                      return (
-                        <li key={i} className="flex items-baseline gap-1.5 text-xs">
-                          <span className="font-semibold shrink-0">{label}:</span>
-                          <span>{message}</span>
-                        </li>
-                      )
-                    })}
-                  </ul>
-                )}
-              </div>
-            )
-          })()}
-
-          {/* ── Actions ── */}
-          <div className="flex justify-end gap-3 pt-2">
-            <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
-            <Button type="submit" loading={isPending} disabled={!countryCode}>
-              {submitLabel}
-            </Button>
-          </div>
+          )}
         </div>
       </ContentCard>
+
+      {/* ── Card 2: Corridor ── */}
+      <ContentCard>
+        <CardHeader
+          title="Corridor"
+          description="Destination country, currency, and payment purpose"
+          icon={
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064" />
+            </svg>
+          }
+        />
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <FormField label="Country" htmlFor="countryCode" error={errors.countryCode?.message} required>
+            <Select
+              value={watch('countryCode')}
+              onValueChange={v => setValue('countryCode', v)}
+              options={COUNTRY_OPTIONS}
+              placeholder="Select country…"
+              error={!!errors.countryCode}
+            />
+          </FormField>
+
+          <FormField label="Currency" htmlFor="currency" error={errors.currency?.message} required>
+            <Input id="currency" {...register('currency')} placeholder="USD" className="uppercase" error={!!errors.currency} />
+          </FormField>
+
+          <FormField label="Purpose" htmlFor="purposeCode" error={errors.purposeCode?.message} required>
+            <Select
+              value={watch('purposeCode')}
+              onValueChange={v => setValue('purposeCode', v)}
+              options={PURPOSE_OPTIONS}
+              placeholder="Select purpose…"
+              error={!!errors.purposeCode}
+            />
+          </FormField>
+
+          <FormField label="Transfer method" htmlFor="transferMethod">
+            <Select
+              value={watch('transferMethod') ?? ''}
+              onValueChange={v => setValue('transferMethod', v)}
+              options={TRANSFER_METHOD_OPTIONS}
+            />
+          </FormField>
+        </div>
+      </ContentCard>
+
+      {/* ── Card 3: Bank details ── */}
+      <ContentCard>
+        <CardHeader
+          title="Bank details"
+          description="Account and routing information for the payment"
+          icon={
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
+            </svg>
+          }
+        />
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <FormField label="Bank name" htmlFor="bankName" error={errors.bankName?.message}>
+            <Input id="bankName" {...register('bankName')} placeholder="e.g. HSBC" error={!!errors.bankName} />
+          </FormField>
+
+          <FormField label="Account holder name" htmlFor="accountName" error={errors.accountName?.message}>
+            <Input id="accountName" {...register('accountName')} placeholder="Name on account" error={!!errors.accountName} />
+          </FormField>
+
+          {cfg && 'routingLabel' in cfg && (
+            <FormField label={cfg.routingLabel} htmlFor="routing" error={errors.routing?.message} required>
+              <Input id="routing" {...register('routing')} className="font-mono" error={!!errors.routing} />
+            </FormField>
+          )}
+
+          {cfg && 'swiftLabel' in cfg && (
+            <FormField label={cfg.swiftLabel} htmlFor="swiftBic" error={errors.swiftBic?.message} required={swiftRequired}>
+              <Input id="swiftBic" {...register('swiftBic')} className="font-mono uppercase" error={!!errors.swiftBic} />
+            </FormField>
+          )}
+
+          {cfg && (
+            <FormField
+              label={cfg.accountLabel}
+              htmlFor="account"
+              error={errors.account?.message}
+              required
+              className={!('routingLabel' in cfg) && !('swiftLabel' in cfg) ? 'sm:col-span-2' : ''}
+            >
+              <Input id="account" {...register('account')} className="font-mono" error={!!errors.account} />
+            </FormField>
+          )}
+
+          {!cfg && (
+            <p className="sm:col-span-2 text-xs text-muted-fg py-2">
+              Select a country above to see the required bank fields.
+            </p>
+          )}
+        </div>
+      </ContentCard>
+
+      {/* ── Card 4: Address ── */}
+      <ContentCard>
+        <CardHeader
+          title="Address"
+          description="Recipient's physical address (optional but recommended)"
+          icon={
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          }
+        />
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <FormField label="Street address" htmlFor="addressLine1" error={errors.addressLine1?.message} className="sm:col-span-2">
+            <Input id="addressLine1" {...register('addressLine1')} placeholder="123 Main St" error={!!errors.addressLine1} />
+          </FormField>
+          <FormField label="Address line 2" htmlFor="addressLine2" error={errors.addressLine2?.message} className="sm:col-span-2">
+            <Input id="addressLine2" {...register('addressLine2')} placeholder="Suite, floor, etc. (optional)" error={!!errors.addressLine2} />
+          </FormField>
+          <FormField label="City" htmlFor="city" error={errors.city?.message}>
+            <Input id="city" {...register('city')} placeholder="New York" error={!!errors.city} />
+          </FormField>
+          <FormField label="State / Province" htmlFor="state" error={errors.state?.message}>
+            <Input id="state" {...register('state')} placeholder="NY" error={!!errors.state} />
+          </FormField>
+          <FormField label="Postal code" htmlFor="postalCode" error={errors.postalCode?.message}>
+            <Input id="postalCode" {...register('postalCode')} placeholder="10001" error={!!errors.postalCode} />
+          </FormField>
+        </div>
+      </ContentCard>
+
+      {/* ── API error ── */}
+      {error && (() => {
+        const message = getApiError(error, 'Could not save beneficiary. Please check the details and try again.')
+        const details = getApiErrorDetails(error)
+        return (
+          <div className="rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger-fg">
+            <div className="flex items-start gap-2">
+              <svg className="mt-0.5 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <span>{message}</span>
+            </div>
+            {details.length > 0 && (
+              <ul className="mt-2 ml-6 flex flex-col gap-1">
+                {details.map((d, i) => {
+                  const { label, message } = humanizeDetail(d)
+                  return (
+                    <li key={i} className="flex items-baseline gap-1.5 text-xs">
+                      <span className="font-semibold shrink-0">{label}:</span>
+                      <span>{message}</span>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </div>
+        )
+      })()}
+
+      {/* ── Actions ── */}
+      <div className="flex justify-end gap-3">
+        <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
+        <Button type="submit" loading={isPending} disabled={!countryCode}>
+          {submitLabel}
+        </Button>
+      </div>
     </form>
   )
 }
