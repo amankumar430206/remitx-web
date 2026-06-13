@@ -58,6 +58,18 @@ export interface AllPayment {
   updated_at: string
 }
 
+export interface ProviderCredentials {
+  provider_name: string
+  is_active: boolean
+  config: { user_id?: string }
+}
+
+export interface ProviderTestResult {
+  success: boolean
+  providerUserId?: string
+  error?: string
+}
+
 export interface CorridorConfig {
   id: string
   tenant_id: string
@@ -359,6 +371,17 @@ const admin = {
         `/admin/tenants/${tenantId}/default-provider`,
         { providerName },
       ),
+  },
+
+  providerCredentials: {
+    get: (tenantId: string) =>
+      apiClient.get<{ success: boolean; data: ProviderCredentials | null }>(`/admin/tenants/${tenantId}/provider-credentials`),
+
+    set: (tenantId: string, payload: { providerName: string; config: { user_id?: string } }) =>
+      apiClient.put<{ success: boolean; data: ProviderCredentials }>(`/admin/tenants/${tenantId}/provider-credentials`, payload),
+
+    test: (tenantId: string) =>
+      apiClient.post<{ success: boolean; data: ProviderTestResult }>(`/admin/tenants/${tenantId}/provider-credentials/test`),
   },
 
   providerDefaults: {

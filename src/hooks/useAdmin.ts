@@ -238,6 +238,30 @@ export function useSetTenantDefaultProvider() {
   })
 }
 
+export function useProviderCredentials(tenantId: string) {
+  return useQuery({
+    queryKey: ['admin-provider-credentials', tenantId],
+    queryFn: () => adminApi.providerCredentials.get(tenantId).then(r => r.data.data),
+    enabled: !!tenantId,
+  })
+}
+
+export function useSetProviderCredentials() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ tenantId, providerName, config }: { tenantId: string; providerName: string; config: { user_id?: string } }) =>
+      adminApi.providerCredentials.set(tenantId, { providerName, config }).then(r => r.data.data),
+    onSuccess: (_, { tenantId }) => qc.invalidateQueries({ queryKey: ['admin-provider-credentials', tenantId] }),
+  })
+}
+
+export function useTestProviderCredentials() {
+  return useMutation({
+    mutationFn: (tenantId: string) =>
+      adminApi.providerCredentials.test(tenantId).then(r => r.data.data),
+  })
+}
+
 export function useUpdateProviderConfig() {
   const qc = useQueryClient()
   return useMutation({

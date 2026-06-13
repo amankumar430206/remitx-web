@@ -30,6 +30,9 @@ const TenantCorridors = lazy(() =>
 const TenantBranding = lazy(() =>
   import('./tenant/TenantBranding').then((m) => ({ default: m.TenantBranding }))
 )
+const TenantProviderCredentials = lazy(() =>
+  import('./tenant/TenantProviderCredentials').then((m) => ({ default: m.TenantProviderCredentials }))
+)
 
 // ─── Tab-level error boundary ─────────────────────────────────────────────────
 // Catches render errors inside a tab so one broken panel can't crash the page.
@@ -263,6 +266,7 @@ export function TenantDetail() {
         {activeTab === 'providers' && (
           <TabErrorBoundary key="providers">
             <Suspense fallback={<LoadingState className="py-20" />}>
+              <TenantProviderCredentials tenantId={tenant.id} />
               <TenantCorridors tenantId={tenant.id} />
             </Suspense>
           </TabErrorBoundary>
