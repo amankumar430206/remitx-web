@@ -53,6 +53,43 @@ const TRANSFER_METHOD_OPTIONS = [
   { value: 'FASTER_PAYMENTS', label: 'Faster Payments (UK)' },
 ]
 
+// ─── API error humanizer ──────────────────────────────────────────────────────
+
+const FIELD_LABELS: Record<string, string> = {
+  name:           'Name',
+  entityType:     'Entity type',
+  firstName:      'First name',
+  lastName:       'Last name',
+  countryCode:    'Country',
+  currency:       'Currency',
+  purposeCode:    'Purpose',
+  transferMethod: 'Transfer method',
+  bankName:       'Bank name',
+  bankAddress:    'Bank address',
+  accountName:    'Account holder name',
+  accountNumber:  'Account number',
+  routingNumber:  'Routing number',
+  sortCode:       'Sort code',
+  ifscCode:       'IFSC code',
+  iban:           'IBAN',
+  swiftBic:       'SWIFT / BIC',
+  addressLine1:   'Street address',
+  addressLine2:   'Address line 2',
+  city:           'City',
+  state:          'State / Province',
+  postalCode:     'Postal code',
+}
+
+function humanizeDetail(d: { field: string; message: string }): { label: string; message: string } {
+  const label = FIELD_LABELS[d.field] ?? d.field.replace(/([A-Z])/g, ' $1').trim()
+  const msg = d.message
+    .replace(/^"[^"]+"\s+/, '')
+    .replace(/is not allowed to be empty/, 'is required')
+    .replace(/must be a string/, 'is required')
+    .replace(/with value "".*$/, 'is required')
+  return { label, message: msg.charAt(0).toUpperCase() + msg.slice(1) }
+}
+
 // ─── Zod schema ───────────────────────────────────────────────────────────────
 
 const schema = z.object({
@@ -74,6 +111,55 @@ const schema = z.object({
   city:           z.string().optional().default(''),
   state:          z.string().optional().default(''),
   postalCode:     z.string().optional().default(''),
+}).superRefine((data, ctx) => {
+  const cc = data.countryCode as CountryCode
+  if (!cc || !COUNTRY_CONFIGS[cc]) return
+
+  const cfg = COUNTRY_CONFIGS[cc]
+  const useIban       = 'useIban' in cfg && cfg.useIban
+  const hasRouting    = 'routingField' in cfg
+  const swiftRequired = !useIban && !hasRouting  // SG, HK, OTHER
+
+  // Account / IBAN
+  if (!data.account) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['account'],
+      message: useIban ? 'IBAN is required' : 'Account number is required' })
+  } else {
+    if (cc === 'US' && !/^\d{4,17}$/.test(data.account))
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['account'], message: 'Must be 4–17 digits' })
+    if (cc === 'GB' && !/^\d{8}$/.test(data.account))
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['account'], message: 'Must be exactly 8 digits' })
+    if (cc === 'IN' && !/^\d{9,18}$/.test(data.account))
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['account'], message: 'Must be 9–18 digits' })
+    if (cc === 'AE' && !/^AE\d{21}$/.test(data.account.replace(/\s/g, '')))
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['account'], message: 'Must be a valid UAE IBAN: AE followed by 21 digits' })
+    if (['DE','FR','ES','NL','BE','IT'].includes(cc)) {
+      const clean = data.account.replace(/\s/g, '').toUpperCase()
+      if (!/^[A-Z]{2}\d{2}[A-Z0-9]{4,30}$/.test(clean))
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['account'], message: 'Must be a valid IBAN (e.g. DE89370400440532013000)' })
+    }
+  }
+
+  // Routing field (routingNumber / sortCode / ifscCode)
+  if (hasRouting) {
+    if (!data.routing) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['routing'],
+        message: `${cfg.routingLabel} is required` })
+    } else {
+      if (cc === 'US' && !/^\d{9}$/.test(data.routing))
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['routing'], message: 'ABA routing number must be exactly 9 digits' })
+      if (cc === 'GB' && !/^\d{6}$/.test(data.routing.replace(/-/g, '')))
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['routing'], message: 'Sort code must be exactly 6 digits (e.g. 200000)' })
+      if (cc === 'IN' && !/^[A-Z]{4}0[A-Z0-9]{6}$/i.test(data.routing))
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['routing'], message: 'IFSC must be 11 characters: 4 letters, 0, then 6 alphanumeric (e.g. HDFC0001234)' })
+    }
+  }
+
+  // SWIFT — required for SG/HK/OTHER, validated when present
+  if (swiftRequired && !data.swiftBic)
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['swiftBic'], message: 'SWIFT / BIC code is required' })
+  if (data.swiftBic && !/^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/i.test(data.swiftBic))
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['swiftBic'], message: 'Must be 8 or 11 characters (e.g. HSBCSGSGXXX)' })
 })
 
 type FormValues = z.infer<typeof schema>
@@ -191,6 +277,7 @@ export function BeneficiaryForm({ initial, submitLabel, onSubmit, onCancel, isPe
   const entityType = watch('entityType')
   const countryCode = watch('countryCode') as CountryCode | ''
   const cfg = countryCode ? COUNTRY_CONFIGS[countryCode] : null
+  const swiftRequired = !!(cfg && 'swiftLabel' in cfg && !('useIban' in cfg) && !('routingField' in cfg))
 
   // Auto-fill currency when country changes (only on new forms)
   useEffect(() => {
@@ -305,7 +392,7 @@ export function BeneficiaryForm({ initial, submitLabel, onSubmit, onCancel, isPe
             )}
 
             {cfg && 'swiftLabel' in cfg && (
-              <FormField label={cfg.swiftLabel} htmlFor="swiftBic" error={errors.swiftBic?.message}>
+              <FormField label={cfg.swiftLabel} htmlFor="swiftBic" error={errors.swiftBic?.message} required={swiftRequired}>
                 <Input id="swiftBic" {...register('swiftBic')} className="font-mono uppercase" error={!!errors.swiftBic} />
               </FormField>
             )}
@@ -357,12 +444,15 @@ export function BeneficiaryForm({ initial, submitLabel, onSubmit, onCancel, isPe
                 </div>
                 {details.length > 0 && (
                   <ul className="mt-2 ml-6 flex flex-col gap-1">
-                    {details.map((d, i) => (
-                      <li key={i} className="flex items-baseline gap-1.5 text-xs">
-                        <span className="font-mono font-semibold shrink-0">{d.field}:</span>
-                        <span>{d.message}</span>
-                      </li>
-                    ))}
+                    {details.map((d, i) => {
+                      const { label, message } = humanizeDetail(d)
+                      return (
+                        <li key={i} className="flex items-baseline gap-1.5 text-xs">
+                          <span className="font-semibold shrink-0">{label}:</span>
+                          <span>{message}</span>
+                        </li>
+                      )
+                    })}
                   </ul>
                 )}
               </div>
