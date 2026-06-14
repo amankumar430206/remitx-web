@@ -61,10 +61,11 @@ export function AccountDetail() {
   const [exportFormat, setExportFormat] = useState('csv')
   const [exporting, setExporting] = useState(false)
 
-  const [adjustOpen, setAdjustOpen] = useState(false)
-  const [adjustType, setAdjustType] = useState<'credit' | 'debit'>('credit')
+  const [adjustOpen, setAdjustOpen]   = useState(false)
+  const [adjustType, setAdjustType]   = useState<'credit' | 'debit'>('credit')
   const [adjustAmount, setAdjustAmount] = useState('')
-  const [adjustDesc, setAdjustDesc] = useState('')
+  const [adjustReason, setAdjustReason] = useState('')
+  const [adjustDesc, setAdjustDesc]   = useState('')
   const [adjustError, setAdjustError] = useState('')
 
   const adjustMutation = useAdjustBalance(id!)
@@ -99,6 +100,7 @@ export function AccountDetail() {
   const closeAdjust = () => {
     setAdjustOpen(false)
     setAdjustAmount('')
+    setAdjustReason('')
     setAdjustDesc('')
     setAdjustError('')
     setAdjustType('credit')
@@ -111,12 +113,17 @@ export function AccountDetail() {
       setAdjustError('Enter a valid positive amount.')
       return
     }
-    if (!adjustDesc.trim()) {
-      setAdjustError('Description is required.')
+    if (!adjustReason) {
+      setAdjustError('Select a reason.')
+      return
+    }
+    const description = adjustReason === 'Other' ? adjustDesc.trim() : adjustReason
+    if (!description) {
+      setAdjustError('Describe the reason for this adjustment.')
       return
     }
     adjustMutation.mutate(
-      { type: adjustType, amount: adjustAmount, description: adjustDesc.trim() },
+      { type: adjustType, amount: adjustAmount, description },
       {
         onSuccess: closeAdjust,
         onError: (err) => setAdjustError(getApiError(err, 'Adjustment failed. Please try again.')),
@@ -393,7 +400,7 @@ export function AccountDetail() {
               <button
                 key={t}
                 type="button"
-                onClick={() => setAdjustType(t)}
+                onClick={() => { setAdjustType(t); setAdjustReason(''); setAdjustDesc('') }}
                 className={`rounded-lg py-2 text-sm font-semibold capitalize transition-all duration-150 ${
                   adjustType === t
                     ? t === 'credit'
@@ -420,14 +427,46 @@ export function AccountDetail() {
             />
           </FormField>
 
-          <FormField label="Reason / description" required htmlFor="adj-desc">
-            <Input
-              id="adj-desc"
-              placeholder="e.g. Manual top-up, fee reversal…"
-              value={adjustDesc}
-              onChange={e => setAdjustDesc(e.target.value)}
-            />
-          </FormField>
+          {/* Preset reasons */}
+          <div className="flex flex-col gap-2">
+            <p className="text-xs font-medium text-foreground">
+              Reason <span className="text-danger-fg">*</span>
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {(adjustType === 'credit'
+                ? ['Initial funding', 'Client deposit', 'Fee reversal', 'Bonus / reward', 'Reconciliation adjustment', 'Other']
+                : ['Fee charge', 'Withdrawal', 'Penalty', 'Chargeback', 'Reconciliation adjustment', 'Other']
+              ).map(reason => (
+                <button
+                  key={reason}
+                  type="button"
+                  onClick={() => { setAdjustReason(reason); setAdjustDesc('') }}
+                  className={[
+                    'rounded-lg border px-3 py-2 text-left text-xs font-medium transition-colors',
+                    adjustReason === reason
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border bg-surface text-muted-fg hover:border-border-strong hover:text-foreground',
+                  ].join(' ')}
+                >
+                  {reason}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Free-text only when Other is selected */}
+          {adjustReason === 'Other' && (
+            <FormField label="Describe the reason" required htmlFor="adj-desc">
+              <textarea
+                id="adj-desc"
+                rows={2}
+                placeholder="Briefly describe the reason for this adjustment…"
+                value={adjustDesc}
+                onChange={e => setAdjustDesc(e.target.value)}
+                className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-fg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              />
+            </FormField>
+          )}
 
           {adjustError && (
             <div className="flex items-center gap-2 rounded-lg border border-danger-border bg-danger px-3 py-2">
