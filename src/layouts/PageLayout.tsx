@@ -4,6 +4,7 @@ import { TopBar } from './TopBar'
 import { MobileNav } from './MobileNav'
 import { Sidebar } from './Sidebar'
 import { BackToTop } from '@/components/ui/atoms/BackToTop'
+import { OfflineOverlay } from '@/components/ui/molecules/OfflineOverlay'
 import { useLayoutStore } from '@/stores/layoutStore'
 import type { NavItem } from './TopNav'
 
@@ -33,6 +34,7 @@ export function PageLayout({ navItems, user, onLogout, logo, logoUrl, tenantName
           </main>
         </div>
         <BackToTop />
+        <OfflineOverlay />
       </div>
     )
   }
@@ -45,6 +47,7 @@ export function PageLayout({ navItems, user, onLogout, logo, logoUrl, tenantName
         {children}
       </main>
       <BackToTop />
+      <OfflineOverlay />
     </div>
   )
 }
