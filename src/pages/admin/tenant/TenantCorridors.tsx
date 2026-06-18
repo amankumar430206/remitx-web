@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import * as Dialog from '@radix-ui/react-dialog'
 import { Badge } from '@/components/ui/atoms/Badge'
 import { Button } from '@/components/ui/atoms/Button'
 import { Input } from '@/components/ui/atoms/Input'
@@ -43,6 +44,7 @@ export function TenantCorridors({ tenantId }: Props) {
   const [deleteTarget, setDeleteTarget] = useState<CorridorConfig | null>(null)
   const [defaultProvider, setDefaultProvider] = useState<string>('')
   const [defaultSaved, setDefaultSaved] = useState(false)
+  const [guideOpen, setGuideOpen] = useState(false)
 
   const { data: providerConfig, isLoading } = useProviderConfig(tenantId)
   const corridors = providerConfig?.corridors ?? []
@@ -214,9 +216,23 @@ export function TenantCorridors({ tenantId }: Props) {
               Provider routing rules for this client. Overrides global defaults.
             </p>
           </div>
-          <Button size="sm" onClick={() => setAddOpen(true)}>
-            Add corridor
-          </Button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setGuideOpen(true)}
+              title="How provider resolution works"
+              className={cn(
+                'flex h-7 w-7 items-center justify-center rounded-full border border-border',
+                'text-xs font-semibold text-muted-fg bg-surface',
+                'hover:border-border-strong hover:text-foreground transition-colors',
+              )}
+            >
+              ?
+            </button>
+            <Button size="sm" onClick={() => setAddOpen(true)}>
+              Add corridor
+            </Button>
+          </div>
         </div>
 
         {isLoading ? (
@@ -292,6 +308,118 @@ export function TenantCorridors({ tenantId }: Props) {
         onConfirm={onConfirmDelete}
         loading={deleteMutation.isPending}
       />
+
+      {/* ── Provider resolution guide ── */}
+      <Dialog.Root open={guideOpen} onOpenChange={setGuideOpen}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+          <Dialog.Content className="fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg rounded-xl bg-surface p-6 shadow-xl focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-start justify-between gap-4 mb-5">
+              <div>
+                <Dialog.Title className="text-base font-semibold text-foreground">
+                  How provider resolution works
+                </Dialog.Title>
+                <Dialog.Description className="mt-1 text-xs text-muted-fg">
+                  When a payment is submitted, RemitX picks a provider by walking this lookup chain — first match wins.
+                </Dialog.Description>
+              </div>
+              <button
+                onClick={() => setGuideOpen(false)}
+                className="mt-0.5 shrink-0 text-muted-fg hover:text-foreground transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Steps */}
+            <ol className="flex flex-col gap-3">
+              {[
+                {
+                  step: 1,
+                  label: 'Exact corridor match',
+                  desc: 'A corridor rule for this tenant with the exact source AND destination currency (e.g. USD → GBP).',
+                  badge: 'tenant',
+                },
+                {
+                  step: 2,
+                  label: 'Wildcard destination',
+                  desc: 'A corridor rule for this tenant matching the source currency but with destination left blank — meaning "any destination from this source" (e.g. USD → Any).',
+                  badge: 'tenant',
+                },
+                {
+                  step: 3,
+                  label: 'Any-to-any corridor',
+                  desc: 'A corridor rule for this tenant where both source and destination are blank. Acts as a catch-all for all currency pairs.',
+                  badge: 'tenant',
+                },
+                {
+                  step: 4,
+                  label: 'Tenant default provider',
+                  desc: 'The default provider set on this client (the selector above). Applied when no corridor rule matches.',
+                  badge: 'tenant',
+                },
+                {
+                  step: 5,
+                  label: 'Global exact corridor',
+                  desc: 'A platform-wide corridor rule (configured in Super Admin → Global corridors) matching the exact source and destination.',
+                  badge: 'global',
+                },
+                {
+                  step: 6,
+                  label: 'Global wildcard destination',
+                  desc: 'A platform-wide corridor rule matching the source currency with any destination.',
+                  badge: 'global',
+                },
+                {
+                  step: 7,
+                  label: 'Global any-to-any',
+                  desc: 'A platform-wide catch-all corridor rule with both source and destination blank.',
+                  badge: 'global',
+                },
+                {
+                  step: 8,
+                  label: 'Manual fallback',
+                  desc: 'If nothing matches, the payment enters the manual processing queue for the ops team to handle.',
+                  badge: 'fallback',
+                },
+              ].map(({ step, label, desc, badge }) => (
+                <li key={step} className="flex gap-3">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-surface border border-border text-xs font-semibold text-muted-fg mt-0.5">
+                    {step}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-medium text-foreground">{label}</span>
+                      <span className={cn(
+                        'rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+                        badge === 'tenant'   && 'bg-primary/10 text-primary',
+                        badge === 'global'   && 'bg-warning/10 text-warning-fg',
+                        badge === 'fallback' && 'bg-surface border border-border text-muted-fg',
+                      )}>
+                        {badge}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-fg mt-0.5 leading-relaxed">{desc}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+
+            {/* Priority note */}
+            <div className="mt-5 rounded-lg border border-border bg-surface-raised px-4 py-3">
+              <p className="text-xs text-muted-fg leading-relaxed">
+                <span className="font-medium text-foreground">Priority field:</span> when multiple corridor rules at the same level could match, the one with the lowest priority number wins. Default priority is 1.
+              </p>
+            </div>
+
+            <div className="mt-5 flex justify-end">
+              <Button size="sm" variant="outline" onClick={() => setGuideOpen(false)}>Close</Button>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
     </>
   )
 }
