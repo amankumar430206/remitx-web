@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { TopNav } from './TopNav'
 import { TopBar } from './TopBar'
@@ -5,7 +6,9 @@ import { MobileNav } from './MobileNav'
 import { Sidebar } from './Sidebar'
 import { BackToTop } from '@/components/ui/atoms/BackToTop'
 import { OfflineOverlay } from '@/components/ui/molecules/OfflineOverlay'
+import { CommandPalette } from '@/components/ui/organisms/CommandPalette'
 import { useLayoutStore } from '@/stores/layoutStore'
+import { useCommandPaletteStore } from '@/stores/commandPaletteStore'
 import type { NavItem } from './TopNav'
 
 export interface PageLayoutProps {
@@ -21,6 +24,18 @@ export interface PageLayoutProps {
 
 export function PageLayout({ navItems, user, onLogout, logo, logoUrl, tenantName, children, className }: PageLayoutProps) {
   const layout = useLayoutStore(s => s.layout)
+  const togglePalette = useCommandPaletteStore(s => s.toggle)
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        togglePalette()
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [togglePalette])
 
   if (layout === 'sidebar') {
     return (
@@ -35,6 +50,7 @@ export function PageLayout({ navItems, user, onLogout, logo, logoUrl, tenantName
         </div>
         <BackToTop />
         <OfflineOverlay />
+        <CommandPalette />
       </div>
     )
   }
@@ -48,6 +64,7 @@ export function PageLayout({ navItems, user, onLogout, logo, logoUrl, tenantName
       </main>
       <BackToTop />
       <OfflineOverlay />
+      <CommandPalette />
     </div>
   )
 }

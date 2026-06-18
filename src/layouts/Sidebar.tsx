@@ -2,6 +2,7 @@ import { NavLink, Link, useNavigate } from 'react-router-dom'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { cn } from '@/lib/utils'
 import { Avatar } from '@/components/ui/atoms/Avatar'
+import { useCommandPaletteStore } from '@/stores/commandPaletteStore'
 import type { NavItem } from './TopNav'
 
 interface SidebarProps {
@@ -19,6 +20,7 @@ const ArrowsIcon = () => (
 
 export function Sidebar({ navItems, user, onLogout, tenantName }: SidebarProps) {
   const navigate = useNavigate()
+  const togglePalette = useCommandPaletteStore(s => s.toggle)
 
   return (
     <aside className="hidden md:flex flex-col w-60 shrink-0 h-screen sticky top-0 sidebar-glass sidebar-border z-40">
@@ -38,8 +40,22 @@ export function Sidebar({ navItems, user, onLogout, tenantName }: SidebarProps) 
         </Link>
       </div>
 
+      {/* Search trigger */}
+      <div className="px-3 pt-3 pb-1">
+        <button
+          onClick={togglePalette}
+          className="flex items-center gap-2 w-full h-9 px-3 rounded-xl border border-border bg-surface-overlay text-xs text-muted-fg hover:text-foreground hover:border-border-strong transition-colors"
+        >
+          <svg className="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+          </svg>
+          <span className="flex-1 text-left">Search…</span>
+          <kbd className="font-sans text-[10px] bg-surface border border-border rounded px-1 py-0.5">⌘K</kbd>
+        </button>
+      </div>
+
       {/* Nav links */}
-      <nav className="flex-1 overflow-y-auto scrollbar-thin p-3 flex flex-col gap-0.5 pt-4">
+      <nav className="flex-1 overflow-y-auto scrollbar-thin p-3 flex flex-col gap-0.5 pt-2">
         {navItems.map(item => (
           <NavLink
             key={item.href}

@@ -3,6 +3,7 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { Avatar } from '@/components/ui/atoms/Avatar'
 import { ThemeToggle } from '@/components/ui/atoms/ThemeToggle'
 import { NotificationBell } from '@/components/ui/organisms/NotificationBell'
+import { useCommandPaletteStore } from '@/stores/commandPaletteStore'
 
 interface TopBarProps {
   user?: { name: string; email: string; avatarUrl?: string; role?: string }
@@ -32,6 +33,7 @@ const ROLE_COLORS: Record<string, string> = {
 
 export function TopBar({ user, tenantName, onLogout }: TopBarProps) {
   const navigate = useNavigate()
+  const togglePalette = useCommandPaletteStore(s => s.toggle)
   const roleKey = user?.role ?? ''
   const roleLabel = ROLE_LABELS[roleKey] ?? roleKey
   const roleColor = ROLE_COLORS[roleKey] ?? 'bg-slate-500/15 text-slate-400 border-slate-500/20'
@@ -50,6 +52,18 @@ export function TopBar({ user, tenantName, onLogout }: TopBarProps) {
       )}
 
       <div className="flex-1" />
+
+      {/* Search trigger */}
+      <button
+        onClick={togglePalette}
+        className="hidden lg:flex items-center gap-2 h-8 px-3 rounded-lg border border-border bg-surface-overlay text-xs text-muted-fg hover:text-foreground hover:border-border-strong transition-colors"
+      >
+        <svg className="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+        </svg>
+        <span>Search…</span>
+        <kbd className="ml-1 font-sans text-[10px] bg-surface border border-border rounded px-1 py-0.5">⌘K</kbd>
+      </button>
 
       {/* Notifications + Theme */}
       <NotificationBell />
