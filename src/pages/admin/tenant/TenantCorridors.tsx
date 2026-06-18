@@ -18,7 +18,11 @@ import type { Column } from '@/components/ui/organisms/DataTable'
 const PROVIDERS = ['manual', 'zoqq', 'cloudcurrency']
 
 const corridorSchema = z.object({
-  sourceCurrency: z.string().length(3, 'Must be 3-letter code').toUpperCase(),
+  sourceCurrency: z
+    .string()
+    .transform(v => v.toUpperCase())
+    .refine(v => v === '' || v.length === 3, { message: 'Must be 3-letter code or blank' })
+    .optional(),
   destCurrency: z
     .string()
     .transform(v => v.toUpperCase())
@@ -75,7 +79,7 @@ export function TenantCorridors({ tenantId }: Props) {
       {
         tenantId,
         corridor: {
-          sourceCurrency: values.sourceCurrency,
+          sourceCurrency: values.sourceCurrency || null,
           destCurrency: values.destCurrency || null,
           providerName: values.providerName,
           priority: values.priority ?? 1,
@@ -98,7 +102,9 @@ export function TenantCorridors({ tenantId }: Props) {
       key: 'source_currency',
       header: 'From',
       render: row => (
-        <span className="font-mono text-xs font-semibold text-foreground">{row.source_currency}</span>
+        <span className="font-mono text-xs font-semibold text-foreground">
+          {row.source_currency ?? <span className="text-muted-fg italic">Any</span>}
+        </span>
       ),
     },
     {
@@ -242,17 +248,17 @@ export function TenantCorridors({ tenantId }: Props) {
         open={addOpen}
         onOpenChange={open => { if (!open) { setAddOpen(false); reset() } }}
         title="Add payment corridor"
-        description="Route a currency corridor through a specific provider for this client. Leave destination blank for a wildcard (any destination from source currency)."
+        description="Route payments through a specific provider. Leave source and/or destination blank to create a wildcard rule — blank both for any-to-any."
         confirmLabel="Add corridor"
         onConfirm={handleSubmit(onAdd)}
         loading={addMutation.isPending}
       >
         <div className="flex flex-col gap-4 pt-1">
           <div className="grid grid-cols-2 gap-3">
-            <FormField label="From currency" htmlFor="sourceCurrency" error={errors.sourceCurrency?.message} required>
-              <Input id="sourceCurrency" placeholder="USD" className="font-mono uppercase" {...register('sourceCurrency')} error={!!errors.sourceCurrency} />
+            <FormField label="From currency" htmlFor="sourceCurrency" error={errors.sourceCurrency?.message} hint="Blank = any source">
+              <Input id="sourceCurrency" placeholder="USD or blank" className="font-mono uppercase" {...register('sourceCurrency')} error={!!errors.sourceCurrency} />
             </FormField>
-            <FormField label="To currency" htmlFor="destCurrency" error={errors.destCurrency?.message}>
+            <FormField label="To currency" htmlFor="destCurrency" error={errors.destCurrency?.message} hint="Blank = any destination">
               <Input id="destCurrency" placeholder="GBP or blank" className="font-mono uppercase" {...register('destCurrency')} error={!!errors.destCurrency} />
             </FormField>
           </div>
@@ -280,7 +286,7 @@ export function TenantCorridors({ tenantId }: Props) {
         open={!!deleteTarget}
         onOpenChange={open => !open && setDeleteTarget(null)}
         title="Remove corridor"
-        description={`Remove the ${deleteTarget?.source_currency}${deleteTarget?.dest_currency ? ` → ${deleteTarget.dest_currency}` : ' (wildcard)'} corridor? This client will fall back to global defaults.`}
+        description={`Remove the ${deleteTarget?.source_currency ?? 'Any'} → ${deleteTarget?.dest_currency ?? 'Any'} corridor? This client will fall back to global defaults.`}
         confirmLabel="Remove"
         variant="danger"
         onConfirm={onConfirmDelete}
