@@ -11,7 +11,7 @@ interface LayoutState {
 export const useLayoutStore = create<LayoutState>()(
   persist(
     (set) => ({
-      layout: 'topnav',
+      layout: 'sidebar',
       setLayout: (layout) => set({ layout }),
     }),
     { name: 'remitx-layout' }
