@@ -196,6 +196,49 @@ export const FEATURE_FLAGS: FeatureFlagDef[] = [
     group: 'Fees & Billing',
     defaultEnabled: false,
   },
+  // ── Admin ─────────────────────────────────────────────────────────────────
+  {
+    key: 'tenants',
+    label: 'Tenant Management',
+    description: 'List, create, and configure client tenants from the super-admin Tenants page',
+    group: 'Admin',
+    defaultEnabled: true,
+  },
+  {
+    key: 'admin_kyc_queue',
+    label: 'KYC Review Queue',
+    description: 'Admin queue for reviewing and approving KYC document submissions',
+    group: 'Admin',
+    defaultEnabled: true,
+  },
+  {
+    key: 'admin_manual_payments',
+    label: 'Manual Payment Queue',
+    description: 'Admin queue for manually processing payments that require intervention',
+    group: 'Admin',
+    defaultEnabled: true,
+  },
+  {
+    key: 'admin_provider_config',
+    label: 'Provider Configuration',
+    description: 'Configure payment provider credentials and routing rules per tenant',
+    group: 'Admin',
+    defaultEnabled: true,
+  },
+  {
+    key: 'admin_global_fees',
+    label: 'Global Fee Rules',
+    description: 'Manage platform-wide default fee rules that tenants inherit',
+    group: 'Admin',
+    defaultEnabled: true,
+  },
+  {
+    key: 'on_behalf_payments',
+    label: 'On-Behalf Payments',
+    description: 'Allow super admins to initiate payments on behalf of a tenant',
+    group: 'Admin',
+    defaultEnabled: true,
+  },
   // ── Integrations ──────────────────────────────────────────────────────────
   {
     key: 'webhooks',
