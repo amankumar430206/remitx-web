@@ -39,7 +39,7 @@ export const FEATURE_FLAGS: FeatureFlagDef[] = [
   {
     key: 'network',
     label: 'Network',
-    description: 'Network overview and connectivity page',
+    description: 'Network overview and corridor connectivity map',
     group: 'Core',
     defaultEnabled: true,
   },
@@ -54,7 +54,7 @@ export const FEATURE_FLAGS: FeatureFlagDef[] = [
   {
     key: 'fx_pay_now',
     label: 'FX Pay Now',
-    description: 'Enable "Pay now" button on FX Rates page that creates a locked Zoqq quote and redirects to payment form',
+    description: 'Enable "Pay now" button on FX Rates page that creates a locked Zoqq quote and redirects to the payment form',
     group: 'Payments',
     defaultEnabled: true,
   },
@@ -94,6 +94,14 @@ export const FEATURE_FLAGS: FeatureFlagDef[] = [
     group: 'Compliance',
     defaultEnabled: true,
   },
+  // ── Security ──────────────────────────────────────────────────────────────
+  {
+    key: 'mfa',
+    label: 'Two-Factor Authentication (MFA)',
+    description: 'Allow users to enroll in TOTP-based two-factor authentication via the Settings > Security page',
+    group: 'Security',
+    defaultEnabled: true,
+  },
   // ── Analytics & Reporting ─────────────────────────────────────────────────
   {
     key: 'reports',
@@ -108,6 +116,42 @@ export const FEATURE_FLAGS: FeatureFlagDef[] = [
     description: 'Download reports as CSV or PDF',
     group: 'Analytics',
     defaultEnabled: true,
+  },
+  {
+    key: 'statement_reports',
+    label: 'Statement Reports',
+    description: 'Account statement report — per-account transaction ledger with running balance',
+    group: 'Analytics',
+    defaultEnabled: true,
+  },
+  {
+    key: 'reconciliation_reports',
+    label: 'Reconciliation Reports',
+    description: 'Settlement reconciliation report for matching sent payments against provider confirmations',
+    group: 'Analytics',
+    defaultEnabled: false,
+  },
+  // ── User & Access ─────────────────────────────────────────────────────────
+  {
+    key: 'user_management',
+    label: 'User Management',
+    description: 'Invite new users, assign roles, and deactivate accounts from Settings > Users',
+    group: 'User & Access',
+    defaultEnabled: true,
+  },
+  {
+    key: 'role_management',
+    label: 'Role Management',
+    description: 'Create and manage custom roles with granular permissions from Settings > Roles',
+    group: 'User & Access',
+    defaultEnabled: true,
+  },
+  {
+    key: 'sub_clients',
+    label: 'Sub-clients',
+    description: 'Enable a sub-client hierarchy so tenant admins can manage downstream client accounts',
+    group: 'User & Access',
+    defaultEnabled: false,
   },
   // ── Fees & Billing ────────────────────────────────────────────────────────
   {
@@ -152,11 +196,33 @@ export const FEATURE_FLAGS: FeatureFlagDef[] = [
     group: 'Fees & Billing',
     defaultEnabled: false,
   },
+  // ── Integrations ──────────────────────────────────────────────────────────
+  {
+    key: 'webhooks',
+    label: 'Webhooks',
+    description: 'Send outbound webhook events to a configured URL on payment and account state changes',
+    group: 'Integrations',
+    defaultEnabled: false,
+  },
   // ── UX & Personalisation ──────────────────────────────────────────────────
   {
     key: 'notifications',
     label: 'In-app Notifications',
     description: 'Real-time alerts for payment status changes and system events',
+    group: 'UX',
+    defaultEnabled: true,
+  },
+  {
+    key: 'dashboard_notifications',
+    label: 'Dashboard Notifications Panel',
+    description: 'Show a recent notifications panel on the right side of the Dashboard',
+    group: 'UX',
+    defaultEnabled: true,
+  },
+  {
+    key: 'command_palette',
+    label: 'Command Palette',
+    description: 'Global Ctrl+K command palette for quick navigation, actions, and in-app guides',
     group: 'UX',
     defaultEnabled: true,
   },
@@ -185,13 +251,6 @@ export const FEATURE_FLAGS: FeatureFlagDef[] = [
     key: 'client_branding',
     label: 'Client Branding',
     description: 'Show tenant logo and name in the sidebar/nav header instead of the default RemitX branding',
-    group: 'UX',
-    defaultEnabled: true,
-  },
-  {
-    key: 'dashboard_notifications',
-    label: 'Dashboard Notifications Panel',
-    description: 'Show a recent notifications panel on the right side of the Dashboard',
     group: 'UX',
     defaultEnabled: true,
   },
