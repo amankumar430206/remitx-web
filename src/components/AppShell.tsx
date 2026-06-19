@@ -114,7 +114,9 @@ export function AppShell() {
   const flagAccounts = useFeatureFlag('accounts')
   const flagBeneficiaries = useFeatureFlag('beneficiaries')
   const flagFxRates = useFeatureFlag('fx_rates')
+  const flagNetwork = useFeatureFlag('network')
   const flagKyc = useFeatureFlag('kyc')
+  const flagAssistant = useFeatureFlag('ai_assistant')
   const flagReports = useFeatureFlag('reports')
 
   // A user should see Payments if they can do anything payments-related
@@ -126,11 +128,11 @@ export function AppShell() {
     ...(flagPayments && canSeePayments ? [{ label: 'Payments', href: '/payments', icon: NAV_ICONS.payments, badge: pendingApprovals }] : []),
     ...(flagAccounts && has('accounts:view') ? [{ label: 'Accounts', href: '/accounts', icon: NAV_ICONS.accounts }] : []),
     ...(flagBeneficiaries && has('beneficiaries:view') ? [{ label: 'Beneficiaries', href: '/beneficiaries', icon: NAV_ICONS.beneficiaries }] : []),
-    ...(flagFxRates ? [{ label: 'FX Rates', href: '/fx-rates', icon: NAV_ICONS.fxRates }] : []),
-    { label: 'Network', href: '/network', icon: NAV_ICONS.network },
-    ...(flagKyc ? [{ label: 'KYC', href: '/kyc', icon: NAV_ICONS.kyc }] : []),
+    ...(flagFxRates && has('fx_rates:view') ? [{ label: 'FX Rates', href: '/fx-rates', icon: NAV_ICONS.fxRates }] : []),
+    ...(flagNetwork && has('network:view') ? [{ label: 'Network', href: '/network', icon: NAV_ICONS.network }] : []),
+    ...(flagKyc && has('kyc:view') ? [{ label: 'KYC', href: '/kyc', icon: NAV_ICONS.kyc }] : []),
     ...(flagReports && has('reports:view') ? [{ label: 'Reports', href: '/reports/transactions', icon: NAV_ICONS.reports }] : []),
-    { label: 'Assistant', href: '/assistant', icon: NAV_ICONS.assistant },
+    ...(flagAssistant && has('assistant:view') ? [{ label: 'Assistant', href: '/assistant', icon: NAV_ICONS.assistant }] : []),
     { label: 'Settings', href: '/settings', icon: NAV_ICONS.settings },
     ...(has('admin:config') ? [{ label: 'Admin', href: '/admin/kyc-queue', icon: NAV_ICONS.admin }] : []),
   ]

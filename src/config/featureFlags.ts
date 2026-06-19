@@ -36,7 +36,28 @@ export const FEATURE_FLAGS: FeatureFlagDef[] = [
     group: 'Core',
     defaultEnabled: true,
   },
+  {
+    key: 'network',
+    label: 'Network',
+    description: 'Network overview and connectivity page',
+    group: 'Core',
+    defaultEnabled: true,
+  },
+  {
+    key: 'ai_assistant',
+    label: 'AI Assistant',
+    description: 'In-app AI assistant for payment guidance and support',
+    group: 'Core',
+    defaultEnabled: true,
+  },
   // ── Payments workflow ─────────────────────────────────────────────────────
+  {
+    key: 'fx_pay_now',
+    label: 'FX Pay Now',
+    description: 'Enable "Pay now" button on FX Rates page that creates a locked Zoqq quote and redirects to payment form',
+    group: 'Payments',
+    defaultEnabled: true,
+  },
   {
     key: 'payment_approval',
     label: 'Maker-Checker Approval',
@@ -164,6 +185,13 @@ export const FEATURE_FLAGS: FeatureFlagDef[] = [
     key: 'client_branding',
     label: 'Client Branding',
     description: 'Show tenant logo and name in the sidebar/nav header instead of the default RemitX branding',
+    group: 'UX',
+    defaultEnabled: true,
+  },
+  {
+    key: 'dashboard_notifications',
+    label: 'Dashboard Notifications Panel',
+    description: 'Show a recent notifications panel on the right side of the Dashboard',
     group: 'UX',
     defaultEnabled: true,
   },
