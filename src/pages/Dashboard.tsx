@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import { format, parseISO, differenceInDays } from 'date-fns'
+import { format, parseISO, differenceInDays, formatDistanceToNow } from 'date-fns'
 import { PageHeader, DataTable, StatusBadge, AmountDisplay, LoadingState, ErrorState } from '@/components/ui/index'
 import { Button } from '@/components/ui/atoms/Button'
 import { useAccounts } from '@/hooks/useAccounts'
@@ -11,7 +11,9 @@ import { useAuthStore } from '@/stores/authStore'
 import { ContentCard } from '@/layouts/ContentCard'
 import { useFeatureFlag } from '@/hooks/useFeatureFlag'
 import { useScheduledPayments, useCancelScheduledPayment } from '@/hooks/useScheduledPayments'
+import { useNotifications, useMarkAllNotificationsRead, useMarkNotificationRead } from '@/hooks/useNotifications'
 import type { ScheduledPayment } from '@/api/scheduledPayments'
+import type { Notification } from '@/api/notifications'
 
 const CURRENCY_GRADIENT: Record<string, { from: string; to: string; flag: string }> = {
   USD: { from: '#1d4ed8', to: '#1e3a8a', flag: '🇺🇸' },
@@ -120,6 +122,127 @@ function NextScheduledWidget({ schedule }: { schedule: ScheduledPayment }) {
         </svg>
       </div>
     </Link>
+  )
+}
+
+// ─── Notification icon by event type ─────────────────────────────────────────
+
+function NotifIcon({ type }: { type: string }) {
+  if (type.startsWith('payment')) return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 9.75h4.875a2.625 2.625 0 010 5.25H12M8.25 9.75L10.5 7.5M8.25 9.75L10.5 12m9-7.243V21.75l-3.75-1.5-3.75 1.5-3.75-1.5-3.75 1.5V4.757c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0c1.1.128 1.907 1.077 1.907 2.185z" />
+    </svg>
+  )
+  if (type.startsWith('kyc')) return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+    </svg>
+  )
+  if (type.startsWith('account')) return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
+    </svg>
+  )
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+    </svg>
+  )
+}
+
+// ─── Recent notifications panel ───────────────────────────────────────────────
+
+function RecentNotifications() {
+  const { data, isLoading } = useNotifications({ limit: 8 })
+  const markRead    = useMarkNotificationRead()
+  const markAllRead = useMarkAllNotificationsRead()
+
+  const notifications: Notification[] = data?.data ?? []
+  const unreadCount = notifications.filter(n => !n.is_read).length
+
+  return (
+    <ContentCard padding="none" className="flex flex-col">
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-border px-4 py-3.5 shrink-0">
+        <div className="flex items-center gap-2">
+          <h2 className="text-sm font-semibold text-foreground">Notifications</h2>
+          {unreadCount > 0 && (
+            <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-bold text-white">
+              {unreadCount}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-1">
+          {unreadCount > 0 && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => markAllRead.mutate()}
+              loading={markAllRead.isPending}
+              className="text-xs"
+            >
+              Mark all read
+            </Button>
+          )}
+          <Link to="/notifications">
+            <Button size="sm" variant="ghost" className="text-xs">View all</Button>
+          </Link>
+        </div>
+      </div>
+
+      {/* Body */}
+      <div className="flex-1 overflow-y-auto divide-y divide-border">
+        {isLoading ? (
+          <div className="flex items-center justify-center py-10">
+            <svg className="h-5 w-5 animate-spin text-muted-fg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+          </div>
+        ) : notifications.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 py-10 text-center px-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-raised text-muted-fg">
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+              </svg>
+            </div>
+            <p className="text-xs text-muted-fg">No notifications yet</p>
+          </div>
+        ) : (
+          notifications.map(n => (
+            <button
+              key={n.id}
+              type="button"
+              onClick={() => { if (!n.is_read) markRead.mutate(n.id) }}
+              className={`w-full flex items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-raised ${!n.is_read ? 'bg-primary/[0.03]' : ''}`}
+            >
+              {/* Icon */}
+              <div className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-colors ${
+                !n.is_read ? 'bg-primary/10 text-primary' : 'bg-surface-raised text-muted-fg'
+              }`}>
+                <NotifIcon type={n.event_type} />
+              </div>
+
+              {/* Text */}
+              <div className="flex-1 min-w-0">
+                <p className={`text-xs leading-snug ${!n.is_read ? 'font-semibold text-foreground' : 'font-medium text-foreground/80'}`}>
+                  {n.title}
+                </p>
+                <p className="mt-0.5 text-[11px] text-muted-fg leading-snug line-clamp-2">{n.body}</p>
+                <p className="mt-1 text-[10px] text-muted-fg/60">
+                  {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
+                </p>
+              </div>
+
+              {/* Unread dot */}
+              {!n.is_read && (
+                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+              )}
+            </button>
+          ))
+        )}
+      </div>
+    </ContentCard>
   )
 }
 
@@ -489,66 +612,74 @@ export function Dashboard() {
         </div>
       )}
 
-      {/* ── Recent payments ── */}
-      <ContentCard padding="none">
-        <div className="flex items-center justify-between border-b border-border px-5 py-4">
-          <div>
-            <h2 className="text-sm font-semibold text-foreground">Recent payments</h2>
-            {paymentsData?.meta?.total !== undefined && (
-              <p className="text-xs text-muted-fg">{paymentsData.meta.total} total</p>
-            )}
+      {/* ── Recent payments + Notifications ── */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+
+        {/* Recent payments — 2/3 */}
+        <ContentCard padding="none" className="lg:col-span-2">
+          <div className="flex items-center justify-between border-b border-border px-5 py-4">
+            <div>
+              <h2 className="text-sm font-semibold text-foreground">Recent payments</h2>
+              {paymentsData?.meta?.total !== undefined && (
+                <p className="text-xs text-muted-fg">{paymentsData.meta.total} total</p>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {pendingCount > 0 && (
+                <Button variant="outline" size="sm" onClick={() => navigate('/payments/approval-queue')}>
+                  <span className="flex h-4 w-4 items-center justify-center rounded-full bg-warning text-xs font-bold text-warning-fg">{pendingCount}</span>
+                  Pending approval
+                </Button>
+              )}
+              <Button variant="ghost" size="sm" onClick={() => navigate('/payments')}>View all</Button>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            {pendingCount > 0 && (
-              <Button variant="outline" size="sm" onClick={() => navigate('/payments/approval-queue')}>
-                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-warning text-xs font-bold text-warning-fg">{pendingCount}</span>
-                Pending approval
-              </Button>
-            )}
-            <Button variant="ghost" size="sm" onClick={() => navigate('/payments')}>View all</Button>
-          </div>
-        </div>
-        {loadingPayments ? (
-          <LoadingState message="Loading payments…" />
-        ) : paymentsError ? (
-          <ErrorState title="Could not load payments" onRetry={() => queryClient.invalidateQueries({ queryKey: ['payments'] })} />
-        ) : (
-          <DataTable
-            columns={[
-              {
-                key: 'beneficiary', header: 'Recipient',
-                render: p => (
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">{p.beneficiary_name ?? '—'}</p>
-                    <p className="text-xs text-muted-fg">{p.beneficiary_country_code}</p>
-                  </div>
-                ),
-              },
-              { key: 'amount', header: 'Amount', render: p => <AmountDisplay amount={p.source_amount} currency={p.source_currency} size="sm" /> },
-              { key: 'fx', header: 'They receive', render: p => <AmountDisplay amount={p.dest_amount} currency={p.dest_currency} size="sm" /> },
-              { key: 'status', header: 'Status', render: p => <StatusBadge status={p.status} /> },
-              {
-                key: 'created_at', header: 'Date',
-                render: p => (
-                  <div className="flex flex-col">
-                    <span className="text-xs font-medium text-foreground">
-                      {new Date(p.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-                    </span>
-                    <span className="text-xs text-muted-fg">
-                      {new Date(p.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
-                ),
-              },
-            ]}
-            data={paymentsData?.data ?? []}
-            getRowId={p => p.id}
-            onRowClick={p => navigate(`/payments/${p.id}`)}
-            emptyTitle="No payments yet"
-            emptyDescription="Send your first payment to get started."
-          />
-        )}
-      </ContentCard>
+          {loadingPayments ? (
+            <LoadingState message="Loading payments…" />
+          ) : paymentsError ? (
+            <ErrorState title="Could not load payments" onRetry={() => queryClient.invalidateQueries({ queryKey: ['payments'] })} />
+          ) : (
+            <DataTable
+              columns={[
+                {
+                  key: 'beneficiary', header: 'Recipient',
+                  render: p => (
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">{p.beneficiary_name ?? '—'}</p>
+                      <p className="text-xs text-muted-fg">{p.beneficiary_country_code}</p>
+                    </div>
+                  ),
+                },
+                { key: 'amount', header: 'Amount', render: p => <AmountDisplay amount={p.source_amount} currency={p.source_currency} size="sm" /> },
+                { key: 'fx', header: 'They receive', render: p => <AmountDisplay amount={p.dest_amount} currency={p.dest_currency} size="sm" /> },
+                { key: 'status', header: 'Status', render: p => <StatusBadge status={p.status} /> },
+                {
+                  key: 'created_at', header: 'Date',
+                  render: p => (
+                    <div className="flex flex-col">
+                      <span className="text-xs font-medium text-foreground">
+                        {new Date(p.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </span>
+                      <span className="text-xs text-muted-fg">
+                        {new Date(p.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  ),
+                },
+              ]}
+              data={paymentsData?.data ?? []}
+              getRowId={p => p.id}
+              onRowClick={p => navigate(`/payments/${p.id}`)}
+              emptyTitle="No payments yet"
+              emptyDescription="Send your first payment to get started."
+            />
+          )}
+        </ContentCard>
+
+        {/* Recent notifications — 1/3 */}
+        <RecentNotifications />
+
+      </div>
     </div>
   )
 }
