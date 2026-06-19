@@ -111,6 +111,7 @@ export function RoleEditor() {
   const createRole = useCreateRole()
   const updateRole = useUpdateRole()
   const pending = createRole.isPending || updateRole.isPending
+  const { has } = usePermissions()
 
   const role = useMemo(() => roles?.find(r => r.key === key) ?? null, [roles, key])
 
@@ -194,7 +195,6 @@ export function RoleEditor() {
     )
   }
 
-  const { has } = usePermissions()
   const isSuperAdmin = has('*:*')
   // System roles are read-only for regular admins; super admins can always edit
   const isSystemRole = isEdit && (role?.isSystem ?? false) && !isSuperAdmin
