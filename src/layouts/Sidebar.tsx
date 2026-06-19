@@ -10,6 +10,7 @@ interface SidebarProps {
   user?: { name: string; email: string; avatarUrl?: string; role?: string }
   onLogout?: () => void
   tenantName?: string
+  logoUrl?: string | null
 }
 
 const ArrowsIcon = () => (
@@ -18,7 +19,7 @@ const ArrowsIcon = () => (
   </svg>
 )
 
-export function Sidebar({ navItems, user, onLogout, tenantName }: SidebarProps) {
+export function Sidebar({ navItems, user, onLogout, tenantName, logoUrl }: SidebarProps) {
   const navigate = useNavigate()
   const togglePalette = useCommandPaletteStore(s => s.toggle)
 
@@ -27,14 +28,24 @@ export function Sidebar({ navItems, user, onLogout, tenantName }: SidebarProps) 
 
       {/* Logo */}
       <div className="flex h-16 items-center gap-3 px-5 border-b border-border">
-        <Link to="/" className="flex items-center gap-2.5">
-          <div className="h-8 w-8 rounded-xl btn-gradient flex items-center justify-center shadow-md shadow-blue-900/40 shrink-0">
-            <ArrowsIcon />
-          </div>
-          <div className="flex flex-col leading-tight">
-            <span className="font-bold text-nav-fg-active text-sm tracking-tight">RemitX</span>
-            {tenantName && (
-              <span className="text-[10px] text-nav-fg leading-none">{tenantName}</span>
+        <Link to="/" className="flex items-center gap-2.5 min-w-0">
+          {logoUrl ? (
+            <img
+              src={logoUrl}
+              alt={tenantName ?? 'Logo'}
+              className="h-8 w-8 rounded-xl object-contain bg-white p-0.5 shrink-0 shadow-sm"
+            />
+          ) : (
+            <div className="h-8 w-8 rounded-xl btn-gradient flex items-center justify-center shadow-md shadow-blue-900/40 shrink-0">
+              <ArrowsIcon />
+            </div>
+          )}
+          <div className="flex flex-col leading-tight min-w-0">
+            <span className="font-bold text-nav-fg-active text-sm tracking-tight truncate">
+              {tenantName ?? 'RemitX'}
+            </span>
+            {logoUrl && (
+              <span className="text-[10px] text-nav-fg leading-none">Powered by RemitX</span>
             )}
           </div>
         </Link>

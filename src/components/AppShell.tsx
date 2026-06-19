@@ -79,7 +79,8 @@ export function AppShell() {
   const tenantSlug = useAuthStore(s => s.tenantSlug)
   const navigate = useNavigate()
   const applyTheme = useThemeStore(s => s.applyTheme)
-  const logoUrl = useThemeStore(s => s.theme?.logoUrl ?? null)
+  const logoUrl        = useThemeStore(s => s.theme?.logoUrl ?? null)
+  const themeDisplayName = useThemeStore(s => s.theme?.tenantName ?? null)
   const setFlags = useFeatureFlagStore(s => s.setFlags)
   const { data: approvalData } = useApprovalQueue()
 
@@ -108,6 +109,7 @@ export function AppShell() {
   const { has } = usePermissions()
   const pendingApprovals = approvalData?.data?.length ?? 0
 
+  const flagClientBranding = useFeatureFlag('client_branding')
   const flagPayments = useFeatureFlag('payments')
   const flagAccounts = useFeatureFlag('accounts')
   const flagBeneficiaries = useFeatureFlag('beneficiaries')
@@ -138,8 +140,8 @@ export function AppShell() {
       navItems={navItems}
       user={user ? { name: [user.first_name, user.last_name].filter(Boolean).join(' ') || user.email, email: user.email, role: user.role } : undefined}
       onLogout={handleLogout}
-      tenantName={tenantSlug ?? undefined}
-      logoUrl={logoUrl}
+      tenantName={flagClientBranding && themeDisplayName ? themeDisplayName : (tenantSlug ?? undefined)}
+      logoUrl={flagClientBranding ? logoUrl : null}
     >
       <Outlet />
     </PageLayout>

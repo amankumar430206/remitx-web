@@ -40,7 +40,7 @@ export function PageLayout({ navItems, user, onLogout, logo, logoUrl, tenantName
   if (layout === 'sidebar') {
     return (
       <div className="min-h-screen bg-surface-raised flex">
-        <Sidebar navItems={navItems} user={user} onLogout={onLogout} tenantName={tenantName} />
+        <Sidebar navItems={navItems} user={user} onLogout={onLogout} tenantName={tenantName} logoUrl={logoUrl} />
         <div className="flex-1 flex flex-col min-w-0">
           <MobileNav navItems={navItems} user={user} onLogout={onLogout} logo={logo} tenantName={tenantName} />
           <TopBar user={user} tenantName={tenantName} onLogout={onLogout} />

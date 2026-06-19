@@ -160,6 +160,13 @@ export const FEATURE_FLAGS: FeatureFlagDef[] = [
     group: 'UX',
     defaultEnabled: true,
   },
+  {
+    key: 'client_branding',
+    label: 'Client Branding',
+    description: 'Show tenant logo and name in the sidebar/nav header instead of the default RemitX branding',
+    group: 'UX',
+    defaultEnabled: true,
+  },
 ]
 
 export const FLAG_GROUPS = [...new Set(FEATURE_FLAGS.map(f => f.group))]
