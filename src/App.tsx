@@ -45,7 +45,6 @@ const Users               = lazy(() => import('@/pages/settings/Users').then(m =
 const Permissions         = lazy(() => import('@/pages/settings/Permissions').then(m => ({ default: m.Permissions })))
 const RoleEditor          = lazy(() => import('@/pages/settings/RoleEditor').then(m => ({ default: m.RoleEditor })))
 const RoleComparison      = lazy(() => import('@/pages/settings/RoleComparison').then(m => ({ default: m.RoleComparison })))
-const SidebarPermissions  = lazy(() => import('@/pages/settings/SidebarPermissions').then(m => ({ default: m.SidebarPermissions })))
 const SubClients          = lazy(() => import('@/pages/settings/SubClients').then(m => ({ default: m.SubClients })))
 const Theme               = lazy(() => import('@/pages/settings/Theme').then(m => ({ default: m.Theme })))
 const FeatureFlags        = lazy(() => import('@/pages/settings/FeatureFlags').then(m => ({ default: m.FeatureFlags })))
@@ -151,7 +150,6 @@ function App() {
                   <Route path="permissions" element={page(<Permissions />)} />
                   <Route path="permissions/new" element={page(<RoleEditor />)} />
                   <Route path="permissions/compare" element={page(<RoleComparison />)} />
-                  <Route path="permissions/sidebar" element={page(<SidebarPermissions />)} />
                   <Route path="permissions/:key" element={page(<RoleEditor />)} />
                 </Route>
                 <Route element={<RequirePermission permission="subclients:view" />}>
