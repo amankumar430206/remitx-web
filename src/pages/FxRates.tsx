@@ -4,10 +4,9 @@ import { useMutation } from '@tanstack/react-query'
 import { PageHeader } from '@/components/ui/organisms/PageHeader'
 import { LoadingState } from '@/components/ui/molecules/LoadingState'
 import { ErrorState } from '@/components/ui/molecules/ErrorState'
-import { Spinner } from '@/components/ui/atoms/Spinner'
 import { Button } from '@/components/ui/atoms/Button'
 import { ContentCard } from '@/layouts/ContentCard'
-import { useFxRatesList, useFxQuote } from '@/hooks/useFxRates'
+import { useFxRatesList } from '@/hooks/useFxRates'
 import fxApi, { type ZoqqQuoteType, type ZoqqLockPeriod, type ZoqqConversionSchedule } from '@/api/fx'
 import { usePaymentStore } from '@/stores/paymentStore'
 
@@ -25,12 +24,6 @@ export function FxRates() {
   const [calcFrom, setCalcFrom] = useState('')
   const [calcTo, setCalcTo] = useState('')
   const [calcAmount, setCalcAmount] = useState('')
-  const [debouncedAmount, setDebouncedAmount] = useState('')
-
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedAmount(calcAmount), 500)
-    return () => clearTimeout(t)
-  }, [calcAmount])
 
   const currencies = useMemo(() => {
     const all = rates.flatMap(r => [r.from, r.to])
@@ -44,7 +37,15 @@ export function FxRates() {
     }
   }, [currencies, calcFrom])
 
-  const { data: quote, isFetching: quoteFetching } = useFxQuote(calcFrom, calcTo, debouncedAmount)
+  const calcRate = useMemo(
+    () => rates.find(r => r.from === calcFrom && r.to === calcTo),
+    [rates, calcFrom, calcTo],
+  )
+  const calcToAmount = useMemo(() => {
+    const amt = parseFloat(calcAmount)
+    if (!calcRate || !calcAmount || isNaN(amt) || amt <= 0) return null
+    return (amt * parseFloat(calcRate.clientRate)).toFixed(2)
+  }, [calcRate, calcAmount])
 
   const [zoqqQuoteType,          setZoqqQuoteType]          = useState<ZoqqQuoteType>('payout')
   const [zoqqLockPeriod,         setZoqqLockPeriod]         = useState<ZoqqLockPeriod>('15_mins')
@@ -111,10 +112,8 @@ export function FxRates() {
             <label className="text-sm font-medium text-foreground">They receive</label>
             <div className="flex gap-2">
               <div className="flex-1 h-9 rounded border border-border bg-surface-raised px-3 text-sm flex items-center text-foreground font-medium">
-                {quoteFetching ? (
-                  <Spinner size="sm" />
-                ) : quote ? (
-                  parseFloat(quote.toAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                {calcToAmount != null ? (
+                  parseFloat(calcToAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                 ) : (
                   <span className="text-muted-fg">—</span>
                 )}
@@ -132,13 +131,11 @@ export function FxRates() {
           </div>
         </div>
 
-        {quote && (
+        {calcRate && (
           <p className="mt-3 text-xs text-muted-fg">
-            Rate: 1 {calcFrom} = {parseFloat(quote.rate).toFixed(4)} {calcTo}
+            Rate: 1 {calcFrom} = {parseFloat(calcRate.clientRate).toFixed(4)} {calcTo}
             {' · '}
-            Spread: {parseFloat(quote.spread).toFixed(4)}%
-            {' · '}
-            Quote expires in ~30s
+            Mid: {parseFloat(calcRate.midRate).toFixed(4)}
           </p>
         )}
 
