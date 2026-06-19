@@ -187,14 +187,16 @@ export function FxRates() {
               ))}
             </div>
 
-            <Button
-              onClick={() => payNow()}
-              loading={payNowLoading}
-              variant="gradient"
-              className="w-full mt-1"
-            >
-              Pay now →
-            </Button>
+            <div className="flex justify-end">
+              <Button
+                onClick={() => payNow()}
+                loading={payNowLoading}
+                variant="gradient"
+                size="sm"
+              >
+                Pay now →
+              </Button>
+            </div>
           </div>
         )}
       </ContentCard>
