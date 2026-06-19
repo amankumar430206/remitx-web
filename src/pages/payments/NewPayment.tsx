@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -1017,13 +1017,27 @@ function PreflightBanner({ items }: { items: PreflightItem[] }) {
 
 export function NewPayment() {
   const navigate = useNavigate()
-  const { step, setStep, reset } = usePaymentStore()
+  const [searchParams] = useSearchParams()
+  const { step, setStep, reset, setData } = usePaymentStore()
   const user = useAuthStore(s => s.user)
   const isSuperAdmin = user?.role === 'super_admin'
   const { data: prefetchAccounts } = useAccounts()
   const { data: prefetchBenes } = useBeneficiaries({ limit: 1 })
 
-  useEffect(() => { reset() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const quoteId = searchParams.get('quoteId')
+    if (quoteId) {
+      // Coming from FX rates page — store already seeded, skip reset and jump to step 2.
+      // On refresh the store is empty but Step2's debounce refetches the quote automatically.
+      const from = searchParams.get('from')
+      const to = searchParams.get('to')
+      const amount = searchParams.get('amount')
+      if (from && to && amount) setData({ sourceCurrency: from, destinationCurrency: to, sourceAmount: amount })
+      setStep(2)
+    } else {
+      reset()
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const next = () => setStep(step + 1)
   const back = () => { if (step > 1) setStep(step - 1) }

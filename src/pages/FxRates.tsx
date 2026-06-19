@@ -1,13 +1,20 @@
 import { useState, useEffect, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useMutation } from '@tanstack/react-query'
 import { PageHeader } from '@/components/ui/organisms/PageHeader'
 import { LoadingState } from '@/components/ui/molecules/LoadingState'
 import { ErrorState } from '@/components/ui/molecules/ErrorState'
 import { Spinner } from '@/components/ui/atoms/Spinner'
+import { Button } from '@/components/ui/atoms/Button'
 import { ContentCard } from '@/layouts/ContentCard'
 import { useFxRatesList, useFxQuote } from '@/hooks/useFxRates'
+import fxApi from '@/api/fx'
+import { usePaymentStore } from '@/stores/paymentStore'
 
 export function FxRates() {
   const { rates, provider, isLoading, isError, refetch } = useFxRatesList()
+  const navigate = useNavigate()
+  const { setData, setStep } = usePaymentStore()
 
   const [calcFrom, setCalcFrom] = useState('')
   const [calcTo, setCalcTo] = useState('')
@@ -32,6 +39,18 @@ export function FxRates() {
   }, [currencies, calcFrom])
 
   const { data: quote, isFetching: quoteFetching } = useFxQuote(calcFrom, calcTo, debouncedAmount)
+
+  const { mutate: payNow, isPending: payNowLoading } = useMutation({
+    mutationFn: () => fxApi.quote(calcFrom, calcTo, calcAmount),
+    onSuccess: (res) => {
+      const q = res.data.data
+      setData({ sourceCurrency: calcFrom, destinationCurrency: calcTo, sourceAmount: calcAmount, quote: q })
+      setStep(2)
+      navigate(`/payments/new?quoteId=${encodeURIComponent(q.quoteId)}&from=${calcFrom}&to=${calcTo}&amount=${encodeURIComponent(calcAmount)}`)
+    },
+  })
+
+  const canPayNow = provider === 'zoqq' && !!calcFrom && !!calcTo && parseFloat(calcAmount) > 0
 
   if (isLoading) return <LoadingState message="Loading exchange rates…" />
   if (isError) return <ErrorState title="Could not load rates" onRetry={refetch} />
@@ -108,6 +127,19 @@ export function FxRates() {
             {' · '}
             Quote expires in ~30s
           </p>
+        )}
+
+        {canPayNow && (
+          <div className="mt-4 pt-4 border-t border-border">
+            <Button
+              onClick={() => payNow()}
+              loading={payNowLoading}
+              variant="gradient"
+              className="w-full"
+            >
+              Pay now →
+            </Button>
+          </div>
         )}
       </ContentCard>
 
