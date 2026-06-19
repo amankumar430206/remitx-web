@@ -1099,13 +1099,13 @@ export function NewPayment() {
   useEffect(() => {
     const quoteId = searchParams.get('quoteId')
     if (quoteId) {
-      // Coming from FX rates page — store already seeded, skip reset and jump to step 2.
-      // On refresh the store is empty but Step2's debounce refetches the quote automatically.
+      // Coming from FX rates page — pre-seed currencies/amount/quote but start at Step 1
+      // so the user still picks a beneficiary before reaching the amount step.
       const from = searchParams.get('from')
       const to = searchParams.get('to')
       const amount = searchParams.get('amount')
       if (from && to && amount) setData({ sourceCurrency: from, destinationCurrency: to, sourceAmount: amount })
-      setStep(2)
+      setStep(1)
     } else {
       reset()
     }

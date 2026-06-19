@@ -14,7 +14,7 @@ import { usePaymentStore } from '@/stores/paymentStore'
 export function FxRates() {
   const { rates, provider, isLoading, isError, refetch } = useFxRatesList()
   const navigate = useNavigate()
-  const { setData, setStep } = usePaymentStore()
+  const { setData } = usePaymentStore()
 
   const [calcFrom, setCalcFrom] = useState('')
   const [calcTo, setCalcTo] = useState('')
@@ -53,7 +53,6 @@ export function FxRates() {
     onSuccess: (res) => {
       const q = res.data.data
       setData({ sourceCurrency: calcFrom, destinationCurrency: calcTo, sourceAmount: calcAmount, quote: q })
-      setStep(2)
       navigate(`/payments/new?quoteId=${encodeURIComponent(q.quoteId)}&from=${calcFrom}&to=${calcTo}&amount=${encodeURIComponent(calcAmount)}`)
     },
   })
