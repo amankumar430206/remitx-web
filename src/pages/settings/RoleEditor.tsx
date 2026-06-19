@@ -11,6 +11,7 @@ import { Toggle } from '@/components/ui/atoms/Toggle'
 import { Badge } from '@/components/ui/atoms/Badge'
 import { ContentCard } from '@/layouts/ContentCard'
 import { useRoles, usePermissionCatalog, useRoleTemplates, useCreateRole, useUpdateRole } from '@/hooks/useRoles'
+import { usePermissions } from '@/hooks/usePermissions'
 import { getApiError } from '@/lib/apiError'
 import { cn } from '@/lib/utils'
 import type { RoleTemplate } from '@/api/tenants'
@@ -31,6 +32,7 @@ interface NavDef {
 
 const NAV_DEFS: NavDef[] = [
   { key: 'dashboard',      label: 'Dashboard',      permission: null,               locked: 'Always visible',           path: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
+  { key: 'tenants',        label: 'Tenants',        permission: 'admin:config',                                         path: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' },
   { key: 'payments',       label: 'Payments',       permission: 'payments:view',                                        path: 'M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4' },
   { key: 'accounts',       label: 'Accounts',       permission: 'accounts:view',                                        path: 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z' },
   { key: 'beneficiaries',  label: 'Beneficiaries',  permission: 'beneficiaries:view',                                   path: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z' },
@@ -192,19 +194,24 @@ export function RoleEditor() {
     )
   }
 
-  const isSystemRole = isEdit && (role?.isSystem ?? false)
+  const { has } = usePermissions()
+  const isSuperAdmin = has('*:*')
+  // System roles are read-only for regular admins; super admins can always edit
+  const isSystemRole = isEdit && (role?.isSystem ?? false) && !isSuperAdmin
   const canSave = name.trim().length > 0 && !pending && !isSystemRole
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title={isSystemRole ? ((role?.name ?? 'Role') + ' (System)') : isEdit ? 'Edit role' : 'New role'}
+        title={isSystemRole ? ((role?.name ?? 'Role') + ' (System — Read Only)') : isEdit ? 'Edit role' : 'New role'}
         breadcrumbs={[{ label: 'Settings' }, { label: 'Roles', href: ROLES_PATH }, { label: isEdit ? (role?.name ?? 'Edit') : 'New role' }]}
         description={isSystemRole
-          ? 'System roles are built into the platform and cannot be modified. Create a custom role to define your own permissions.'
-          : isEdit
-            ? "Update this role's details and the permissions it grants."
-            : 'Define a new role and choose the permissions it grants. It can then be assigned to users.'}
+          ? 'System roles are read-only for tenant admins. Create a custom role to define your own permissions.'
+          : isEdit && (role?.isSystem)
+            ? "Editing a system role — changes apply immediately for all users with this role."
+            : isEdit
+              ? "Update this role's details and the permissions it grants."
+              : 'Define a new role and choose the permissions it grants. It can then be assigned to users.'}
         actions={
           <div className="flex items-center gap-3">
             <Button variant="outline" onClick={() => navigate(ROLES_PATH)} disabled={pending}>
