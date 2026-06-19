@@ -19,7 +19,8 @@ import { useBeneficiaries } from '@/hooks/useBeneficiaries'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useDebounce } from '@/hooks/useDebounce'
 import { usePaymentStore } from '@/stores/paymentStore'
-import fxApi, { type FxQuote } from '@/api/fx'
+import fxApi, { type FxQuote, type ZoqqQuoteType, type ZoqqLockPeriod, type ZoqqConversionSchedule } from '@/api/fx'
+import { useFxRatesList } from '@/hooks/useFxRates'
 import paymentsApi from '@/api/payments'
 import accountsApi from '@/api/accounts'
 import { cn } from '@/lib/utils'
@@ -284,8 +285,19 @@ const amountSchema = z.object({
 })
 type AmountFormValues = z.infer<typeof amountSchema>
 
+const LOCK_PERIOD_LABELS: Record<ZoqqLockPeriod, string> = {
+  '5_mins': '5 min', '15_mins': '15 min', '1_hour': '1 hr',
+  '4_hours': '4 hr', '8_hours': '8 hr', '24_hours': '24 hr',
+}
+const CONVERSION_SCHEDULE_LABELS: Record<ZoqqConversionSchedule, string> = {
+  immediate: 'Immediately', end_of_day: 'End of day', next_day: 'Next day', '2_days': 'In 2 days',
+}
+
 function Step2({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
   const { setData, data: stored } = usePaymentStore()
+  const { provider } = useFxRatesList()
+  const isZoqq = provider === 'zoqq'
+
   const [quote, setQuote] = useState<FxQuote | null>(stored.quote ?? null)
   const [quoteLoading, setQuoteLoading] = useState(false)
   const [quoteError, setQuoteError] = useState('')
@@ -296,6 +308,10 @@ function Step2({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
   const [balanceVisible, setBalanceVisible] = useState(true)
   const [lockMins, setLockMins] = useState(5)
   const lockMinsRef = useRef(5)
+  // Zoqq-specific options — pre-fill from existing quote if coming from FX page
+  const [zoqqQuoteType,          setZoqqQuoteType]          = useState<ZoqqQuoteType>(stored.quote?.quoteType ?? 'payout')
+  const [zoqqLockPeriod,         setZoqqLockPeriod]         = useState<ZoqqLockPeriod>(stored.quote?.lockPeriod ?? '15_mins')
+  const [zoqqConversionSchedule, setZoqqConversionSchedule] = useState<ZoqqConversionSchedule>(stored.quote?.conversionSchedule ?? 'immediate')
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const { data: accountsData } = useQuery({
@@ -341,10 +357,15 @@ function Step2({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
     setQuoteLoading(true)
     setQuoteError('')
     try {
-      const res = await fxApi.quote(from, to, amount)
+      const opts = isZoqq
+        ? { quoteType: zoqqQuoteType, lockPeriod: zoqqLockPeriod, conversionSchedule: zoqqConversionSchedule }
+        : undefined
+      const res = await fxApi.quote(from, to, amount, opts)
       const q = res.data.data
-      const lockMs = lockMinsRef.current * 60 * 1000
-      const adjustedQuote: FxQuote = { ...q, expiresAt: new Date(Date.now() + lockMs).toISOString() }
+      // For non-Zoqq: client-side lock extension via lockMins pill; for Zoqq: use API-returned expiresAt
+      const adjustedQuote: FxQuote = isZoqq
+        ? q
+        : { ...q, expiresAt: new Date(Date.now() + lockMinsRef.current * 60 * 1000).toISOString() }
       setQuote(adjustedQuote)
 
       setFeeLoading(true)
@@ -366,7 +387,7 @@ function Step2({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
     } finally {
       setQuoteLoading(false)
     }
-  }, [setData])
+  }, [setData, isZoqq, zoqqQuoteType, zoqqLockPeriod, zoqqConversionSchedule])
 
   const handleExpire = useCallback(() => {
     fetchQuote(sourceAmount, sourceCurrency, destinationCurrency)
@@ -506,8 +527,8 @@ function Step2({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
             )}
           </div>
 
-          {/* Lock duration pills */}
-          {quote && !quoteLoading && (
+          {/* Lock duration — Zoqq uses API lock periods; non-Zoqq uses client-side pills */}
+          {quote && !quoteLoading && !isZoqq && (
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-[11px] text-muted-fg shrink-0">Lock for</span>
               {[5, 15, 30, 60].map(m => (
@@ -525,6 +546,57 @@ function Step2({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
                   {m}m
                 </button>
               ))}
+            </div>
+          )}
+
+          {/* Zoqq-specific options */}
+          {isZoqq && (
+            <div className="flex flex-col gap-1.5 pt-0.5">
+              {/* Lock period */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[11px] text-muted-fg w-24 shrink-0">Lock period</span>
+                {(['5_mins', '15_mins', '1_hour', '4_hours', '8_hours', '24_hours'] as const).map(lp => (
+                  <button key={lp} type="button" onClick={() => setZoqqLockPeriod(lp)}
+                    className={cn('rounded-full border px-2.5 py-0.5 text-[11px] font-semibold transition-all duration-150',
+                      zoqqLockPeriod === lp
+                        ? 'bg-primary border-primary text-white shadow-sm shadow-primary/25'
+                        : 'border-border text-muted-fg hover:border-primary/50 hover:text-foreground'
+                    )}
+                  >
+                    {LOCK_PERIOD_LABELS[lp]}
+                  </button>
+                ))}
+              </div>
+              {/* Quote type */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[11px] text-muted-fg w-24 shrink-0">Quote type</span>
+                {(['payout', 'conversion'] as const).map(qt => (
+                  <button key={qt} type="button" onClick={() => setZoqqQuoteType(qt)}
+                    className={cn('rounded-full border px-2.5 py-0.5 text-[11px] font-semibold transition-all duration-150',
+                      zoqqQuoteType === qt
+                        ? 'bg-primary border-primary text-white shadow-sm shadow-primary/25'
+                        : 'border-border text-muted-fg hover:border-primary/50 hover:text-foreground'
+                    )}
+                  >
+                    {qt === 'payout' ? 'Payout' : 'Conversion'}
+                  </button>
+                ))}
+              </div>
+              {/* Conversion schedule */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[11px] text-muted-fg w-24 shrink-0">Convert</span>
+                {(['immediate', 'end_of_day', 'next_day', '2_days'] as const).map(cs => (
+                  <button key={cs} type="button" onClick={() => setZoqqConversionSchedule(cs)}
+                    className={cn('rounded-full border px-2.5 py-0.5 text-[11px] font-semibold transition-all duration-150',
+                      zoqqConversionSchedule === cs
+                        ? 'bg-primary border-primary text-white shadow-sm shadow-primary/25'
+                        : 'border-border text-muted-fg hover:border-primary/50 hover:text-foreground'
+                    )}
+                  >
+                    {CONVERSION_SCHEDULE_LABELS[cs]}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </div>

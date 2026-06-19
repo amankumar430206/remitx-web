@@ -835,6 +835,38 @@ export function PaymentDetail() {
           {!payment.provider_payment_id && (
             <InfoRow label="Provider payment ID" value="—" />
           )}
+
+          {/* Zoqq quote metadata — only shown when provider is zoqq and metadata exists */}
+          {payment.provider_name === 'zoqq' && payment.provider_metadata && (() => {
+            const m = typeof payment.provider_metadata === 'string'
+              ? JSON.parse(payment.provider_metadata)
+              : payment.provider_metadata
+            const LOCK_LABELS: Record<string, string> = {
+              '5_mins': '5 minutes', '15_mins': '15 minutes', '1_hour': '1 hour',
+              '4_hours': '4 hours', '8_hours': '8 hours', '24_hours': '24 hours',
+            }
+            const SCHEDULE_LABELS: Record<string, string> = {
+              immediate: 'Immediately', end_of_day: 'End of day',
+              next_day: 'Next day', '2_days': 'In 2 days',
+            }
+            return (
+              <>
+                {m.quoteType && (
+                  <InfoRow label="Quote type" value={m.quoteType === 'payout' ? 'Payout' : 'Conversion'} />
+                )}
+                {m.lockPeriod && (
+                  <InfoRow label="Rate lock period" value={LOCK_LABELS[m.lockPeriod] ?? m.lockPeriod} />
+                )}
+                {m.conversionSchedule && (
+                  <InfoRow label="Conversion schedule" value={SCHEDULE_LABELS[m.conversionSchedule] ?? m.conversionSchedule} />
+                )}
+                {m.providerQuoteId && (
+                  <InfoRow label="Provider quote ID" value={m.providerQuoteId} mono copyable copyValue={m.providerQuoteId} />
+                )}
+              </>
+            )
+          })()}
+
           {payment.ops_notes && (
             <InfoRow label="Ops notes" value={payment.ops_notes} />
           )}

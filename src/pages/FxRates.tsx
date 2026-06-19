@@ -8,7 +8,7 @@ import { Spinner } from '@/components/ui/atoms/Spinner'
 import { Button } from '@/components/ui/atoms/Button'
 import { ContentCard } from '@/layouts/ContentCard'
 import { useFxRatesList, useFxQuote } from '@/hooks/useFxRates'
-import fxApi from '@/api/fx'
+import fxApi, { type ZoqqQuoteType, type ZoqqLockPeriod, type ZoqqConversionSchedule } from '@/api/fx'
 import { usePaymentStore } from '@/stores/paymentStore'
 
 export function FxRates() {
@@ -40,8 +40,16 @@ export function FxRates() {
 
   const { data: quote, isFetching: quoteFetching } = useFxQuote(calcFrom, calcTo, debouncedAmount)
 
+  const [zoqqQuoteType,          setZoqqQuoteType]          = useState<ZoqqQuoteType>('payout')
+  const [zoqqLockPeriod,         setZoqqLockPeriod]         = useState<ZoqqLockPeriod>('15_mins')
+  const [zoqqConversionSchedule, setZoqqConversionSchedule] = useState<ZoqqConversionSchedule>('immediate')
+
   const { mutate: payNow, isPending: payNowLoading } = useMutation({
-    mutationFn: () => fxApi.quote(calcFrom, calcTo, calcAmount),
+    mutationFn: () => fxApi.quote(calcFrom, calcTo, calcAmount, {
+      quoteType: zoqqQuoteType,
+      lockPeriod: zoqqLockPeriod,
+      conversionSchedule: zoqqConversionSchedule,
+    }),
     onSuccess: (res) => {
       const q = res.data.data
       setData({ sourceCurrency: calcFrom, destinationCurrency: calcTo, sourceAmount: calcAmount, quote: q })
@@ -130,12 +138,60 @@ export function FxRates() {
         )}
 
         {canPayNow && (
-          <div className="mt-4 pt-4 border-t border-border">
+          <div className="mt-4 pt-4 border-t border-border flex flex-col gap-3">
+            {/* Quote type */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[11px] text-muted-fg w-32 shrink-0">Quote type</span>
+              {(['payout', 'conversion'] as const).map(t => (
+                <button key={t} type="button" onClick={() => setZoqqQuoteType(t)}
+                  className={`rounded-full border px-3 py-0.5 text-[11px] font-semibold transition-all ${
+                    zoqqQuoteType === t
+                      ? 'bg-primary border-primary text-white shadow-sm shadow-primary/25'
+                      : 'border-border text-muted-fg hover:border-primary/50 hover:text-foreground'
+                  }`}
+                >
+                  {t === 'payout' ? 'Payout' : 'Conversion'}
+                </button>
+              ))}
+            </div>
+
+            {/* Lock period */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[11px] text-muted-fg w-32 shrink-0">Lock period</span>
+              {(['5_mins', '15_mins', '1_hour', '4_hours', '8_hours', '24_hours'] as const).map(lp => (
+                <button key={lp} type="button" onClick={() => setZoqqLockPeriod(lp)}
+                  className={`rounded-full border px-3 py-0.5 text-[11px] font-semibold transition-all ${
+                    zoqqLockPeriod === lp
+                      ? 'bg-primary border-primary text-white shadow-sm shadow-primary/25'
+                      : 'border-border text-muted-fg hover:border-primary/50 hover:text-foreground'
+                  }`}
+                >
+                  {lp.replace('_', ' ')}
+                </button>
+              ))}
+            </div>
+
+            {/* Conversion schedule */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[11px] text-muted-fg w-32 shrink-0">Convert</span>
+              {(['immediate', 'end_of_day', 'next_day', '2_days'] as const).map(cs => (
+                <button key={cs} type="button" onClick={() => setZoqqConversionSchedule(cs)}
+                  className={`rounded-full border px-3 py-0.5 text-[11px] font-semibold transition-all ${
+                    zoqqConversionSchedule === cs
+                      ? 'bg-primary border-primary text-white shadow-sm shadow-primary/25'
+                      : 'border-border text-muted-fg hover:border-primary/50 hover:text-foreground'
+                  }`}
+                >
+                  {cs === 'immediate' ? 'Immediately' : cs === 'end_of_day' ? 'End of day' : cs === 'next_day' ? 'Next day' : 'In 2 days'}
+                </button>
+              ))}
+            </div>
+
             <Button
               onClick={() => payNow()}
               loading={payNowLoading}
               variant="gradient"
-              className="w-full"
+              className="w-full mt-1"
             >
               Pay now →
             </Button>
