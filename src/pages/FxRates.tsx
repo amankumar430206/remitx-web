@@ -4,10 +4,10 @@ import { LoadingState } from '@/components/ui/molecules/LoadingState'
 import { ErrorState } from '@/components/ui/molecules/ErrorState'
 import { Spinner } from '@/components/ui/atoms/Spinner'
 import { ContentCard } from '@/layouts/ContentCard'
-import { useFxRates, useFxQuote } from '@/hooks/useFxRates'
+import { useFxRatesList, useFxQuote } from '@/hooks/useFxRates'
 
 export function FxRates() {
-  const { data: rates, isLoading, isError, refetch } = useFxRates()
+  const { rates, provider, isLoading, isError, refetch } = useFxRatesList()
 
   const [calcFrom, setCalcFrom] = useState('')
   const [calcTo, setCalcTo] = useState('')
@@ -20,7 +20,7 @@ export function FxRates() {
   }, [calcAmount])
 
   const currencies = useMemo(() => {
-    const all = (rates ?? []).flatMap(r => [r.from, r.to])
+    const all = rates.flatMap(r => [r.from, r.to])
     return [...new Set(all)].sort()
   }, [rates])
 
@@ -113,9 +113,22 @@ export function FxRates() {
 
       {/* Rates grid */}
       <ContentCard>
-        <h3 className="text-sm font-semibold text-foreground mb-4">Live rates</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-semibold text-foreground">Live rates</h3>
+          {provider === 'zoqq' ? (
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-success-fg bg-success/10 border border-success/20 rounded-full px-2.5 py-0.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-success-fg animate-pulse" />
+              Live via Zoqq
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-muted-fg bg-surface border border-border rounded-full px-2.5 py-0.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-muted-fg" />
+              Market rates
+            </span>
+          )}
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {(rates ?? []).map(rate => (
+          {rates.map(rate => (
             <div
               key={`${rate.from}-${rate.to}`}
               className="flex items-center justify-between rounded-lg border border-border bg-surface-raised px-4 py-3"
@@ -137,7 +150,7 @@ export function FxRates() {
             </div>
           ))}
         </div>
-        {(rates ?? []).length === 0 && (
+        {rates.length === 0 && (
           <p className="py-6 text-center text-sm text-muted-fg">No rates available.</p>
         )}
       </ContentCard>

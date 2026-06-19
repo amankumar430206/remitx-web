@@ -7,6 +7,11 @@ export interface FxRate {
   midRate: string
 }
 
+export interface FxRatesResponse {
+  rates: FxRate[]
+  provider: 'zoqq' | 'market'
+}
+
 export interface FxQuote {
   quoteId: string
   from: string
@@ -19,7 +24,7 @@ export interface FxQuote {
 }
 
 const fx = {
-  rates: () => apiClient.get<{ success: boolean; data: FxRate[] }>('/fx/rates'),
+  rates: () => apiClient.get<{ success: boolean; data: FxRatesResponse }>('/fx/rates'),
 
   quote: (from: string, to: string, fromAmount: string) =>
     apiClient.post<{ success: boolean; data: FxQuote }>('/fx/quote', { from, to, fromAmount }),

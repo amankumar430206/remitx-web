@@ -10,6 +10,15 @@ export function useFxRates() {
   })
 }
 
+export function useFxRatesList() {
+  const q = useFxRates()
+  return {
+    ...q,
+    rates: q.data?.rates ?? [],
+    provider: q.data?.provider ?? 'market',
+  }
+}
+
 export function useFxQuote(from: string, to: string, amount: string) {
   return useQuery({
     queryKey: ['fx-quote', from, to, amount],
